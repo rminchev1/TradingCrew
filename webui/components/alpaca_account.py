@@ -121,14 +121,23 @@ def render_orders_table(page=1, page_size=7):
     """Render the enhanced recent orders table"""
     try:
         orders_data = AlpacaUtils.get_recent_orders(page=page, page_size=page_size)
-        
         if not orders_data:
             return html.Div([
                 html.Div([
                     html.I(className="fas fa-history fa-2x mb-3"),
                     html.H5("No Recent Orders", className="text-muted"),
                     html.P("No trading activity found", className="text-muted small")
-                ], className="text-center p-5")
+                ], className="text-center p-5"),
+                html.Div([
+                    dbc.Pagination(
+                        id="orders-pagination",
+                        max_value=1,
+                        active_page=1,
+                        size="sm",
+                        className="mt-3",
+                        style={"display": "none"}  # Hide pagination when no orders
+                    )
+                ], className="d-flex justify-content-end")
             ], className="enhanced-table-container")
         
         # Create enhanced table rows
@@ -218,7 +227,17 @@ def render_orders_table(page=1, page_size=7):
                 html.H5("Unable to Load Orders", className="text-warning"),
                 html.P("Check your Alpaca API keys", className="text-muted"),
                 html.Small(f"Error: {str(e)}", className="text-muted")
-            ], className="text-center p-4")
+            ], className="text-center p-4"),
+            html.Div([
+                dbc.Pagination(
+                    id="orders-pagination",
+                    max_value=1,
+                    active_page=1,
+                    size="sm",
+                    className="mt-3",
+                    style={"display": "none"}  # Hide pagination on error
+                )
+            ], className="d-flex justify-content-end")
         ], className="enhanced-table-container error-state")
 
 def render_account_summary():
