@@ -137,7 +137,7 @@ def register_scanner_callbacks(app):
         )
 
     @app.callback(
-        Output("ticker-input", "value"),
+        Output("ticker-input", "value", allow_duplicate=True),
         Input({"type": "scanner-analyze-btn", "symbol": ALL}, "n_clicks"),
         State("ticker-input", "value"),
         prevent_initial_call=True
