@@ -1,6 +1,8 @@
 # alpaca_utils.py
 
 import os
+import time
+import random
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import Annotated, Union, Optional, List
@@ -172,25 +174,42 @@ class AlpacaUtils:
             )
         )
 
-        try:
-            bars = client.get_crypto_bars(params) if is_crypto else client.get_stock_bars(params)
-            # convert to DataFrame via the .df property
-            df = bars.df.reset_index()  # multi-index ['symbol','timestamp']
-            
-            # filter for our symbol (in case of list) - only if symbol column exists
-            if "symbol" in df.columns:
-                df = df[df["symbol"] == symbol].drop(columns="symbol")
-            else:
-                # If no symbol column, assume all data is for the requested symbol
-                pass
-                
-            if save_path:
-                df.to_csv(save_path, index=False)
-            return df
+        # Retry logic for transient connection errors (SSL, network issues)
+        max_retries = 3
+        base_delay = 1.0  # seconds
 
-        except Exception as e:
-            print(f"Error fetching data for {symbol}: {e}")
-            return pd.DataFrame()
+        for attempt in range(max_retries):
+            try:
+                bars = client.get_crypto_bars(params) if is_crypto else client.get_stock_bars(params)
+                # convert to DataFrame via the .df property
+                df = bars.df.reset_index()  # multi-index ['symbol','timestamp']
+
+                # filter for our symbol (in case of list) - only if symbol column exists
+                if "symbol" in df.columns:
+                    df = df[df["symbol"] == symbol].drop(columns="symbol")
+                else:
+                    # If no symbol column, assume all data is for the requested symbol
+                    pass
+
+                if save_path:
+                    df.to_csv(save_path, index=False)
+                return df
+
+            except Exception as e:
+                error_str = str(e)
+                # Retry on SSL/connection errors
+                is_retryable = any(err in error_str for err in [
+                    "SSLError", "SSL:", "ConnectionError", "Max retries exceeded",
+                    "EOF occurred", "Connection reset", "Connection refused"
+                ])
+
+                if is_retryable and attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    print(f"[ALPACA] Retry {attempt + 1}/{max_retries} for {symbol} after {delay:.1f}s: {e}")
+                    time.sleep(delay)
+                else:
+                    print(f"Error fetching data for {symbol}: {e}")
+                    return pd.DataFrame()
 
     @staticmethod
     def get_latest_quote(symbol: str) -> dict:

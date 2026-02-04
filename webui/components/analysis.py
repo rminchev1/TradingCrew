@@ -251,6 +251,10 @@ def start_analysis(ticker, analysts_market, analysts_social, analysts_news, anal
         depth = 5
         
     # Create an initial chart immediately with current data
+    # Add small random delay to stagger API calls in parallel execution
+    import random
+    time.sleep(random.uniform(0.1, 0.5))
+
     try:
         print(f"Creating initial chart for {ticker} with current market data")
         current_state = app_state.get_state(ticker)
