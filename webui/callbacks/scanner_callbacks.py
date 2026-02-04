@@ -3,7 +3,7 @@ Scanner callbacks for TradingAgents WebUI
 """
 
 import threading
-from dash import Input, Output, State, callback_context, ALL, MATCH
+from dash import Input, Output, State, callback_context, ALL, MATCH, no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from dash import html
@@ -18,7 +18,7 @@ def register_scanner_callbacks(app):
     @app.callback(
         Output("scanner-btn", "disabled"),
         Output("scanner-btn", "children"),
-        Input("refresh-interval", "n_intervals"),
+        Input("slow-refresh-interval", "n_intervals"),
         Input("scanner-btn", "n_clicks"),
     )
     def update_scanner_button_state(n_intervals, n_clicks):
@@ -34,7 +34,7 @@ def register_scanner_callbacks(app):
         Output("scanner-progress-container", "style"),
         Output("scanner-progress-bar", "value"),
         Output("scanner-progress-text", "children"),
-        Input("refresh-interval", "n_intervals"),
+        Input("slow-refresh-interval", "n_intervals"),
     )
     def update_scanner_progress(n_intervals):
         """Update the scanner progress bar."""
@@ -55,7 +55,7 @@ def register_scanner_callbacks(app):
     @app.callback(
         Output("scanner-error-alert", "children"),
         Output("scanner-error-alert", "is_open"),
-        Input("refresh-interval", "n_intervals"),
+        Input("slow-refresh-interval", "n_intervals"),
     )
     def update_scanner_error(n_intervals):
         """Show scanner error if any."""
@@ -65,13 +65,59 @@ def register_scanner_callbacks(app):
 
     @app.callback(
         Output("scanner-results-container", "children"),
-        Input("refresh-interval", "n_intervals"),
+        Input("slow-refresh-interval", "n_intervals"),
         Input("scanner-btn", "n_clicks"),
+        prevent_initial_call=False
     )
-    def update_scanner_results(n_intervals, n_clicks):
-        """Update the scanner results display."""
-        results = app_state.get_scanner_results()
+    def update_scanner_results_and_start(n_intervals, n_clicks):
+        """Update the scanner results display and start scanner if button clicked."""
+        ctx = callback_context
 
+        # Check if the button was clicked (not just interval refresh)
+        triggered_id = ctx.triggered[0]["prop_id"] if ctx.triggered else ""
+
+        if "scanner-btn" in triggered_id and n_clicks:
+            # Button was clicked - start the scanner if not already running
+            if not app_state.is_scanner_running():
+                # Start scanner in background thread
+                def run_scanner():
+                    try:
+                        from tradingagents.scanner import MarketScanner
+
+                        app_state.start_scanner()
+
+                        scanner = MarketScanner(config={
+                            "num_results": 8,
+                            "min_price": 5.0,
+                            "min_volume": 500000,
+                            "use_llm": True
+                        })
+
+                        def progress_callback(stage, progress):
+                            app_state.update_scanner_progress(stage, progress)
+
+                        results = scanner.scan(progress_callback=progress_callback)
+                        app_state.set_scanner_results(results)
+
+                    except Exception as e:
+                        print(f"[SCANNER] Error: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        app_state.set_scanner_error(str(e))
+
+                thread = threading.Thread(target=run_scanner, daemon=True)
+                thread.start()
+
+                # Return loading state immediately
+                return html.Div(
+                    [
+                        dbc.Spinner(color="primary", type="grow"),
+                        html.P("Starting market scan...", className="mt-2 text-muted")
+                    ],
+                    className="text-center py-4"
+                )
+
+        # Regular update - show current state
         if app_state.is_scanner_running():
             return html.Div(
                 [
@@ -81,6 +127,7 @@ def register_scanner_callbacks(app):
                 className="text-center py-4"
             )
 
+        results = app_state.get_scanner_results()
         if results:
             return create_scanner_results_grid(results)
 
@@ -88,50 +135,6 @@ def register_scanner_callbacks(app):
             "Click 'Scan Market' to find trading opportunities based on technical indicators and news sentiment.",
             className="text-center text-muted py-4"
         )
-
-    @app.callback(
-        Output("scanner-results-container", "data-trigger"),  # Dummy output
-        Input("scanner-btn", "n_clicks"),
-        prevent_initial_call=True
-    )
-    def start_scanner(n_clicks):
-        """Start the market scanner when button is clicked."""
-        if n_clicks is None:
-            raise PreventUpdate
-
-        if app_state.is_scanner_running():
-            raise PreventUpdate
-
-        # Start scanner in background thread
-        def run_scanner():
-            try:
-                from tradingagents.scanner import MarketScanner
-
-                app_state.start_scanner()
-
-                scanner = MarketScanner(config={
-                    "num_results": 8,
-                    "min_price": 5.0,
-                    "min_volume": 500000,
-                    "use_llm": True
-                })
-
-                def progress_callback(stage, progress):
-                    app_state.update_scanner_progress(stage, progress)
-
-                results = scanner.scan(progress_callback=progress_callback)
-                app_state.set_scanner_results(results)
-
-            except Exception as e:
-                print(f"[SCANNER] Error: {e}")
-                import traceback
-                traceback.print_exc()
-                app_state.set_scanner_error(str(e))
-
-        thread = threading.Thread(target=run_scanner, daemon=True)
-        thread.start()
-
-        return ""  # Dummy return
 
     @app.callback(
         Output("ticker-input", "value"),
