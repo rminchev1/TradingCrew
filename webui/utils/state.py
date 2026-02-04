@@ -80,6 +80,13 @@ class AppState:
         self.trade_amount = 1000
         self.trade_occurred = False
 
+        # Scanner state
+        self.scanner_running = False
+        self.scanner_results = []  # List of ScannerResult objects
+        self.scanner_progress = 0.0
+        self.scanner_stage = ""  # Current stage: "fetching", "technical", "news", "ranking", "rationale", "complete"
+        self.scanner_error = None
+
     def add_symbols_to_queue(self, symbols):
         """Add a list of symbols to the analysis queue."""
         self.analysis_queue.extend(symbols)
@@ -906,6 +913,60 @@ class AppState:
         if ui_update_needed:
             self.needs_ui_update = True
             # print(f"[STATE] Setting needs_ui_update flag due to chunk updates")
+
+    # Scanner state management
+    def start_scanner(self):
+        """Start the market scanner."""
+        with self._lock:
+            self.scanner_running = True
+            self.scanner_results = []
+            self.scanner_progress = 0.0
+            self.scanner_stage = "fetching"
+            self.scanner_error = None
+            self.needs_ui_update = True
+            print("[STATE] Starting market scanner")
+
+    def update_scanner_progress(self, stage: str, progress: float):
+        """Update scanner progress."""
+        with self._lock:
+            self.scanner_stage = stage
+            self.scanner_progress = progress
+            self.needs_ui_update = True
+
+    def set_scanner_results(self, results):
+        """Set scanner results and mark as complete."""
+        with self._lock:
+            self.scanner_results = results
+            self.scanner_running = False
+            self.scanner_progress = 1.0
+            self.scanner_stage = "complete"
+            self.needs_ui_update = True
+            print(f"[STATE] Scanner complete with {len(results)} results")
+
+    def set_scanner_error(self, error: str):
+        """Set scanner error and stop running."""
+        with self._lock:
+            self.scanner_error = error
+            self.scanner_running = False
+            self.scanner_progress = 0.0
+            self.scanner_stage = "error"
+            self.needs_ui_update = True
+            print(f"[STATE] Scanner error: {error}")
+
+    def get_scanner_results(self):
+        """Get current scanner results."""
+        return self.scanner_results
+
+    def is_scanner_running(self):
+        """Check if scanner is currently running."""
+        return self.scanner_running
+
+    def add_scanner_result_to_queue(self, symbol: str):
+        """Add a scanner result symbol to the analysis queue."""
+        if symbol not in self.analysis_queue:
+            self.analysis_queue.append(symbol)
+            print(f"[STATE] Added {symbol} from scanner to analysis queue")
+
 
 # Create a global instance
 app_state = AppState() 

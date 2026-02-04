@@ -13,6 +13,7 @@ from webui.components.chart_panel import create_chart_panel
 from webui.components.decision_panel import create_decision_panel
 from webui.components.reports_panel import create_reports_panel
 from webui.components.alpaca_account import render_alpaca_account_section
+from webui.components.scanner_panel import create_scanner_panel
 from webui.config.constants import COLORS, REFRESH_INTERVALS
 
 
@@ -92,7 +93,10 @@ def create_main_layout():
         ]),
         className="mb-4"
     )
-    
+
+    # Create scanner panel
+    scanner_card = create_scanner_panel()
+
     # Assemble the layout
     layout = dbc.Container(
         [
@@ -157,6 +161,7 @@ def create_main_layout():
             # Main content
             header,
             alpaca_account_card,
+            scanner_card,
             dbc.Row([
                 dbc.Col(config_card, md=6),
                 dbc.Col([
