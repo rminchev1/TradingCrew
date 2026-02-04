@@ -2,13 +2,17 @@
 Trading Agents Framework - State Management
 """
 
+import threading
+
 # Global variables for tracking state
 class AppState:
     def __init__(self):
+        self._lock = threading.Lock()  # Thread-safety for parallel ticker analysis
         self.analysis_queue = []
         self.symbol_states = {}
         self.current_symbol = None  # Symbol displayed in UI
-        self.analyzing_symbol = None  # Symbol currently being analyzed (backend)
+        self.analyzing_symbol = None  # Symbol currently being analyzed (backend) - kept for backward compatibility
+        self.analyzing_symbols = set()  # Track multiple concurrent analyses
         self.analysis_running = False
         self.analysis_trace = []
         self.tool_calls_count = 0
@@ -82,29 +86,46 @@ class AppState:
 
     def get_next_symbol(self):
         """Get the next symbol from the queue for analysis (without changing UI display)."""
-        if self.analysis_queue:
-            next_symbol = self.analysis_queue.pop(0)
-            
-            # Set the symbol being analyzed (backend tracking)
-            self.analyzing_symbol = next_symbol
-            
-            # Initialize state if needed
-            if next_symbol not in self.symbol_states:
-                self.init_symbol_state(next_symbol)
-            else:
-                # Reset session for existing symbol to start fresh analysis
-                self.start_new_session_for_symbol(next_symbol)
-            
-            # Don't auto-switch UI display - let user control which symbol to view
-            # Only set current_symbol if it's not already set (for initial setup)
-            if self.current_symbol is None:
-                self.current_symbol = next_symbol
-            
-            return next_symbol
-            
-        # No more symbols to analyze
-        self.analyzing_symbol = None
-        return None
+        with self._lock:
+            if self.analysis_queue:
+                next_symbol = self.analysis_queue.pop(0)
+
+                # Set the symbol being analyzed (backend tracking)
+                self.analyzing_symbol = next_symbol  # Keep for backward compatibility
+                self.analyzing_symbols.add(next_symbol)  # Track in set for parallel analysis
+
+                # Initialize state if needed
+                if next_symbol not in self.symbol_states:
+                    self._init_symbol_state_unlocked(next_symbol)
+                else:
+                    # Reset session for existing symbol to start fresh analysis
+                    self._start_new_session_for_symbol_unlocked(next_symbol)
+
+                # Don't auto-switch UI display - let user control which symbol to view
+                # Only set current_symbol if it's not already set (for initial setup)
+                if self.current_symbol is None:
+                    self.current_symbol = next_symbol
+
+                return next_symbol
+
+            # No more symbols to analyze
+            self.analyzing_symbol = None
+            return None
+
+    def start_analyzing_symbol(self, symbol):
+        """Mark a symbol as being analyzed (for parallel execution)."""
+        with self._lock:
+            self.analyzing_symbols.add(symbol)
+            # Keep analyzing_symbol for backward compatibility (set to most recent)
+            self.analyzing_symbol = symbol
+
+    def stop_analyzing_symbol(self, symbol):
+        """Mark a symbol as no longer being analyzed."""
+        with self._lock:
+            self.analyzing_symbols.discard(symbol)
+            # Update analyzing_symbol for backward compatibility
+            if self.analyzing_symbol == symbol:
+                self.analyzing_symbol = next(iter(self.analyzing_symbols), None)
 
     def get_state(self, symbol):
         """Get the state for a specific symbol."""
@@ -122,15 +143,15 @@ class AppState:
             return self.symbol_states.get(self.analyzing_symbol)
         return None
 
-    def init_symbol_state(self, symbol):
-        """Initialize the state for a new symbol."""
+    def _init_symbol_state_unlocked(self, symbol):
+        """Initialize the state for a new symbol (internal, no lock)."""
         import time
         import uuid
-        
+
         # Generate a new session ID for this symbol analysis
         session_id = str(uuid.uuid4())[:8]
         session_start = time.time()
-        
+
         self.symbol_states[symbol] = {
             "agent_statuses": {
                 "Market Analyst": "pending",
@@ -156,7 +177,7 @@ class AppState:
                 "bull_report": None,
                 "bear_report": None,
                 "research_manager_report": None,
-                "investment_plan": None, 
+                "investment_plan": None,
                 "trader_investment_plan": None,
                 "risky_report": None,
                 "safe_report": None,
@@ -173,7 +194,7 @@ class AppState:
                 "bull_report": None,
                 "bear_report": None,
                 "research_manager_report": None,
-                "investment_plan": None, 
+                "investment_plan": None,
                 "trader_investment_plan": None,
                 "risky_report": None,
                 "safe_report": None,
@@ -192,22 +213,28 @@ class AppState:
             "report_timestamps": {}  # Track when each report was last updated
         }
 
+    def init_symbol_state(self, symbol):
+        """Initialize the state for a new symbol (thread-safe)."""
+        with self._lock:
+            self._init_symbol_state_unlocked(symbol)
+
     def update_agent_status(self, agent, status, symbol=None):
         """Update the status of an agent for a specific symbol (or current symbol if none specified)."""
         if symbol is None:
             symbol = self.analyzing_symbol or self.current_symbol
-            
-        state = self.get_state(symbol)
-        if state:
-            if agent in state["agent_statuses"]:
-                if status not in ["pending", "in_progress", "completed"]:
-                    print(f"Warning: Invalid status '{status}' for agent '{agent}', defaulting to 'pending'")
-                    status = "pending"
-                
-                if state["agent_statuses"][agent] != status:
-                    state["agent_statuses"][agent] = status
-                    print(f"[STATE - {symbol}] Updated {agent} status to {status}")
-                    self.needs_ui_update = True
+
+        with self._lock:
+            state = self.symbol_states.get(symbol)
+            if state:
+                if agent in state["agent_statuses"]:
+                    if status not in ["pending", "in_progress", "completed"]:
+                        print(f"Warning: Invalid status '{status}' for agent '{agent}', defaulting to 'pending'")
+                        status = "pending"
+
+                    if state["agent_statuses"][agent] != status:
+                        state["agent_statuses"][agent] = status
+                        print(f"[STATE - {symbol}] Updated {agent} status to {status}")
+                        self.needs_ui_update = True
 
     def store_agent_prompt(self, report_type, prompt_text, symbol=None):
         """Store the prompt used by an agent for a specific report type."""
@@ -232,20 +259,23 @@ class AppState:
     def reset(self):
         """Reset the application state for all symbols."""
         print("[STATE] Resetting application state")
-        self.analysis_queue = []
-        self.symbol_states = {}
-        self.current_symbol = None
-        self.analysis_running = False
-        self.analysis_trace = []
-        self.tool_calls_count = 0
-        self.llm_calls_count = 0
-        # Reset the new tracking lists
-        self.tool_calls_log = []
-        self.llm_calls_log = []
-        self.generated_reports_count = 0
-        # Reset session tracking
-        self.current_session_id = None
-        self.session_start_time = None
+        with self._lock:
+            self.analysis_queue = []
+            self.symbol_states = {}
+            self.current_symbol = None
+            self.analyzing_symbol = None
+            self.analyzing_symbols = set()  # Clear parallel tracking
+            self.analysis_running = False
+            self.analysis_trace = []
+            self.tool_calls_count = 0
+            self.llm_calls_count = 0
+            # Reset the new tracking lists
+            self.tool_calls_log = []
+            self.llm_calls_log = []
+            self.generated_reports_count = 0
+            # Reset session tracking
+            self.current_session_id = None
+            self.session_start_time = None
 
     def get_tool_calls_for_display(self, agent_filter=None, symbol_filter=None):
         """Get tool calls in a consistent format for UI display, optionally filtered by agent type and symbol"""
@@ -452,11 +482,11 @@ class AppState:
         self.analysis_running = False
         print("[STATE] Stopping market hour mode")
     
-    def start_new_session_for_symbol(self, symbol):
-        """Start a new analysis session for an existing symbol."""
+    def _start_new_session_for_symbol_unlocked(self, symbol):
+        """Start a new analysis session for an existing symbol (internal, no lock)."""
         import time
         import uuid
-        
+
         if symbol in self.symbol_states:
             state = self.symbol_states[symbol]
             # Generate new session tracking
@@ -464,6 +494,11 @@ class AppState:
             state["session_start_time"] = time.time()
             state["report_timestamps"] = {}
             print(f"[STATE] Started new analysis session {state['session_id']} for {symbol}")
+
+    def start_new_session_for_symbol(self, symbol):
+        """Start a new analysis session for an existing symbol (thread-safe)."""
+        with self._lock:
+            self._start_new_session_for_symbol_unlocked(symbol)
 
     def signal_trade_occurred(self):
         """Signal that a trade has occurred and Alpaca data should be refreshed."""
@@ -491,16 +526,30 @@ class AppState:
                 return False
         return True
 
-    def process_chunk_updates(self, chunk):
-        """Process chunk updates from the graph stream for the symbol currently being analyzed."""
-        state = self.get_analyzing_state()
-        if not state:
-            # Fallback to current symbol if no analyzing symbol is set
-            state = self.get_current_state()
-            if not state:
-                return
+    def process_chunk_updates(self, chunk, symbol=None):
+        """Process chunk updates from the graph stream for the specified or currently analyzed symbol.
 
-        analyzing_symbol = self.analyzing_symbol or self.current_symbol
+        Args:
+            chunk: The update chunk from the graph stream
+            symbol: Optional explicit symbol (for parallel ticker analysis)
+        """
+        if symbol:
+            # Explicit symbol provided (parallel execution mode)
+            state = self.get_state(symbol)
+            analyzing_symbol = symbol
+        else:
+            # Legacy mode - use analyzing_symbol or current_symbol
+            state = self.get_analyzing_state()
+            if not state:
+                # Fallback to current symbol if no analyzing symbol is set
+                state = self.get_current_state()
+                if not state:
+                    return
+            analyzing_symbol = self.analyzing_symbol or self.current_symbol
+
+        if not state:
+            return
+
         ui_update_needed = False
 
         # Map report types to agent names

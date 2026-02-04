@@ -7,9 +7,13 @@ import dash_bootstrap_components as dbc
 import dash
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from webui.utils.state import app_state
 from webui.components.analysis import start_analysis
+
+# Configuration for parallel ticker analysis
+MAX_PARALLEL_TICKERS = 3  # Maximum number of tickers to analyze in parallel
 
 
 def register_control_callbacks(app):
@@ -592,21 +596,42 @@ def register_control_callbacks(app):
                     for symbol in symbols:
                         app_state.init_symbol_state(symbol)
                     
-                    # Add symbols to queue and run analysis
-                    app_state.add_symbols_to_queue(symbols)
-                    
-                    while app_state.analysis_queue and not app_state.stop_market_hour:
-                        symbol = app_state.get_next_symbol()
-                        if symbol:
-                            print(f"[MARKET_HOUR] Analyzing {symbol} at {next_hour}:00 with current market data...")
+                    def analyze_single_ticker_market_hour(symbol, hour):
+                        """Analyze a single ticker in market hour mode (for parallel execution)."""
+                        try:
+                            app_state.start_analyzing_symbol(symbol)
+                            print(f"[MARKET_HOUR-PARALLEL] Starting analysis for {symbol} at {hour}:00")
                             start_analysis(
                                 symbol,
                                 analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
                                 research_depth, allow_shorts, quick_llm, deep_llm
                             )
-                            
+                            print(f"[MARKET_HOUR-PARALLEL] Completed analysis for {symbol}")
+                            return symbol, True, None
+                        except Exception as e:
+                            print(f"[MARKET_HOUR-PARALLEL] Error analyzing {symbol}: {e}")
+                            return symbol, False, str(e)
+                        finally:
+                            app_state.stop_analyzing_symbol(symbol)
+
+                    # Run analysis for all symbols in parallel
+                    print(f"[MARKET_HOUR] Starting parallel analysis at {next_hour}:00")
+                    max_workers = min(MAX_PARALLEL_TICKERS, len(symbols))
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        futures = {executor.submit(analyze_single_ticker_market_hour, symbol, next_hour): symbol for symbol in symbols}
+
+                        for future in as_completed(futures):
                             if app_state.stop_market_hour:
                                 break
+                            symbol = futures[future]
+                            try:
+                                sym, success, error = future.result()
+                                if success:
+                                    print(f"[MARKET_HOUR] {sym} analysis completed")
+                                else:
+                                    print(f"[MARKET_HOUR] {sym} analysis failed: {error}")
+                            except Exception as e:
+                                print(f"[MARKET_HOUR] {symbol} raised exception: {e}")
                     
                     if not app_state.stop_market_hour:
                         print(f"[MARKET_HOUR] Analysis completed for {next_hour}:00. Waiting for next execution time.")
@@ -628,24 +653,46 @@ def register_control_callbacks(app):
                 }
                 app_state.start_loop(symbols, loop_config)
                 
+                def analyze_single_ticker_loop(symbol):
+                    """Analyze a single ticker in loop mode (for parallel execution)."""
+                    try:
+                        app_state.start_analyzing_symbol(symbol)
+                        print(f"[LOOP-PARALLEL] Starting analysis for {symbol}")
+                        start_analysis(
+                            symbol,
+                            analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
+                            research_depth, allow_shorts, quick_llm, deep_llm
+                        )
+                        print(f"[LOOP-PARALLEL] Completed analysis for {symbol}")
+                        return symbol, True, None
+                    except Exception as e:
+                        print(f"[LOOP-PARALLEL] Error analyzing {symbol}: {e}")
+                        return symbol, False, str(e)
+                    finally:
+                        app_state.stop_analyzing_symbol(symbol)
+
                 loop_iteration = 1
                 while not app_state.stop_loop:
-                    print(f"[LOOP] Starting iteration {loop_iteration}")
-                    
-                    # States already initialized above, just add to queue
-                    app_state.add_symbols_to_queue(symbols)
-                    
-                    # Run analysis for all symbols
-                    while app_state.analysis_queue and not app_state.stop_loop:
-                        symbol = app_state.get_next_symbol()
-                        if symbol:
-                            print(f"[LOOP] Analyzing {symbol} with current market data...")
-                            start_analysis(
-                                symbol,
-                                analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                                research_depth, allow_shorts, quick_llm, deep_llm
-                            )
-                    
+                    print(f"[LOOP] Starting iteration {loop_iteration} with parallel execution")
+
+                    # Run analysis for all symbols in parallel
+                    max_workers = min(MAX_PARALLEL_TICKERS, len(symbols))
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        futures = {executor.submit(analyze_single_ticker_loop, symbol): symbol for symbol in symbols}
+
+                        for future in as_completed(futures):
+                            if app_state.stop_loop:
+                                break
+                            symbol = futures[future]
+                            try:
+                                sym, success, error = future.result()
+                                if success:
+                                    print(f"[LOOP] {sym} analysis completed")
+                                else:
+                                    print(f"[LOOP] {sym} analysis failed: {error}")
+                            except Exception as e:
+                                print(f"[LOOP] {symbol} raised exception: {e}")
+
                     if app_state.stop_loop:
                         break
                     
@@ -665,19 +712,44 @@ def register_control_callbacks(app):
                 
                 print("[LOOP] Loop stopped")
             else:
-                # Single run mode (original behavior) - use current date
-                # States already initialized above, just add to queue
-                app_state.add_symbols_to_queue(symbols)
+                # Single run mode - parallel ticker execution
+                print(f"[PARALLEL] Starting parallel analysis for {len(symbols)} symbols (max {MAX_PARALLEL_TICKERS} concurrent)")
 
-                while app_state.analysis_queue:
-                    symbol = app_state.get_next_symbol()
-                    if symbol:
-                        print(f"[SINGLE] Analyzing {symbol} with current market data...")
+                def analyze_single_ticker(symbol):
+                    """Analyze a single ticker (for parallel execution)."""
+                    try:
+                        app_state.start_analyzing_symbol(symbol)
+                        print(f"[PARALLEL] Starting analysis for {symbol}")
                         start_analysis(
                             symbol,
                             analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
                             research_depth, allow_shorts, quick_llm, deep_llm
                         )
+                        print(f"[PARALLEL] Completed analysis for {symbol}")
+                        return symbol, True, None
+                    except Exception as e:
+                        print(f"[PARALLEL] Error analyzing {symbol}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        return symbol, False, str(e)
+                    finally:
+                        app_state.stop_analyzing_symbol(symbol)
+
+                # Execute all tickers in parallel with limited concurrency
+                max_workers = min(MAX_PARALLEL_TICKERS, len(symbols))
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = {executor.submit(analyze_single_ticker, symbol): symbol for symbol in symbols}
+
+                    for future in as_completed(futures):
+                        symbol = futures[future]
+                        try:
+                            sym, success, error = future.result()
+                            if success:
+                                print(f"[PARALLEL] {sym} analysis completed successfully")
+                            else:
+                                print(f"[PARALLEL] {sym} analysis failed: {error}")
+                        except Exception as e:
+                            print(f"[PARALLEL] {symbol} analysis raised exception: {e}")
             
             app_state.analysis_running = False
 

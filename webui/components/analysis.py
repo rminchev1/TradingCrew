@@ -127,7 +127,7 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         config["max_debate_rounds"] = research_depth
         config["max_risk_discuss_rounds"] = research_depth
         config["allow_shorts"] = allow_shorts
-        config["parallel_analysts"] = False  # Always use sequential execution
+        config["parallel_analysts"] = True  # Enable parallel analyst execution
         config["quick_think_llm"] = quick_llm
         config["deep_think_llm"] = deep_llm
         
@@ -144,16 +144,16 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         print(f"Starting graph stream for {ticker} with current market data")
         trace = []
         for chunk in graph.graph.stream(
-            graph.propagator.create_initial_state(ticker, current_date), 
+            graph.propagator.create_initial_state(ticker, current_date),
             stream_mode="values",
             config={"recursion_limit": 100}
         ):
             # Track progress
             trace.append(chunk)
-            
-            # Process intermediate results
-            app_state.process_chunk_updates(chunk)
-            
+
+            # Process intermediate results - pass explicit symbol for thread-safety in parallel execution
+            app_state.process_chunk_updates(chunk, symbol=ticker)
+
             app_state.needs_ui_update = True
             
             # Update progress bar if provided
@@ -174,9 +174,9 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         # NEW: Persist the extracted decision so the trading engine can act on it directly
         current_state["recommended_action"] = decision
 
-        # Mark all agents as completed
+        # Mark all agents as completed - pass explicit symbol for thread-safety
         for agent in current_state["agent_statuses"]:
-            app_state.update_agent_status(agent, "completed")
+            app_state.update_agent_status(agent, "completed", symbol=ticker)
         
         # Set final results
         current_state["analysis_results"] = {
