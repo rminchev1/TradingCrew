@@ -33,19 +33,20 @@ def apply_sequential_mode_fix():
         # Patch the process_chunk_updates method to fix report mapping
         original_process_chunk_updates = AppState.process_chunk_updates
         
-        def fixed_process_chunk_updates(self, chunk):
+        def fixed_process_chunk_updates(self, chunk, symbol=None):
             """Fixed version that correctly maps social analyst reports"""
-            
+
             # 🔍 DEBUG: Log what we're receiving
-            current_symbol = getattr(self, 'current_symbol', '')
-            if current_symbol:
-                state = self.get_state(current_symbol)
+            # Use explicit symbol if provided (parallel execution), otherwise fall back to current_symbol
+            target_symbol = symbol or getattr(self, 'current_symbol', '')
+            if target_symbol:
+                state = self.get_state(target_symbol)
                 if state:
                     social_status = state["agent_statuses"].get("Social Analyst")
                     if social_status == "in_progress":
                         chunk_fields = list(chunk.keys())
                         # print(f"[DEBUG] Social Analyst chunk received: {chunk_fields}")
-                        
+
                         # Check for the ACTUAL bug: Social Analyst writing to market_report
                         if "market_report" in chunk and "sentiment_report" not in chunk:
                             # print(f"[FIX] 🛑 Detected Social Analyst incorrectly updating market_report - fixing...")
@@ -57,9 +58,9 @@ def apply_sequential_mode_fix():
                             # This is correct - Social Analyst updating sentiment_report
                             sentiment_length = len(chunk["sentiment_report"])
                             # print(f"[DEBUG] ✅ Social Analyst correctly updating sentiment_report ({sentiment_length} chars)")
-            
-            # Call the original method with the fixed chunk
-            return original_process_chunk_updates(self, chunk)
+
+            # Call the original method with the fixed chunk (pass symbol for parallel execution)
+            return original_process_chunk_updates(self, chunk, symbol=symbol)
         
         # Apply the patch
         AppState.process_chunk_updates = fixed_process_chunk_updates
