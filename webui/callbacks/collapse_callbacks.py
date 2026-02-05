@@ -10,6 +10,7 @@ from dash.exceptions import PreventUpdate
 COLLAPSIBLE_PANELS = [
     "alpaca-panel",
     "scanner-panel",
+    "progress-panel",
     "config-panel",
     "chart-panel",
     "status-panel",

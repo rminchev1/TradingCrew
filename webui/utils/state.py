@@ -627,22 +627,11 @@ class AppState:
                 
                 # Store the report if it's genuinely new or different
                 if new_report != current_report or current_status != "completed":
-                    # 🛡️ PROTECTION: Ensure UI gets final reports, not intermediate ones
-                    # Once an analyst is completed, only accept significantly longer reports
-                    # This prevents UI from showing incomplete streaming chunks
-                    if current_status == "completed":
-                        current_length = len(current_report or "")
-                        new_length = len(new_report or "")
-                        
-                        # Only accept new reports if they're at least 20% longer than current
-                        # This allows final complete reports while blocking minor streaming updates
-                        min_required_length = current_length * 1.2
-                        
-                        if new_length < min_required_length:
-                            # print(f"[STATE - {self.current_symbol}] 🛡️ Blocking {report_type} update: {new_length} chars < required {min_required_length:.0f} chars (analyst completed)")
-                            continue
-                        else:
-                            print(f"[STATE - {analyzing_symbol}] 📊 Accepting larger final {report_type}: {new_length} chars (was {current_length})")
+                    # Log report updates for debugging
+                    current_length = len(current_report or "")
+                    new_length = len(new_report or "")
+                    if current_status == "completed" and new_length != current_length:
+                        print(f"[STATE - {analyzing_symbol}] 📊 Updating {report_type}: {new_length} chars (was {current_length})")
                     
                     # Add safety check for excessive updates from the same analyst
                     update_count_key = f"{report_type}_update_count"

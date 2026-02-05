@@ -1574,3 +1574,78 @@ body {
         min-width: 160px !important;
     }
 }
+
+/* ================================
+   Ticker Progress Panel
+   ================================ */
+
+.ticker-progress-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #334155;
+    transition: background-color 0.2s ease;
+}
+
+.ticker-progress-item:last-child {
+    border-bottom: none;
+}
+
+.ticker-progress-item:hover {
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.ticker-symbol {
+    font-size: 1.1em;
+    color: #60A5FA;
+    min-width: 60px;
+}
+
+.ticker-progress-bar {
+    border-radius: 4px;
+}
+
+.agent-badges-row {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.agent-badge {
+    font-size: 0.65em;
+    padding: 2px 6px;
+    min-width: 26px;
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Badge color overrides for better visibility */
+.agent-badge.badge.bg-success {
+    background-color: #10B981 !important;
+}
+
+.agent-badge.badge.bg-warning {
+    background-color: #F59E0B !important;
+    color: #000 !important;
+}
+
+.agent-badge.badge.bg-secondary {
+    background-color: #475569 !important;
+}
+
+/* Responsive adjustments for progress panel */
+@media (max-width: 768px) {
+    .ticker-progress-item {
+        padding: 10px 12px;
+    }
+    
+    .ticker-symbol {
+        font-size: 1em;
+    }
+    
+    .agent-badge {
+        font-size: 0.6em;
+        padding: 1px 4px;
+        min-width: 22px;
+    }
+}

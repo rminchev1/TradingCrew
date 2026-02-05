@@ -207,7 +207,18 @@ class GraphSetup:
                                 ui_state = app_state.get_state(ticker)
                                 if ui_state:
                                     ui_state["current_reports"][report_field] = final_message.content
-                                    print(f"[PARALLEL] Updated UI state for {ticker}: {report_field}")
+                                    # Also update agent status to completed
+                                    agent_name_map = {
+                                        "market_report": "Market Analyst",
+                                        "sentiment_report": "Social Analyst",
+                                        "news_report": "News Analyst",
+                                        "fundamentals_report": "Fundamentals Analyst",
+                                        "macro_report": "Macro Analyst",
+                                    }
+                                    agent_name = agent_name_map.get(report_field)
+                                    if agent_name and agent_name in ui_state.get("agent_statuses", {}):
+                                        ui_state["agent_statuses"][agent_name] = "completed"
+                                        print(f"[PARALLEL] Updated UI state for {ticker}: {report_field} + {agent_name} status=completed")
             
             print(f"[PARALLEL] Parallel analyst execution completed")
             return final_state

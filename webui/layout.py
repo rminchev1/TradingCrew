@@ -14,6 +14,7 @@ from webui.components.decision_panel import create_decision_panel
 from webui.components.reports_panel import create_reports_panel
 from webui.components.alpaca_account import render_alpaca_account_section
 from webui.components.scanner_panel import create_scanner_panel
+from webui.components.ticker_progress_panel import create_ticker_progress_panel
 from webui.config.constants import COLORS, REFRESH_INTERVALS
 
 
@@ -205,7 +206,15 @@ def create_main_layout():
         # Row 2: Scanner (full width)
         scanner_section,
 
-        # Row 3: Config + Chart/Status/Decision
+        # Row 3: Agent Progress (full width)
+        create_collapsible_section(
+            "progress-panel",
+            "Agent Progress",
+            "📊",
+            dbc.CardBody(create_ticker_progress_panel(), className="p-3")
+        ),
+
+        # Row 4: Config + Chart/Status/Decision
         dbc.Row([
             dbc.Col([config_section], lg=5, className="mb-3"),
             dbc.Col([

@@ -658,8 +658,8 @@ def register_report_callbacks(app):
             if not content or not isinstance(content, str):
                 return False
             stripped = content.strip()
-            # Must be at least 100 chars and not a status message
-            if len(stripped) < 100:
+            # Must be at least 50 chars and not a status message
+            if len(stripped) < 50:
                 return False
             # Check it's not a placeholder message
             placeholders = ["in progress", "waiting to start", "not available", "no analysis"]
