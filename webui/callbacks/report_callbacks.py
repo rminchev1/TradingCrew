@@ -649,14 +649,31 @@ def register_report_callbacks(app):
             "macro_report": agent_statuses.get("Macro Analyst")
         }
         
-        # 🛡️ PRIORITY: Analyst status takes precedence over content validation
-        # If analyst is completed, always show the report regardless of content validation
+        # 🛡️ PRIORITY: Content takes precedence over status
+        # If we have substantial content, show it regardless of status (fixes race condition)
         validated_reports = {}
-        
+
+        def is_substantial_content(content):
+            """Check if content looks like a complete report (not just a placeholder)."""
+            if not content or not isinstance(content, str):
+                return False
+            stripped = content.strip()
+            # Must be at least 100 chars and not a status message
+            if len(stripped) < 100:
+                return False
+            # Check it's not a placeholder message
+            placeholders = ["in progress", "waiting to start", "not available", "no analysis"]
+            return not any(p in stripped.lower() for p in placeholders)
+
         for report_type, content in analyst_reports.items():
             status = analyst_status_map.get(report_type)
-            
-            if status == "completed" and content:
+
+            # 🛡️ FIX: Prioritize showing content if it exists and is substantial
+            # This fixes the race condition where content arrives before status is updated
+            if content and is_substantial_content(content):
+                # We have real content - show it regardless of status
+                validated_reports[report_type] = content
+            elif status == "completed" and content:
                 # Analyst is done - show the final report
                 validated_reports[report_type] = content
             elif status == "in_progress":
@@ -664,9 +681,8 @@ def register_report_callbacks(app):
             elif status == "pending":
                 validated_reports[report_type] = f"⏳ {report_type.replace('_', ' ').title()} - Waiting to start..."
             elif content:
-                # Analyst status unknown but we have content - validate it
-                content_validated = validate_reports_for_ui({report_type: content})
-                validated_reports[report_type] = content_validated[report_type]
+                # Analyst status unknown but we have some content - show it
+                validated_reports[report_type] = content
             else:
                 validated_reports[report_type] = f"No {report_type.replace('_', ' ').title()} available yet."
         
