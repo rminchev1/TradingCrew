@@ -1526,3 +1526,51 @@ body {
         transition: none;
     }
 }
+
+/* ================================
+   Scanner Cards Scrollable Layout
+   ================================ */
+
+.scanner-cards-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #3B82F6 #1E293B;
+}
+
+.scanner-cards-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.scanner-cards-scroll::-webkit-scrollbar-track {
+    background: #1E293B;
+    border-radius: 4px;
+}
+
+.scanner-cards-scroll::-webkit-scrollbar-thumb {
+    background: #3B82F6;
+    border-radius: 4px;
+}
+
+.scanner-cards-scroll::-webkit-scrollbar-thumb:hover {
+    background: #2563EB;
+}
+
+.scanner-result-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.scanner-result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .scanner-cards-scroll {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    
+    .scanner-result-card {
+        min-width: 160px !important;
+    }
+}

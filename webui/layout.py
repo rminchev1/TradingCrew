@@ -191,23 +191,23 @@ def create_main_layout():
             # Main content
             header,
 
-            # Top row: Account and Scanner
+            # Top row: Account and Scanner (stack on mobile)
             dbc.Row([
-                dbc.Col(alpaca_panel, lg=6),
-                dbc.Col(scanner_panel, lg=6),
-            ]),
+                dbc.Col(alpaca_panel, xs=12, lg=6, className="mb-3 mb-lg-0"),
+                dbc.Col(scanner_panel, xs=12, lg=6),
+            ], className="mb-3"),
 
             # Middle row: Config and Chart/Status/Decision
             dbc.Row([
-                dbc.Col(config_panel, lg=5),
+                dbc.Col(config_panel, xs=12, lg=5, className="mb-3 mb-lg-0"),
                 dbc.Col([
                     chart_panel,
                     status_panel,
                     decision_panel,
-                ], lg=7)
-            ]),
+                ], xs=12, lg=7)
+            ], className="mb-3"),
 
-            # Bottom: Reports
+            # Bottom: Reports (full width)
             reports_panel,
 
             html.Div(className="mt-2"),
