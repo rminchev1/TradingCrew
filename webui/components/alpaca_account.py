@@ -120,7 +120,9 @@ def render_positions_table():
 def render_orders_table(page=1, page_size=7):
     """Render the enhanced recent orders table"""
     try:
-        orders_data = AlpacaUtils.get_recent_orders(page=page, page_size=page_size)
+        orders_data, total_count = AlpacaUtils.get_recent_orders(page=page, page_size=page_size, return_total=True)
+        total_pages = max(1, (total_count + page_size - 1) // page_size)  # Ceiling division
+
         if not orders_data:
             return html.Div([
                 html.Div([
@@ -156,6 +158,16 @@ def render_orders_table(page=1, page_size=7):
             side_color = "text-success" if order.get("Side", "").lower() == "buy" else "text-danger"
             
             row = html.Tr([
+                html.Td([
+                    html.Div([
+                        html.Small(order.get("Date", "-"), className="text-muted")
+                    ])
+                ], className="date-cell"),
+                html.Td([
+                    html.Div([
+                        html.Code(order.get("Order ID Short", "-"), className="small"),
+                    ], title=order.get("Order ID", ""))
+                ], className="id-cell"),
                 html.Td([
                     html.Div([
                         html.Strong(order["Asset"], className="symbol-text"),
@@ -197,6 +209,8 @@ def render_orders_table(page=1, page_size=7):
             html.Table([
                 html.Thead([
                     html.Tr([
+                        html.Th("Date", className="table-header"),
+                        html.Th("Order ID", className="table-header"),
                         html.Th("Asset", className="table-header"),
                         html.Th("Side & Qty", className="table-header"),
                         html.Th("Filled", className="table-header"),
@@ -207,14 +221,16 @@ def render_orders_table(page=1, page_size=7):
                 html.Tbody(table_rows)
             ], className="enhanced-table"),
             html.Div([
+                html.Small(f"Page {page} of {total_pages} ({total_count} orders)", className="text-muted me-3 align-self-center"),
                 dbc.Pagination(
                     id="orders-pagination",
-                    max_value=10,
+                    max_value=total_pages,
                     active_page=page,
                     size="sm",
-                    className="mt-3"
+                    first_last=True,
+                    previous_next=True
                 )
-            ], className="d-flex justify-content-end")
+            ], className="d-flex justify-content-end align-items-center mt-3")
         ], className="enhanced-table-container")
         
         return table
@@ -310,12 +326,14 @@ def get_positions_data():
         print(f"Error getting positions data: {e}")
         return []
 
-def get_recent_orders(page=1, page_size=7):
+def get_recent_orders(page=1, page_size=7, return_total=False):
     """Get recent orders data for table callback"""
     try:
-        return AlpacaUtils.get_recent_orders(page=page, page_size=page_size)
+        return AlpacaUtils.get_recent_orders(page=page, page_size=page_size, return_total=return_total)
     except Exception as e:
         print(f"Error getting orders data: {e}")
+        if return_total:
+            return [], 0
         return []
 
 def render_alpaca_account_section():
@@ -323,33 +341,38 @@ def render_alpaca_account_section():
     return html.Div([
         html.H4([
             html.I(className="fas fa-chart-line me-2"),
-            "Alpaca Paper Trading Account", 
+            "Alpaca Paper Trading Account",
             html.Button([
                 html.I(className="fas fa-sync-alt")
-            ], 
+            ],
             id="refresh-alpaca-btn",
             className="btn btn-sm btn-outline-primary ms-auto",
             title="Refresh Alpaca account data"
             )
         ], className="mb-3 d-flex align-items-center"),
         html.Hr(),
-        dbc.Row([
-            dbc.Col([
-                html.H5([
-                    html.I(className="fas fa-briefcase me-2"),
-                    "Open Positions"
-                ], className="mb-3"),
-                html.Div(id="positions-table-container", children=render_positions_table())
-            ], md=7),
-            dbc.Col([
-                html.H5([
-                    html.I(className="fas fa-history me-2"),
-                    "Recent Orders"
-                ], className="mb-3"),
-                html.Div(id="orders-table-container", children=render_orders_table())
-            ], md=5)
-        ]),
+
+        # Account Summary at the top
         render_account_summary(),
+
+        # Open Positions Panel (full width)
+        html.Div([
+            html.H5([
+                html.I(className="fas fa-briefcase me-2"),
+                "Open Positions"
+            ], className="mb-3"),
+            html.Div(id="positions-table-container", children=render_positions_table())
+        ], className="mb-4"),
+
+        # Recent Orders Panel (full width, below positions)
+        html.Div([
+            html.H5([
+                html.I(className="fas fa-history me-2"),
+                "Recent Orders"
+            ], className="mb-3"),
+            html.Div(id="orders-table-container", children=render_orders_table())
+        ], className="mb-3"),
+
         # Hidden div for liquidation confirmations
         dcc.ConfirmDialog(
             id='liquidate-confirm',

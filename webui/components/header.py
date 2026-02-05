@@ -9,8 +9,8 @@ def create_header():
     """Create the header component for the web UI."""
     return dbc.Card(
         dbc.CardBody([
-            html.H1("AlpacaTradingAgent 📊 - Multi-Agents LLM Financial Trading Framework", 
-                    className="text-center mb-4")
+            html.H1("AI Trading Hub", className="text-start mb-1 fw-bold"),
+            html.P("Autonomous Multi-Agent Trading Platform", className="text-start text-muted mb-0")
         ]),
         className="mb-4"
     ) 

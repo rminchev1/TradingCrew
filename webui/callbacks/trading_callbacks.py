@@ -17,11 +17,10 @@ def register_trading_callbacks(app):
         [Output("positions-table-container", "children"),
          Output("orders-table-container", "children")],
         [Input("slow-refresh-interval", "n_intervals"),
-         Input("refresh-btn", "n_clicks"),
          Input("refresh-alpaca-btn", "n_clicks"),
          Input("orders-pagination", "active_page")]
     )
-    def update_enhanced_alpaca_tables(n_intervals, n_clicks, alpaca_refresh, orders_page):
+    def update_enhanced_alpaca_tables(n_intervals, alpaca_refresh, orders_page):
         """Update the enhanced positions and orders tables"""
         
         page = orders_page if orders_page is not None else 1

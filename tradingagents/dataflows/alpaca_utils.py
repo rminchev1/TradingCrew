@@ -341,13 +341,22 @@ class AlpacaUtils:
             return []
 
     @staticmethod
-    def get_recent_orders(page=1, page_size=7):
-        """Get recent orders from Alpaca account, with simple pagination."""
+    def get_recent_orders(page=1, page_size=7, return_total=False):
+        """Get recent orders from Alpaca account, with simple pagination.
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of orders per page
+            return_total: If True, returns (orders, total_count) tuple
+        """
         try:
             client = get_alpaca_trading_client()
-            req = GetOrdersRequest(status="all", limit=page_size * page, nested=False)
+            # Fetch enough orders to know total (max 100 for reasonable performance)
+            max_fetch = 100
+            req = GetOrdersRequest(status="all", limit=max_fetch, nested=False)
             orders_page = client.get_orders(req)
             orders = list(orders_page)
+            total_count = len(orders)
 
             # Convert orders to a list of dictionaries
             orders_data = []
@@ -355,6 +364,15 @@ class AlpacaUtils:
                 qty = float(order.qty) if order.qty is not None else 0.0
                 filled_qty = float(order.filled_qty) if order.filled_qty is not None else 0.0
                 filled_avg_price = float(order.filled_avg_price) if order.filled_avg_price is not None else 0.0
+
+                # Format order date/time
+                order_date = ""
+                if order.created_at:
+                    order_date = order.created_at.strftime("%m/%d %H:%M")
+
+                # Get order ID (short version for display)
+                order_id = str(order.id) if order.id else "-"
+                order_id_short = order_id[:8] if len(order_id) > 8 else order_id
 
                 orders_data.append({
                     "Asset": order.symbol,
@@ -364,15 +382,24 @@ class AlpacaUtils:
                     "Filled Qty": filled_qty,
                     "Avg. Fill Price": f"${filled_avg_price:.2f}" if filled_avg_price > 0 else "-",
                     "Status": order.status,
-                    "Source": order.client_order_id
+                    "Source": order.client_order_id,
+                    "Date": order_date,
+                    "Order ID": order_id,
+                    "Order ID Short": order_id_short
                 })
 
-            # Now slice out the exact page we want (newest first)
+            # Slice out the exact page we want (newest first)
             start = (page - 1) * page_size
-            return orders_data[start : start + page_size]
+            page_data = orders_data[start : start + page_size]
+
+            if return_total:
+                return page_data, total_count
+            return page_data
 
         except Exception as e:
             print(f"Error fetching orders: {e}")
+            if return_total:
+                return [], 0
             return []
 
     @staticmethod
