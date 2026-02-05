@@ -33,26 +33,29 @@ def create_collapsible_card(
     # Build badge element if ID provided
     badge_element = html.Span(id=badge_id, className="badge-pill") if badge_id else None
 
+    # Build header content
+    header_content = dbc.Row([
+        dbc.Col([
+            html.I(
+                id=f"{card_id}-chevron",
+                className=f"bi bi-chevron-{'down' if default_open else 'right'} me-2 chevron-icon"
+            ),
+            html.Span(icon, className="me-2 panel-icon"),
+            html.Span(title, className="fw-semibold panel-title"),
+        ], width="auto", className="d-flex align-items-center"),
+        dbc.Col([
+            badge_element
+        ], width="auto", className="ms-auto d-flex align-items-center") if badge_element else None,
+    ], className="align-items-center g-0", justify="between")
+
     return dbc.Card([
-        # Clickable header
-        dbc.CardHeader(
-            dbc.Row([
-                dbc.Col([
-                    html.I(
-                        id=f"{card_id}-chevron",
-                        className=f"bi bi-chevron-{'down' if default_open else 'right'} me-2 chevron-icon"
-                    ),
-                    html.Span(icon, className="me-2 panel-icon"),
-                    html.Span(title, className="fw-semibold panel-title"),
-                ], width="auto", className="d-flex align-items-center"),
-                dbc.Col([
-                    badge_element
-                ], width="auto", className="ms-auto d-flex align-items-center") if badge_element else None,
-            ], className="align-items-center g-0", justify="between"),
+        # Clickable header - using html.Div wrapper for n_clicks support
+        html.Div(
+            header_content,
             id=f"{card_id}-header",
+            n_clicks=0,
             style={"cursor": "pointer"},
-            className="collapsible-header",
-            n_clicks=0
+            className="collapsible-header card-header"
         ),
         # Collapsible body
         dbc.Collapse(
