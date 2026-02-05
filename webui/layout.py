@@ -14,6 +14,7 @@ from webui.components.decision_panel import create_decision_panel
 from webui.components.reports_panel import create_reports_panel
 from webui.components.alpaca_account import render_alpaca_account_section
 from webui.components.scanner_panel import create_scanner_panel
+from webui.components.collapsible_card import create_collapsible_card
 from webui.config.constants import COLORS, REFRESH_INTERVALS
 
 
@@ -27,7 +28,7 @@ def create_intervals():
             n_intervals=0,
             disabled=True  # Start disabled, only enable when analysis is running
         ),
-        
+
         # Medium refresh for reports and non-critical updates
         dcc.Interval(
             id='medium-refresh-interval',
@@ -35,10 +36,10 @@ def create_intervals():
             n_intervals=0,
             disabled=True
         ),
-        
+
         # Slow refresh for account data
         dcc.Interval(
-            id='slow-refresh-interval', 
+            id='slow-refresh-interval',
             interval=REFRESH_INTERVALS["slow"],
             n_intervals=0,
             disabled=False  # Always enabled for account data
@@ -66,36 +67,86 @@ def create_footer():
                 className="d-flex justify-content-center"
             ),
             dbc.Col(
-                html.Div("Status updates automatically every 0.5 seconds", className="text-info small"),
+                html.Div("Status updates automatically", className="text-muted small"),
                 width="auto",
                 className="d-flex align-items-center"
             ),
         ],
-        className="d-flex justify-content-center"
+        className="d-flex justify-content-center py-3"
     )
 
 
 def create_main_layout():
     """Create the main application layout"""
-    
+
     # Create UI components
     header = create_header()
-    config_card = create_config_panel()
-    status_card = create_status_panel()
-    chart_card = create_chart_panel()
-    decision_card = create_decision_panel()
-    reports_card = create_reports_panel()
-    
-    # Create Alpaca account card
-    alpaca_account_card = dbc.Card(
-        dbc.CardBody([
-            render_alpaca_account_section()
-        ]),
-        className="mb-4"
+
+    # Wrap panels in collapsible cards
+    alpaca_panel = create_collapsible_card(
+        card_id="alpaca-panel",
+        title="Account & Positions",
+        icon="💰",
+        children=render_alpaca_account_section(),
+        default_open=True,
+        extra_class="alpaca-panel"
     )
 
-    # Create scanner panel
-    scanner_card = create_scanner_panel()
+    scanner_panel = create_collapsible_card(
+        card_id="scanner-panel",
+        title="Market Scanner",
+        icon="🔍",
+        children=create_scanner_panel_content(),
+        default_open=True,
+        badge_id="scanner-badge",
+        extra_class="scanner-panel"
+    )
+
+    config_panel = create_collapsible_card(
+        card_id="config-panel",
+        title="Analysis Configuration",
+        icon="⚙️",
+        children=create_config_panel_content(),
+        default_open=True,
+        extra_class="config-panel"
+    )
+
+    chart_panel = create_collapsible_card(
+        card_id="chart-panel",
+        title="Price Chart",
+        icon="📈",
+        children=create_chart_panel_content(),
+        default_open=True,
+        extra_class="chart-panel"
+    )
+
+    status_panel = create_collapsible_card(
+        card_id="status-panel",
+        title="Analysis Status",
+        icon="📊",
+        children=create_status_panel_content(),
+        default_open=True,
+        badge_id="status-badge",
+        extra_class="status-panel"
+    )
+
+    decision_panel = create_collapsible_card(
+        card_id="decision-panel",
+        title="Decision Summary",
+        icon="🎯",
+        children=create_decision_panel_content(),
+        default_open=True,
+        extra_class="decision-panel"
+    )
+
+    reports_panel = create_collapsible_card(
+        card_id="reports-panel",
+        title="Agent Reports",
+        icon="📋",
+        children=create_reports_panel(),
+        default_open=True,
+        extra_class="reports-panel"
+    )
 
     # Assemble the layout
     layout = dbc.Container(
@@ -103,16 +154,14 @@ def create_main_layout():
             # Intervals and stores
             *create_intervals(),
             *create_stores(),
-            
+
             # Client-side script to handle iframe messages for prompt modal
             html.Script("""
                 window.addEventListener('message', function(event) {
                     if (event.data && event.data.type === 'showPrompt') {
-                        // Find and trigger the appropriate show prompt button
                         const buttons = document.querySelectorAll('[id*="show-prompt-"]');
                         const reportType = event.data.reportType;
-                        
-                        // Find the button that matches this report type
+
                         let targetButton = null;
                         for (let button of buttons) {
                             const buttonId = button.getAttribute('id');
@@ -121,8 +170,7 @@ def create_main_layout():
                                 break;
                             }
                         }
-                        
-                        // If no direct match, try pattern matching
+
                         if (!targetButton) {
                             for (let button of buttons) {
                                 const buttonData = button.getAttribute('data-dash-props');
@@ -132,53 +180,126 @@ def create_main_layout():
                                 }
                             }
                         }
-                        
-                        // Trigger the button click if found
+
                         if (targetButton) {
                             targetButton.click();
-                        } else {
-                            console.log('Could not find button for:', reportType);
-                            // Fallback: trigger any show prompt button and set content manually
-                            const anyPromptBtn = document.querySelector('[id*="show-prompt-"]');
-                            if (anyPromptBtn) {
-                                anyPromptBtn.click();
-                                // Try to set the modal content directly after a short delay
-                                setTimeout(() => {
-                                    const modalTitle = document.querySelector('#prompt-modal-title');
-                                    const modalContent = document.querySelector('#prompt-modal-content');
-                                    if (modalTitle) modalTitle.textContent = event.data.title;
-                                    if (modalContent) {
-                                        // This will be filled by the callback, but we can try to trigger it
-                                        console.log('Showing prompt for:', reportType);
-                                    }
-                                }, 100);
-                            }
                         }
                     }
                 });
             """),
-            
+
             # Main content
             header,
-            alpaca_account_card,
-            scanner_card,
+
+            # Top row: Account and Scanner
             dbc.Row([
-                dbc.Col(config_card, md=6),
-                dbc.Col([
-                    chart_card,
-                    html.Div(className="mb-3"),  # Add some spacing
-                    status_card,
-                    html.Div(className="mb-3"),  # Add some spacing
-                    decision_card,
-                ], md=6)
+                dbc.Col(alpaca_panel, lg=6),
+                dbc.Col(scanner_panel, lg=6),
             ]),
-            reports_card,
-            html.Div(className="mt-4"),
+
+            # Middle row: Config and Chart/Status/Decision
+            dbc.Row([
+                dbc.Col(config_panel, lg=5),
+                dbc.Col([
+                    chart_panel,
+                    status_panel,
+                    decision_panel,
+                ], lg=7)
+            ]),
+
+            # Bottom: Reports
+            reports_panel,
+
+            html.Div(className="mt-2"),
             create_footer(),
         ],
         fluid=True,
-        className="p-4",
+        className="p-3",
         style={"backgroundColor": COLORS["background"]}
     )
-    
-    return layout 
+
+    return layout
+
+
+# Helper functions to extract panel content (without the outer Card wrapper)
+
+def create_scanner_panel_content():
+    """Create scanner panel content without outer card."""
+    return html.Div([
+        dbc.Row([
+            dbc.Col([
+                html.Small("Find trading opportunities in real-time", className="text-muted"),
+            ], width=8),
+            dbc.Col([
+                dbc.Button(
+                    [html.I(className="bi bi-search me-2"), "Scan Market"],
+                    id="scanner-btn",
+                    color="primary",
+                    className="w-100"
+                ),
+            ], width=4, className="d-flex align-items-center"),
+        ], className="mb-3"),
+
+        # Progress indicator (hidden by default)
+        html.Div(
+            id="scanner-progress-container",
+            children=[
+                dbc.Progress(
+                    id="scanner-progress-bar",
+                    value=0,
+                    striped=True,
+                    animated=True,
+                    className="mb-2"
+                ),
+                html.Div(id="scanner-progress-text", className="text-center text-muted small"),
+            ],
+            style={"display": "none"}
+        ),
+
+        # Error message
+        dbc.Alert(
+            id="scanner-error-alert",
+            color="danger",
+            is_open=False,
+            dismissable=True,
+            className="mt-2"
+        ),
+
+        # Results container
+        html.Div(id="scanner-results-container", children=[
+            html.Div(
+                "Click 'Scan Market' to find trading opportunities.",
+                className="text-center text-muted py-3"
+            )
+        ]),
+    ])
+
+
+def create_config_panel_content():
+    """Create config panel content without outer card."""
+    from webui.components.config_panel import create_config_panel
+    # Get the inner content from config panel
+    config_card = create_config_panel()
+    # Extract CardBody children
+    return config_card.children.children if hasattr(config_card.children, 'children') else config_card.children
+
+
+def create_chart_panel_content():
+    """Create chart panel content without outer card."""
+    from webui.components.chart_panel import create_chart_panel
+    chart_card = create_chart_panel()
+    return chart_card.children.children if hasattr(chart_card.children, 'children') else chart_card.children
+
+
+def create_status_panel_content():
+    """Create status panel content without outer card."""
+    from webui.components.status_panel import create_status_panel
+    status_card = create_status_panel()
+    return status_card.children.children if hasattr(status_card.children, 'children') else status_card.children
+
+
+def create_decision_panel_content():
+    """Create decision panel content without outer card."""
+    from webui.components.decision_panel import create_decision_panel
+    decision_card = create_decision_panel()
+    return decision_card.children.children if hasattr(decision_card.children, 'children') else decision_card.children

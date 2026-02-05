@@ -1391,3 +1391,138 @@ body {
     }
 }
 
+
+/* ================================
+   Collapsible Card Styles
+   ================================ */
+
+.collapsible-card {
+    border: 1px solid #334155;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.collapsible-card:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.collapsible-header {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    border-bottom: 1px solid #334155;
+    padding: 14px 18px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, #2D3B4F 0%, #1A2332 100%);
+}
+
+.collapsible-header:active {
+    background: linear-gradient(135deg, #3D4B5F 0%, #2A3342 100%);
+}
+
+.collapsible-header .panel-icon {
+    font-size: 1.1rem;
+}
+
+.collapsible-header .panel-title {
+    font-size: 1rem;
+    color: #F1F5F9;
+    letter-spacing: 0.025em;
+}
+
+.collapsible-header .chevron-icon {
+    color: #94A3B8;
+    font-size: 0.85rem;
+    transition: transform 0.3s ease, color 0.2s ease;
+}
+
+.collapsible-header:hover .chevron-icon {
+    color: #F1F5F9;
+}
+
+.collapsible-header .badge-pill {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    color: #FFFFFF;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.collapsible-body {
+    background-color: #1E293B;
+    padding: 16px;
+}
+
+/* Smooth collapse animation */
+.collapsible-card .collapse {
+    transition: height 0.3s ease;
+}
+
+.collapsible-card .collapsing {
+    transition: height 0.3s ease;
+}
+
+/* Panel-specific colors */
+.collapsible-card.alpaca-panel .collapsible-header {
+    border-left: 3px solid #10B981;
+}
+
+.collapsible-card.scanner-panel .collapsible-header {
+    border-left: 3px solid #8B5CF6;
+}
+
+.collapsible-card.config-panel .collapsible-header {
+    border-left: 3px solid #3B82F6;
+}
+
+.collapsible-card.chart-panel .collapsible-header {
+    border-left: 3px solid #F59E0B;
+}
+
+.collapsible-card.status-panel .collapsible-header {
+    border-left: 3px solid #06B6D4;
+}
+
+.collapsible-card.decision-panel .collapsible-header {
+    border-left: 3px solid #EF4444;
+}
+
+.collapsible-card.reports-panel .collapsible-header {
+    border-left: 3px solid #EC4899;
+}
+
+/* Badge variations */
+.badge-success {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
+}
+
+.badge-info {
+    background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%) !important;
+}
+
+/* Focus states for accessibility */
+.collapsible-header:focus {
+    outline: 2px solid #3B82F6;
+    outline-offset: 2px;
+}
+
+.collapsible-header:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .collapsible-header .chevron-icon,
+    .collapsible-card .collapse,
+    .collapsible-card .collapsing {
+        transition: none;
+    }
+}

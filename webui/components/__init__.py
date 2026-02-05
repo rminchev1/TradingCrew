@@ -6,4 +6,5 @@ Trading Agents Framework - Web UI Components
 from webui.components import analysis
 from webui.components import ui
 from webui.components import alpaca_account
-from webui.components import scanner_panel 
+from webui.components import scanner_panel
+from webui.components import collapsible_card 
