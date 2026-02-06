@@ -15,6 +15,7 @@ from webui.components.reports_panel import create_reports_panel
 from webui.components.alpaca_account import render_compact_account_bar, render_positions_orders_section
 from webui.components.scanner_panel import create_scanner_panel
 from webui.components.ticker_progress_panel import create_ticker_progress_panel
+from webui.components.watchlist_panel import create_watchlist_section
 from webui.config.constants import COLORS, REFRESH_INTERVALS
 
 
@@ -180,7 +181,12 @@ def create_main_layout():
     )
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ROW 4: Agent Reports (Collapsible)
+    # ROW 4: Watchlist (Collapsible)
+    # ═══════════════════════════════════════════════════════════════════════
+    watchlist_section = create_watchlist_section()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # ROW 5: Agent Reports (Collapsible)
     # ═══════════════════════════════════════════════════════════════════════
     reports_content = create_reports_panel()
     reports_section = create_collapsible_section(
@@ -274,6 +280,9 @@ def create_main_layout():
 
         # Positions & Orders
         positions_orders_section,
+
+        # Watchlist
+        watchlist_section,
 
         # Agent Reports
         reports_section,

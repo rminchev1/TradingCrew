@@ -2445,3 +2445,111 @@ body.theme-bw .nav-tabs .nav-link.active {
     background-color: #FFFFFF;
     border-color: #E2E8F0 #E2E8F0 #FFFFFF;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WATCHLIST STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.watchlist-panel {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.watchlist-input {
+    background-color: var(--input-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.watchlist-input::placeholder {
+    color: var(--text-muted);
+}
+
+.watchlist-add-btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.watchlist-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.watchlist-empty-msg {
+    font-style: italic;
+}
+
+.watchlist-item {
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.watchlist-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-primary);
+}
+
+.watchlist-symbol {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.watchlist-price {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.watchlist-change {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.watchlist-action-btn {
+    padding: 2px 6px;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.watchlist-action-btn:hover {
+    color: var(--accent-primary);
+    transform: scale(1.1);
+}
+
+.watchlist-action-btn.text-danger:hover {
+    color: var(--accent-danger) !important;
+}
+
+/* Light theme adjustments */
+body.theme-bw .watchlist-item {
+    background: #F8FAFC;
+    border-color: #E2E8F0;
+}
+
+body.theme-bw .watchlist-item:hover {
+    background: #F1F5F9;
+    border-color: #3B82F6;
+}
+
+body.theme-bw .watchlist-input {
+    background-color: #FFFFFF;
+    border-color: #CBD5E1;
+    color: #1E293B;
+}
+
+body.theme-bw .watchlist-symbol,
+body.theme-bw .watchlist-price {
+    color: #1E293B;
+}
+
+body.theme-bw .watchlist-action-btn {
+    color: #64748B;
+}
+
+body.theme-bw .watchlist-action-btn:hover {
+    color: #3B82F6;
+}

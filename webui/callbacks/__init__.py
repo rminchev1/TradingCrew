@@ -13,6 +13,7 @@ from .scanner_callbacks import register_scanner_callbacks
 from .collapse_callbacks import register_collapse_callbacks
 from .ticker_progress_callbacks import register_ticker_progress_callbacks
 from .theme_callbacks import register_theme_callbacks
+from .watchlist_callbacks import register_watchlist_callbacks
 
 def register_all_callbacks(app):
     """Register all callback functions with the Dash app"""
@@ -25,4 +26,5 @@ def register_all_callbacks(app):
     register_scanner_callbacks(app)
     register_collapse_callbacks(app)
     register_ticker_progress_callbacks(app)
-    register_theme_callbacks(app) 
+    register_theme_callbacks(app)
+    register_watchlist_callbacks(app) 

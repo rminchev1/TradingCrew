@@ -153,14 +153,21 @@ def create_ticker_card(result):
                 ),
             ], className="mb-2"),
 
-            # Analyze button
-            dbc.Button(
-                [html.I(className="bi bi-plus-circle me-1"), "Add"],
-                id={"type": "scanner-analyze-btn", "symbol": result.symbol},
-                color="outline-primary",
-                size="sm",
-                className="w-100 mt-2"
-            ),
+            # Action buttons row
+            dbc.ButtonGroup([
+                dbc.Button(
+                    [html.I(className="bi bi-robot me-1"), "Analyze"],
+                    id={"type": "scanner-analyze-btn", "symbol": result.symbol},
+                    color="outline-primary",
+                    size="sm",
+                ),
+                dbc.Button(
+                    [html.I(className="bi bi-star me-1"), "Watch"],
+                    id={"type": "scanner-add-watchlist-btn", "symbol": result.symbol},
+                    color="outline-secondary",
+                    size="sm",
+                ),
+            ], className="w-100 mt-2"),
         ], className="p-2"),
     ], className="scanner-result-card h-100", style={
         "minWidth": "180px",
