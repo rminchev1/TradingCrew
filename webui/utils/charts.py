@@ -7,10 +7,84 @@ from datetime import datetime, timedelta
 import pandas as pd
 import traceback
 import pytz
-from tradingagents.dataflows.alpaca_utils import AlpacaUtils
-from tradingagents.dataflows.config import get_alpaca_api_key, get_alpaca_secret_key
-from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
+import yfinance as yf
 from typing import Union, List, Optional
+
+
+def get_yahoo_data(symbol: str, period: str = "1d") -> pd.DataFrame:
+    """
+    Fetch historical OHLCV data from Yahoo Finance.
+
+    Args:
+        symbol: Stock/crypto symbol (e.g., "AAPL", "BTC-USD")
+        period: Timeframe period (5m, 15m, 30m, 1h, 4h, 1d, 1w, 1mo, 1y)
+
+    Returns:
+        DataFrame with columns: timestamp, open, high, low, close, volume
+    """
+    # Convert crypto symbols from Alpaca format to Yahoo format
+    if "/" in symbol:
+        symbol = symbol.replace("/", "-")  # BTC/USD -> BTC-USD
+
+    # Map period to yfinance parameters
+    # yfinance uses: period (how far back) and interval (bar size)
+    period_map = {
+        "5m": {"period": "1d", "interval": "1m"},
+        "15m": {"period": "5d", "interval": "5m"},
+        "30m": {"period": "5d", "interval": "15m"},
+        "1h": {"period": "1mo", "interval": "30m"},
+        "4h": {"period": "3mo", "interval": "1h"},
+        "1d": {"period": "3mo", "interval": "1d"},
+        "1w": {"period": "6mo", "interval": "1d"},
+        "1mo": {"period": "1y", "interval": "1d"},
+        "1y": {"period": "2y", "interval": "1d"},
+    }
+
+    params = period_map.get(period.lower(), period_map["1d"])
+
+    try:
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period=params["period"], interval=params["interval"])
+
+        if df.empty:
+            print(f"[YAHOO] No data returned for {symbol}")
+            return pd.DataFrame()
+
+        # Reset index to get timestamp as a column
+        df = df.reset_index()
+
+        # The index column name varies: 'Date' for daily, 'Datetime' for intraday
+        # Find the datetime column
+        datetime_col = None
+        for col in df.columns:
+            if col in ['Date', 'Datetime', 'index']:
+                datetime_col = col
+                break
+
+        if datetime_col:
+            df = df.rename(columns={datetime_col: 'timestamp'})
+
+        # Rename OHLCV columns (they are capitalized in yfinance)
+        df = df.rename(columns={
+            'Open': 'open',
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume'
+        })
+
+        # Keep only required columns
+        required_cols = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+        available_cols = [col for col in required_cols if col in df.columns]
+        df = df[available_cols]
+
+        return df
+
+    except Exception as e:
+        print(f"[YAHOO] Error fetching data for {symbol}: {e}")
+        import traceback
+        traceback.print_exc()
+        return pd.DataFrame()
 
 
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -65,12 +139,12 @@ def create_chart(
 ):
     """
     Create a Plotly candlestick chart with technical indicators for a given ticker and period.
-    Falls back to demo data if API fails or no bars are returned.
+    Uses Yahoo Finance for data. Falls back to demo data if API fails.
 
     Args:
         ticker: Stock/crypto symbol
         period: Timeframe period (5m, 15m, 30m, 1h, 4h, 1d, 1w, 1mo, 1y)
-        end_date: End date for the data
+        end_date: End date for the data (not used with Yahoo Finance, kept for compatibility)
         indicators: List of indicators to show ('sma', 'ema', 'bb', 'rsi', 'macd')
     """
     # Default indicators if none specified
@@ -84,41 +158,12 @@ def create_chart(
     show_rsi = 'rsi' in indicators
     show_macd = 'macd' in indicators
 
-    # determine end and start datetimes (in UTC for the API)
-    now_utc = datetime.now(pytz.UTC)
-    if end_date:
-        end_dt = pd.to_datetime(end_date)
-        end_dt = end_dt.tz_localize(pytz.UTC) if end_dt.tzinfo is None else end_dt
-    else:
-        end_dt = now_utc
-
-    # Enhanced period mapping with more timeframes
-    # Format: period_key -> (alpaca_timeframe, timedelta_for_data_fetch)
-    period_map = {
-        "5m": ("1Min", timedelta(days=1)),        # 1 day of 1-minute data
-        "15m": ("5Min", timedelta(days=2)),       # 2 days of 5-minute data
-        "30m": ("15Min", timedelta(days=5)),      # 5 days of 15-minute data
-        "1h": ("30Min", timedelta(days=10)),      # 10 days of 30-minute data
-        "4h": ("1Hour", timedelta(days=30)),      # 30 days of 1-hour data
-        "1d": ("1Day", timedelta(days=90)),       # 90 days of daily data
-        "1w": ("1Day", timedelta(days=180)),      # 180 days of daily data
-        "1mo": ("1Day", timedelta(days=365)),     # 365 days of daily data
-        "1y": ("1Day", timedelta(days=730)),      # 2 years of daily data
-    }
-    tf_str, delta = period_map.get(period.lower(), period_map["1d"])
-    start_dt = end_dt - delta
-
-    # fetch data
-    df = AlpacaUtils.get_stock_data(
-        symbol=ticker,
-        start_date=start_dt,
-        end_date=end_dt,
-        timeframe=tf_str
-    )
+    # Fetch data from Yahoo Finance
+    df = get_yahoo_data(ticker, period)
 
     # if we got no data, make a demo chart
     if df.empty:
-        return create_demo_chart(ticker, period, end_date, error_msg="No data returned from Alpaca API.", indicators=indicators)
+        return create_demo_chart(ticker, period, end_date, error_msg="No data returned from Yahoo Finance.", indicators=indicators)
 
     # Add technical indicators
     df = add_indicators(df)

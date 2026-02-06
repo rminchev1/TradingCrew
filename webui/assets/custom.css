@@ -2629,3 +2629,32 @@ body.theme-bw #analysis-toast .toast-body {
     background: #FFFFFF;
     color: #1E293B;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLICKABLE SYMBOL LINKS - Positions & Orders Tables
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.symbol-link {
+    text-decoration: none;
+    color: var(--accent-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.symbol-link:hover {
+    color: var(--accent-secondary);
+    text-decoration: underline;
+}
+
+.symbol-link .symbol-text {
+    color: inherit;
+}
+
+/* Light theme adjustments */
+body.theme-bw .symbol-link {
+    color: #2563EB;
+}
+
+body.theme-bw .symbol-link:hover {
+    color: #1D4ED8;
+}

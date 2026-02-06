@@ -2,9 +2,10 @@
 Trading and Alpaca-related callbacks for TradingAgents WebUI
 """
 
-from dash import Input, Output, State, html
+from dash import Input, Output, State, html, ctx, ALL
 import dash_bootstrap_components as dbc
 import dash.dependencies
+import dash
 import json
 
 from webui.components.alpaca_account import render_positions_table, render_orders_table
@@ -94,3 +95,70 @@ def register_trading_callbacks(app):
                 html.I(className="fas fa-exclamation-triangle me-2"),
                 f"Error during liquidation: {str(e)}"
             ], color="danger", duration=8000, className="mt-3")
+
+    # =========================================================================
+    # Symbol Click Handlers - Update chart when clicking positions/orders
+    # =========================================================================
+    @app.callback(
+        Output("chart-store", "data", allow_duplicate=True),
+        [Input({"type": "position-symbol-link", "symbol": ALL}, "n_clicks")],
+        [State("chart-store", "data")],
+        prevent_initial_call=True
+    )
+    def handle_position_symbol_click(n_clicks_list, chart_store):
+        """Update chart when clicking a position symbol."""
+        if not any(n_clicks_list):
+            return dash.no_update
+
+        if not ctx.triggered:
+            return dash.no_update
+
+        # Get the clicked symbol
+        triggered = ctx.triggered[0]
+        prop_id = triggered["prop_id"]
+
+        if "position-symbol-link" in prop_id:
+            try:
+                button_id = json.loads(prop_id.split(".")[0])
+                symbol = button_id.get("symbol")
+
+                if symbol:
+                    chart_store = chart_store or {}
+                    chart_store["last_symbol"] = symbol
+                    return chart_store
+            except (json.JSONDecodeError, KeyError):
+                pass
+
+        return dash.no_update
+
+    @app.callback(
+        Output("chart-store", "data", allow_duplicate=True),
+        [Input({"type": "order-symbol-link", "symbol": ALL}, "n_clicks")],
+        [State("chart-store", "data")],
+        prevent_initial_call=True
+    )
+    def handle_order_symbol_click(n_clicks_list, chart_store):
+        """Update chart when clicking an order symbol."""
+        if not any(n_clicks_list):
+            return dash.no_update
+
+        if not ctx.triggered:
+            return dash.no_update
+
+        # Get the clicked symbol
+        triggered = ctx.triggered[0]
+        prop_id = triggered["prop_id"]
+
+        if "order-symbol-link" in prop_id:
+            try:
+                button_id = json.loads(prop_id.split(".")[0])
+                symbol = button_id.get("symbol")
+
+                if symbol:
+                    chart_store = chart_store or {}
+                    chart_store["last_symbol"] = symbol
+                    return chart_store
+            except (json.JSONDecodeError, KeyError):
+                pass
+
+        return dash.no_update

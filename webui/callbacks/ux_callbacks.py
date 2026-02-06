@@ -97,7 +97,9 @@ def register_ux_callbacks(app):
         reports = symbol_state.get("reports", {})
 
         if not reports:
-            if app_state.is_symbol_analyzing(current_symbol):
+            # Check if symbol is currently being analyzed
+            is_analyzing = current_symbol in app_state.analyzing_symbols
+            if is_analyzing:
                 return html.Div([
                     dbc.Spinner(size="sm", color="primary", className="me-2"),
                     html.Span("Analyzing...", className="text-muted small")

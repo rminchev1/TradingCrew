@@ -119,7 +119,7 @@ def register_chart_callbacks(app):
     @app.callback(
         [Output("chart-container", "figure"),
          Output("current-symbol-display", "children"),
-         Output("chart-store", "data")],
+         Output("chart-store", "data", allow_duplicate=True)],
         [Input("period-5m", "n_clicks"),
          Input("period-15m", "n_clicks"),
          Input("period-30m", "n_clicks"),
@@ -131,25 +131,40 @@ def register_chart_callbacks(app):
          Input("period-1y", "n_clicks"),
          Input("chart-pagination", "active_page"),
          Input("manual-chart-refresh", "n_clicks"),
-         Input("indicator-checklist", "value")],
-        [State("chart-store", "data")]
+         Input("indicator-checklist", "value"),
+         Input("chart-store", "data")],
+        [State("ticker-input", "value")],
+        prevent_initial_call=True
     )
     def update_chart(n_5m, n_15m, n_30m, n_1h, n_4h, n_1d, n_1w, n_1mo, n_1y,
-                     active_page, manual_refresh, indicators, chart_store_data):
+                     active_page, manual_refresh, indicators, chart_store_data, ticker_input):
         """Update the chart based on period selection, ticker change, or indicator toggle"""
-
-        if not app_state.symbol_states or not active_page:
-            return create_welcome_chart(), "", chart_store_data
-
-        # Safeguard against accessing invalid page index
-        symbols_list = list(app_state.symbol_states.keys())
-        if active_page > len(symbols_list):
-            return create_welcome_chart(), "Page index out of range", chart_store_data
-
-        symbol = symbols_list[active_page - 1]
 
         # Determine which input triggered the callback
         triggered_prop = ctx.triggered[0]["prop_id"] if ctx.triggered else None
+
+        # Check if chart-store triggered with a new symbol (from watchlist/positions/orders)
+        if triggered_prop == "chart-store.data" and chart_store_data:
+            quick_symbol = chart_store_data.get("last_symbol")
+            if quick_symbol:
+                # Use the symbol from chart-store (clicked from watchlist/positions/orders)
+                symbol = quick_symbol.upper()
+            else:
+                return dash.no_update, dash.no_update, dash.no_update
+        elif app_state.symbol_states and active_page:
+            # Use pagination-based symbol selection
+            symbols_list = list(app_state.symbol_states.keys())
+            if active_page > len(symbols_list):
+                return create_welcome_chart(), "Page index out of range", chart_store_data
+            symbol = symbols_list[active_page - 1]
+        elif chart_store_data and chart_store_data.get("last_symbol"):
+            # Fallback to last symbol in store
+            symbol = chart_store_data["last_symbol"]
+        elif ticker_input:
+            # Use first ticker from input
+            symbol = ticker_input.split(",")[0].strip().upper()
+        else:
+            return create_welcome_chart(), "", chart_store_data
 
         # Period mapping for all timeframe buttons
         period_map = {

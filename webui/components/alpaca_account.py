@@ -49,7 +49,13 @@ def render_positions_table():
             row = html.Tr([
                 html.Td([
                     html.Div([
-                        html.Strong(position["Symbol"], className="symbol-text"),
+                        html.A(
+                            html.Strong(position["Symbol"], className="symbol-text"),
+                            id={"type": "position-symbol-link", "symbol": position["Symbol"]},
+                            href="#",
+                            className="symbol-link",
+                            title=f"Click to view {position['Symbol']} chart"
+                        ),
                         html.Br(),
                         html.Small(f"{position['Qty']} shares", className="text-muted")
                     ])
@@ -170,7 +176,13 @@ def render_orders_table(page=1, page_size=7):
                 ], className="id-cell"),
                 html.Td([
                     html.Div([
-                        html.Strong(order["Asset"], className="symbol-text"),
+                        html.A(
+                            html.Strong(order["Asset"], className="symbol-text"),
+                            id={"type": "order-symbol-link", "symbol": order["Asset"]},
+                            href="#",
+                            className="symbol-link",
+                            title=f"Click to view {order['Asset']} chart"
+                        ),
                         html.Br(),
                         html.Small(order["Order Type"], className="text-muted")
                     ])
