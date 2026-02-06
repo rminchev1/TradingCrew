@@ -2658,3 +2658,44 @@ body.theme-bw .symbol-link {
 body.theme-bw .symbol-link:hover {
     color: #1D4ED8;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HISTORY SELECTOR - Analysis History Feature
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.history-row {
+    padding: 8px 12px;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.history-select {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    max-width: 300px;
+}
+
+.history-select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+#save-history-btn,
+#refresh-history-btn {
+    font-size: 0.75rem;
+}
+
+/* Light theme adjustments */
+body.theme-bw .history-row {
+    background: rgba(59, 130, 246, 0.03);
+    border-color: rgba(59, 130, 246, 0.15);
+}
+
+body.theme-bw .history-select {
+    background: #FFFFFF;
+    border-color: #CBD5E1;
+    color: #1E293B;
+}

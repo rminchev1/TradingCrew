@@ -87,6 +87,10 @@ class AppState:
         self.scanner_stage = ""  # Current stage: "fetching", "technical", "news", "ranking", "rationale", "complete"
         self.scanner_error = None
 
+        # History viewing state
+        self.viewing_history = False
+        self.historical_run = None
+
     def add_symbols_to_queue(self, symbols):
         """Add a list of symbols to the analysis queue."""
         self.analysis_queue.extend(symbols)

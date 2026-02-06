@@ -37,6 +37,40 @@ def create_reports_panel():
 
     # Navigation structure - grouped by workflow stage
     nav_section = html.Div([
+        # Row 0: History selector
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.I(className="fas fa-history me-2 text-muted"),
+                    dbc.Select(
+                        id="history-selector",
+                        options=[{"label": "Current Session", "value": "current"}],
+                        value="current",
+                        size="sm",
+                        className="history-select"
+                    ),
+                ], className="d-flex align-items-center")
+            ], lg=6, md=8),
+            dbc.Col([
+                dbc.ButtonGroup([
+                    dbc.Button(
+                        [html.I(className="fas fa-save me-1"), "Save"],
+                        id="save-history-btn",
+                        color="outline-primary",
+                        size="sm",
+                        title="Save current analysis to history"
+                    ),
+                    dbc.Button(
+                        [html.I(className="fas fa-sync-alt")],
+                        id="refresh-history-btn",
+                        color="outline-secondary",
+                        size="sm",
+                        title="Refresh history list"
+                    ),
+                ], size="sm")
+            ], lg=6, md=4, className="d-flex justify-content-end")
+        ], className="mb-2 history-row"),
+
         # Row 1: Symbol selector (left) + Current symbol (right)
         dbc.Row([
             dbc.Col([
