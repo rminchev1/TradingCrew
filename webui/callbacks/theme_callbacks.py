@@ -51,7 +51,7 @@ def register_theme_callbacks(app):
 
             // Return button content based on theme
             if (theme === 'bw') {
-                return ['B&W'];
+                return ['Light'];
             } else {
                 return ['Dark'];
             }

@@ -23,25 +23,25 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   BLACK & WHITE THEME
+   LIGHT (WHITE) THEME
    ═══════════════════════════════════════════════════════════════════════════ */
 body.theme-bw {
-    --bg-primary: #000000;
-    --bg-secondary: #111111;
-    --bg-tertiary: #222222;
-    --text-primary: #FFFFFF;
-    --text-secondary: #CCCCCC;
-    --text-muted: #888888;
-    --border-color: #333333;
-    --accent-primary: #FFFFFF;
-    --accent-secondary: #CCCCCC;
-    --accent-warning: #FFFFFF;
-    --accent-danger: #FFFFFF;
-    --card-bg: #111111;
-    --input-bg: #111111;
-    --shadow-color: rgba(255, 255, 255, 0.1);
-    --gradient-start: #000000;
-    --gradient-end: #111111;
+    --bg-primary: #F8FAFC;
+    --bg-secondary: #FFFFFF;
+    --bg-tertiary: #E2E8F0;
+    --text-primary: #1E293B;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --border-color: #CBD5E1;
+    --accent-primary: #3B82F6;
+    --accent-secondary: #10B981;
+    --accent-warning: #F59E0B;
+    --accent-danger: #EF4444;
+    --card-bg: #FFFFFF;
+    --input-bg: #FFFFFF;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --gradient-start: #F8FAFC;
+    --gradient-end: #FFFFFF;
 }
 
 body {
@@ -89,15 +89,15 @@ body {
 }
 
 body.theme-bw .btn-primary {
-    background-color: #FFFFFF;
-    border-color: #FFFFFF;
-    color: #000000;
+    background-color: #3B82F6;
+    border-color: #3B82F6;
+    color: #FFFFFF;
 }
 
 body.theme-bw .btn-primary:hover {
-    background-color: #CCCCCC;
-    border-color: #CCCCCC;
-    color: #000000;
+    background-color: #2563EB;
+    border-color: #2563EB;
+    color: #FFFFFF;
 }
 
 /* Navigation buttons */
@@ -157,14 +157,14 @@ body.theme-bw .btn-primary:hover {
 }
 
 body.theme-bw .form-control {
-    background-color: #000000;
-    border-color: #444444;
-    color: #FFFFFF;
+    background-color: #FFFFFF;
+    border-color: #CBD5E1;
+    color: #1E293B;
 }
 
 body.theme-bw .form-control:focus {
-    border-color: #FFFFFF;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 /* Tabs styling */
@@ -2151,239 +2151,297 @@ body.theme-bw .form-control:focus {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   BLACK & WHITE THEME - COMPREHENSIVE OVERRIDES
+   LIGHT THEME - COMPREHENSIVE OVERRIDES
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* B&W Theme - Cards and Containers */
+/* Light Theme - Cards and Containers */
 body.theme-bw .card {
-    background-color: #111111;
-    border-color: #333333;
+    background-color: #FFFFFF;
+    border-color: #E2E8F0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 body.theme-bw .card-header {
-    background-color: #1A1A1A;
-    border-color: #333333;
+    background-color: #F8FAFC;
+    border-color: #E2E8F0;
+    color: #1E293B;
 }
 
 body.theme-bw .card-body {
-    background-color: #111111;
+    background-color: #FFFFFF;
+    color: #1E293B;
 }
 
-/* B&W Theme - Navigation */
+/* Light Theme - Navigation */
 body.theme-bw .nav-group {
-    background: rgba(20, 20, 20, 0.8);
-    border-color: #333333;
+    background: rgba(248, 250, 252, 0.9);
+    border-color: #E2E8F0;
 }
 
 body.theme-bw .nav-group-label {
-    color: #888888;
-    border-color: #444444;
+    color: #64748B;
+    border-color: #CBD5E1;
 }
 
 body.theme-bw .report-nav-pill {
-    color: #AAAAAA !important;
+    color: #475569 !important;
 }
 
 body.theme-bw .report-nav-pill:hover {
-    color: #FFFFFF !important;
-    background: rgba(255, 255, 255, 0.1) !important;
+    color: #1E293B !important;
+    background: rgba(59, 130, 246, 0.1) !important;
 }
 
 body.theme-bw .report-nav-pill.active,
 body.theme-bw .nav-pills .nav-link.active.report-nav-pill {
-    color: #000000 !important;
-    background: #FFFFFF !important;
-    box-shadow: 0 2px 6px rgba(255, 255, 255, 0.2) !important;
+    color: #FFFFFF !important;
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3) !important;
 }
 
-/* B&W Theme - Symbol Buttons */
+/* Light Theme - Symbol Buttons */
 body.theme-bw .symbol-btn {
-    background-color: #222222 !important;
-    border-color: #444444 !important;
-    color: #CCCCCC !important;
+    background-color: #F1F5F9 !important;
+    border-color: #CBD5E1 !important;
+    color: #475569 !important;
 }
 
 body.theme-bw .symbol-btn:hover {
-    background-color: #333333 !important;
-    border-color: #666666 !important;
-    color: #FFFFFF !important;
+    background-color: #E2E8F0 !important;
+    border-color: #94A3B8 !important;
+    color: #1E293B !important;
 }
 
 body.theme-bw .symbol-btn.active {
-    background: #FFFFFF !important;
-    color: #000000 !important;
-    border-color: #FFFFFF !important;
-}
-
-/* B&W Theme - Current Symbol Badge */
-body.theme-bw .current-symbol-badge {
-    background: #FFFFFF;
-    color: #000000;
-    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
-}
-
-/* B&W Theme - Tabs */
-body.theme-bw .reports-tabs-hidden-nav .tab-content {
-    background: linear-gradient(135deg, #000000 0%, #111111 100%);
-    border-color: #333333;
-}
-
-/* B&W Theme - Markdown Content */
-body.theme-bw .enhanced-markdown-content {
-    background: linear-gradient(135deg, #000000 0%, #111111 100%) !important;
-    border-color: #333333 !important;
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
     color: #FFFFFF !important;
+    border-color: #3B82F6 !important;
 }
 
-/* B&W Theme - Progress Bars */
+/* Light Theme - Current Symbol Badge */
+body.theme-bw .current-symbol-badge {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Light Theme - Tabs */
+body.theme-bw .reports-tabs-hidden-nav .tab-content {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+}
+
+/* Light Theme - Markdown Content */
+body.theme-bw .enhanced-markdown-content {
+    background: #FFFFFF !important;
+    border-color: #E2E8F0 !important;
+    color: #1E293B !important;
+}
+
+/* Light Theme - Progress Bars */
 body.theme-bw .progress {
-    background-color: #222222;
+    background-color: #E2E8F0;
 }
 
 body.theme-bw .progress-bar {
-    background-color: #FFFFFF;
+    background-color: #3B82F6;
 }
 
-/* B&W Theme - Buttons */
+/* Light Theme - Buttons */
 body.theme-bw .btn-success {
-    background-color: #FFFFFF;
-    border-color: #FFFFFF;
-    color: #000000;
+    background-color: #10B981;
+    border-color: #10B981;
+    color: #FFFFFF;
 }
 
 body.theme-bw .btn-success:hover {
-    background-color: #CCCCCC;
-    border-color: #CCCCCC;
-    color: #000000;
+    background-color: #059669;
+    border-color: #059669;
+    color: #FFFFFF;
 }
 
 body.theme-bw .btn-danger {
-    background-color: #666666;
-    border-color: #666666;
+    background-color: #EF4444;
+    border-color: #EF4444;
     color: #FFFFFF;
 }
 
 body.theme-bw .btn-outline-secondary {
-    border-color: #666666;
-    color: #CCCCCC;
+    border-color: #CBD5E1;
+    color: #475569;
 }
 
 body.theme-bw .btn-outline-secondary:hover {
-    background-color: #333333;
-    border-color: #888888;
-    color: #FFFFFF;
+    background-color: #F1F5F9;
+    border-color: #94A3B8;
+    color: #1E293B;
 }
 
-/* B&W Theme - Account Bar */
+/* Light Theme - Account Bar */
 body.theme-bw .compact-account-bar {
-    background: linear-gradient(135deg, #111111 0%, #1A1A1A 100%);
-    border-color: #333333;
+    background: linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%);
+    border-color: #E2E8F0;
 }
 
 body.theme-bw .account-stat-card {
-    background: rgba(30, 30, 30, 0.8);
-    border-color: #333333;
+    background: #FFFFFF;
+    border-color: #E2E8F0;
 }
 
-/* B&W Theme - Chart Panel */
+/* Light Theme - Chart Panel */
 body.theme-bw .chart-card {
-    background-color: #111111;
-    border-color: #333333;
+    background-color: #FFFFFF;
+    border-color: #E2E8F0;
 }
 
-/* B&W Theme - Trading Panel */
+/* Light Theme - Trading Panel */
 body.theme-bw .trading-panel-card {
-    background-color: #111111;
-    border-color: #333333;
+    background-color: #FFFFFF;
+    border-color: #E2E8F0;
 }
 
-/* B&W Theme - Signal Card */
+/* Light Theme - Signal Card */
 body.theme-bw .signal-card {
-    background: #1A1A1A;
-    border-color: #333333;
+    background: #F8FAFC;
+    border-color: #E2E8F0;
 }
 
-/* B&W Theme - Text Colors */
+/* Light Theme - Text Colors */
 body.theme-bw .text-muted {
-    color: #888888 !important;
+    color: #64748B !important;
 }
 
 body.theme-bw .text-success {
-    color: #FFFFFF !important;
+    color: #10B981 !important;
 }
 
 body.theme-bw .text-danger {
-    color: #999999 !important;
+    color: #EF4444 !important;
 }
 
 body.theme-bw .text-warning {
-    color: #CCCCCC !important;
+    color: #F59E0B !important;
 }
 
 body.theme-bw .text-primary {
-    color: #FFFFFF !important;
+    color: #3B82F6 !important;
 }
 
-/* B&W Theme - Select/Dropdown */
+body.theme-bw h1, body.theme-bw h2, body.theme-bw h3,
+body.theme-bw h4, body.theme-bw h5, body.theme-bw h6 {
+    color: #1E293B;
+}
+
+body.theme-bw p, body.theme-bw span, body.theme-bw div {
+    color: inherit;
+}
+
+/* Light Theme - Select/Dropdown */
 body.theme-bw .form-select,
 body.theme-bw select {
-    background-color: #111111;
-    border-color: #444444;
-    color: #FFFFFF;
-}
-
-/* B&W Theme - Checklist/Radio */
-body.theme-bw .form-check-input:checked {
     background-color: #FFFFFF;
-    border-color: #FFFFFF;
+    border-color: #CBD5E1;
+    color: #1E293B;
 }
 
-/* B&W Theme - Collapsible Headers */
+/* Light Theme - Checklist/Radio */
+body.theme-bw .form-check-input:checked {
+    background-color: #3B82F6;
+    border-color: #3B82F6;
+}
+
+body.theme-bw .form-check-label {
+    color: #1E293B;
+}
+
+/* Light Theme - Collapsible Headers */
 body.theme-bw .card-header[style*="cursor: pointer"] {
-    background-color: #1A1A1A;
+    background-color: #F8FAFC;
 }
 
 body.theme-bw .card-header[style*="cursor: pointer"]:hover {
-    background-color: #222222;
+    background-color: #F1F5F9;
 }
 
-/* B&W Theme - Scrollbars */
+/* Light Theme - Scrollbars */
 body.theme-bw ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 body.theme-bw ::-webkit-scrollbar-track {
-    background: #111111;
+    background: #F1F5F9;
 }
 
 body.theme-bw ::-webkit-scrollbar-thumb {
-    background: #444444;
+    background: #CBD5E1;
     border-radius: 4px;
 }
 
 body.theme-bw ::-webkit-scrollbar-thumb:hover {
-    background: #666666;
+    background: #94A3B8;
 }
 
-/* B&W Theme - Symbol Navigation Row */
+/* Light Theme - Symbol Navigation Row */
 body.theme-bw .symbol-nav-row {
-    background: linear-gradient(135deg, rgba(20, 20, 20, 0.9) 0%, rgba(30, 30, 30, 0.9) 100%);
-    border-color: #333333;
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%);
+    border-color: #E2E8F0;
 }
 
-/* B&W Theme - Modals */
+/* Light Theme - Modals */
 body.theme-bw .modal-content {
-    background-color: #111111;
-    border-color: #333333;
+    background-color: #FFFFFF;
+    border-color: #E2E8F0;
 }
 
 body.theme-bw .modal-header {
-    background-color: #1A1A1A;
-    border-color: #333333;
+    background-color: #F8FAFC;
+    border-color: #E2E8F0;
+    color: #1E293B;
 }
 
 body.theme-bw .modal-footer {
-    background-color: #1A1A1A;
-    border-color: #333333;
+    background-color: #F8FAFC;
+    border-color: #E2E8F0;
+}
+
+/* Light Theme - Tables */
+body.theme-bw .table {
+    color: #1E293B;
+}
+
+body.theme-bw .table thead th {
+    background-color: #F8FAFC;
+    color: #475569;
+    border-color: #E2E8F0;
+}
+
+body.theme-bw .table td {
+    border-color: #E2E8F0;
+}
+
+/* Light Theme - Alerts */
+body.theme-bw .alert {
+    border-width: 1px;
+}
+
+/* Light Theme - Settings Card */
+body.theme-bw .settings-card {
+    background-color: #F8FAFC;
+    border-color: #E2E8F0;
+}
+
+/* Light Theme - Nav Tabs */
+body.theme-bw .nav-tabs {
+    border-color: #E2E8F0;
+}
+
+body.theme-bw .nav-tabs .nav-link {
+    color: #64748B;
+}
+
+body.theme-bw .nav-tabs .nav-link.active {
+    color: #1E293B;
+    background-color: #FFFFFF;
+    border-color: #E2E8F0 #E2E8F0 #FFFFFF;
 }
