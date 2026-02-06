@@ -1,9 +1,63 @@
 /* Custom CSS for TradingAgents Dash UI */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   THEME VARIABLES - Dark Theme (Default)
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+    --bg-primary: #0F172A;
+    --bg-secondary: #1E293B;
+    --bg-tertiary: #334155;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --border-color: #334155;
+    --accent-primary: #3B82F6;
+    --accent-secondary: #10B981;
+    --accent-warning: #F59E0B;
+    --accent-danger: #EF4444;
+    --card-bg: #1E293B;
+    --input-bg: #1E293B;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --gradient-start: #0F172A;
+    --gradient-end: #1E293B;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLACK & WHITE THEME
+   ═══════════════════════════════════════════════════════════════════════════ */
+body.theme-bw {
+    --bg-primary: #000000;
+    --bg-secondary: #111111;
+    --bg-tertiary: #222222;
+    --text-primary: #FFFFFF;
+    --text-secondary: #CCCCCC;
+    --text-muted: #888888;
+    --border-color: #333333;
+    --accent-primary: #FFFFFF;
+    --accent-secondary: #CCCCCC;
+    --accent-warning: #FFFFFF;
+    --accent-danger: #FFFFFF;
+    --card-bg: #111111;
+    --input-bg: #111111;
+    --shadow-color: rgba(255, 255, 255, 0.1);
+    --gradient-start: #000000;
+    --gradient-end: #111111;
+}
+
 body {
-    background-color: #0F172A;
-    color: #F1F5F9;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+    transition: all 0.3s ease;
+}
+
+.theme-toggle-btn:hover {
+    transform: scale(1.05);
 }
 
 .dash-markdown {
@@ -14,21 +68,36 @@ body {
 /* Card styling */
 .card {
     border-radius: 10px;
-    border: 1px solid #334155;
-    background-color: #1E293B;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
     margin-bottom: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px var(--shadow-color);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Button styling */
 .btn-primary {
-    background-color: #3B82F6;
-    border-color: #3B82F6;
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
-    background-color: #2563EB;
-    border-color: #2563EB;
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    filter: brightness(0.9);
+}
+
+body.theme-bw .btn-primary {
+    background-color: #FFFFFF;
+    border-color: #FFFFFF;
+    color: #000000;
+}
+
+body.theme-bw .btn-primary:hover {
+    background-color: #CCCCCC;
+    border-color: #CCCCCC;
+    color: #000000;
 }
 
 /* Navigation buttons */
@@ -61,29 +130,41 @@ body {
 
 /* Table styling */
 .table {
-    color: #F1F5F9;
-    border-color: #334155;
+    color: var(--text-primary);
+    border-color: var(--border-color);
 }
 
 .table thead th {
-    border-bottom: 2px solid #334155;
+    border-bottom: 2px solid var(--border-color);
 }
 
 .table td, .table th {
-    border-top: 1px solid #334155;
+    border-top: 1px solid var(--border-color);
 }
 
 /* Input styling */
 .form-control {
-    background-color: #1E293B;
-    border-color: #334155;
-    color: #F1F5F9;
+    background-color: var(--input-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
 }
 
 .form-control:focus {
-    background-color: #1E293B;
-    border-color: #3B82F6;
-    color: #F1F5F9;
+    background-color: var(--input-bg);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+body.theme-bw .form-control {
+    background-color: #000000;
+    border-color: #444444;
+    color: #FFFFFF;
+}
+
+body.theme-bw .form-control:focus {
+    border-color: #FFFFFF;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
 /* Tabs styling */
@@ -2067,4 +2148,242 @@ body {
         flex-wrap: wrap;
         justify-content: center;
     }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLACK & WHITE THEME - COMPREHENSIVE OVERRIDES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* B&W Theme - Cards and Containers */
+body.theme-bw .card {
+    background-color: #111111;
+    border-color: #333333;
+}
+
+body.theme-bw .card-header {
+    background-color: #1A1A1A;
+    border-color: #333333;
+}
+
+body.theme-bw .card-body {
+    background-color: #111111;
+}
+
+/* B&W Theme - Navigation */
+body.theme-bw .nav-group {
+    background: rgba(20, 20, 20, 0.8);
+    border-color: #333333;
+}
+
+body.theme-bw .nav-group-label {
+    color: #888888;
+    border-color: #444444;
+}
+
+body.theme-bw .report-nav-pill {
+    color: #AAAAAA !important;
+}
+
+body.theme-bw .report-nav-pill:hover {
+    color: #FFFFFF !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.theme-bw .report-nav-pill.active,
+body.theme-bw .nav-pills .nav-link.active.report-nav-pill {
+    color: #000000 !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 2px 6px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* B&W Theme - Symbol Buttons */
+body.theme-bw .symbol-btn {
+    background-color: #222222 !important;
+    border-color: #444444 !important;
+    color: #CCCCCC !important;
+}
+
+body.theme-bw .symbol-btn:hover {
+    background-color: #333333 !important;
+    border-color: #666666 !important;
+    color: #FFFFFF !important;
+}
+
+body.theme-bw .symbol-btn.active {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    border-color: #FFFFFF !important;
+}
+
+/* B&W Theme - Current Symbol Badge */
+body.theme-bw .current-symbol-badge {
+    background: #FFFFFF;
+    color: #000000;
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+/* B&W Theme - Tabs */
+body.theme-bw .reports-tabs-hidden-nav .tab-content {
+    background: linear-gradient(135deg, #000000 0%, #111111 100%);
+    border-color: #333333;
+}
+
+/* B&W Theme - Markdown Content */
+body.theme-bw .enhanced-markdown-content {
+    background: linear-gradient(135deg, #000000 0%, #111111 100%) !important;
+    border-color: #333333 !important;
+    color: #FFFFFF !important;
+}
+
+/* B&W Theme - Progress Bars */
+body.theme-bw .progress {
+    background-color: #222222;
+}
+
+body.theme-bw .progress-bar {
+    background-color: #FFFFFF;
+}
+
+/* B&W Theme - Buttons */
+body.theme-bw .btn-success {
+    background-color: #FFFFFF;
+    border-color: #FFFFFF;
+    color: #000000;
+}
+
+body.theme-bw .btn-success:hover {
+    background-color: #CCCCCC;
+    border-color: #CCCCCC;
+    color: #000000;
+}
+
+body.theme-bw .btn-danger {
+    background-color: #666666;
+    border-color: #666666;
+    color: #FFFFFF;
+}
+
+body.theme-bw .btn-outline-secondary {
+    border-color: #666666;
+    color: #CCCCCC;
+}
+
+body.theme-bw .btn-outline-secondary:hover {
+    background-color: #333333;
+    border-color: #888888;
+    color: #FFFFFF;
+}
+
+/* B&W Theme - Account Bar */
+body.theme-bw .compact-account-bar {
+    background: linear-gradient(135deg, #111111 0%, #1A1A1A 100%);
+    border-color: #333333;
+}
+
+body.theme-bw .account-stat-card {
+    background: rgba(30, 30, 30, 0.8);
+    border-color: #333333;
+}
+
+/* B&W Theme - Chart Panel */
+body.theme-bw .chart-card {
+    background-color: #111111;
+    border-color: #333333;
+}
+
+/* B&W Theme - Trading Panel */
+body.theme-bw .trading-panel-card {
+    background-color: #111111;
+    border-color: #333333;
+}
+
+/* B&W Theme - Signal Card */
+body.theme-bw .signal-card {
+    background: #1A1A1A;
+    border-color: #333333;
+}
+
+/* B&W Theme - Text Colors */
+body.theme-bw .text-muted {
+    color: #888888 !important;
+}
+
+body.theme-bw .text-success {
+    color: #FFFFFF !important;
+}
+
+body.theme-bw .text-danger {
+    color: #999999 !important;
+}
+
+body.theme-bw .text-warning {
+    color: #CCCCCC !important;
+}
+
+body.theme-bw .text-primary {
+    color: #FFFFFF !important;
+}
+
+/* B&W Theme - Select/Dropdown */
+body.theme-bw .form-select,
+body.theme-bw select {
+    background-color: #111111;
+    border-color: #444444;
+    color: #FFFFFF;
+}
+
+/* B&W Theme - Checklist/Radio */
+body.theme-bw .form-check-input:checked {
+    background-color: #FFFFFF;
+    border-color: #FFFFFF;
+}
+
+/* B&W Theme - Collapsible Headers */
+body.theme-bw .card-header[style*="cursor: pointer"] {
+    background-color: #1A1A1A;
+}
+
+body.theme-bw .card-header[style*="cursor: pointer"]:hover {
+    background-color: #222222;
+}
+
+/* B&W Theme - Scrollbars */
+body.theme-bw ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body.theme-bw ::-webkit-scrollbar-track {
+    background: #111111;
+}
+
+body.theme-bw ::-webkit-scrollbar-thumb {
+    background: #444444;
+    border-radius: 4px;
+}
+
+body.theme-bw ::-webkit-scrollbar-thumb:hover {
+    background: #666666;
+}
+
+/* B&W Theme - Symbol Navigation Row */
+body.theme-bw .symbol-nav-row {
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.9) 0%, rgba(30, 30, 30, 0.9) 100%);
+    border-color: #333333;
+}
+
+/* B&W Theme - Modals */
+body.theme-bw .modal-content {
+    background-color: #111111;
+    border-color: #333333;
+}
+
+body.theme-bw .modal-header {
+    background-color: #1A1A1A;
+    border-color: #333333;
+}
+
+body.theme-bw .modal-footer {
+    background-color: #1A1A1A;
+    border-color: #333333;
 }
