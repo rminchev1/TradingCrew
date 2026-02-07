@@ -19,6 +19,7 @@ import logging
 from webui.config.constants import APP_CONFIG, COLORS
 from webui.layout import create_main_layout
 from webui.callbacks import register_all_callbacks
+from webui.utils.log_handler import setup_log_capture
 
 
 def apply_sequential_mode_fix():
@@ -74,7 +75,10 @@ def apply_sequential_mode_fix():
 
 def create_app():
     """Create and configure the Dash application"""
-    
+
+    # Setup log capture for real-time streaming
+    setup_log_capture()
+
     # Apply the sequential mode fix first
     apply_sequential_mode_fix()
     

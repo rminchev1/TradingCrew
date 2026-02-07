@@ -16,6 +16,7 @@ from webui.components.alpaca_account import render_compact_account_bar, render_p
 from webui.components.scanner_panel import create_scanner_panel
 from webui.components.ticker_progress_panel import create_ticker_progress_panel
 from webui.components.watchlist_panel import create_watchlist_section
+from webui.components.log_panel import create_log_panel
 from webui.config.constants import COLORS, REFRESH_INTERVALS
 
 
@@ -301,6 +302,9 @@ def create_main_layout():
 
         # Agent Reports
         reports_section,
+
+        # Application Logs (Live Streaming)
+        create_log_panel(),
 
         # Hidden components
         hidden_components,
