@@ -16,12 +16,12 @@ except ImportError:
 def create_trader(llm, memory, config=None):
     def trader_node(state, name):
         company_name = state["company_of_interest"]
-        investment_plan = state["investment_plan"]
-        market_research_report = state["market_report"]
-        sentiment_report = state["sentiment_report"]
-        news_report = state["news_report"]
-        fundamentals_report = state["fundamentals_report"]
-        macro_report = state["macro_report"]
+        investment_plan = state.get("investment_plan", "")
+        market_research_report = state.get("market_report", "")
+        sentiment_report = state.get("sentiment_report", "")
+        news_report = state.get("news_report", "")
+        fundamentals_report = state.get("fundamentals_report", "")
+        macro_report = state.get("macro_report", "")
         options_report = state.get("options_report", "")
         
         # Determine current position from live Alpaca account (fallback to state)

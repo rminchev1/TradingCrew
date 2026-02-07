@@ -166,11 +166,11 @@ class AppState:
         self.symbol_states[symbol] = {
             "agent_statuses": {
                 "Market Analyst": "pending",
+                "Options Analyst": "pending",
                 "Social Analyst": "pending",
                 "News Analyst": "pending",
                 "Fundamentals Analyst": "pending",
                 "Macro Analyst": "pending",
-                "Options Analyst": "pending",
                 "Bull Researcher": "pending",
                 "Bear Researcher": "pending",
                 "Research Manager": "pending",
@@ -182,11 +182,11 @@ class AppState:
             },
             "current_reports": {
                 "market_report": None,
+                "options_report": None,
                 "sentiment_report": None,
                 "news_report": None,
                 "fundamentals_report": None,
                 "macro_report": None,
-                "options_report": None,
                 "bull_report": None,
                 "bear_report": None,
                 "research_manager_report": None,
@@ -200,11 +200,11 @@ class AppState:
             },
             "agent_prompts": {
                 "market_report": None,
+                "options_report": None,
                 "sentiment_report": None,
                 "news_report": None,
                 "fundamentals_report": None,
                 "macro_report": None,
-                "options_report": None,
                 "bull_report": None,
                 "bear_report": None,
                 "research_manager_report": None,
@@ -356,6 +356,7 @@ class AppState:
             "news_report": ["news analyst", "news"],
             "fundamentals_report": ["fundamentals analyst", "fundamental analyst", "fundamentals"],
             "macro_report": ["macro analyst", "macro", "macroeconomic analyst"],
+            "options_report": ["options analyst", "options", "options market analyst"],
             "bull_report": ["bull researcher", "bull", "optimistic researcher"],
             "bear_report": ["bear researcher", "bear", "pessimistic researcher"],
             "research_manager_report": ["research manager", "manager"],
@@ -398,6 +399,7 @@ class AppState:
                 "analysis_complete": False,
                 "current_reports": {
                     "market_report": None,
+                    "options_report": None,
                     "sentiment_report": None,
                     "news_report": None,
                     "fundamentals_report": None,
@@ -414,6 +416,7 @@ class AppState:
                 },
                 "agent_prompts": {
                     "market_report": None,
+                    "options_report": None,
                     "sentiment_report": None,
                     "news_report": None,
                     "fundamentals_report": None,
@@ -430,7 +433,8 @@ class AppState:
                 },
                 "agent_statuses": {
                     "Market Analyst": "pending",
-                    "Social Analyst": "pending", 
+                    "Options Analyst": "pending",
+                    "Social Analyst": "pending",
                     "News Analyst": "pending",
                     "Fundamentals Analyst": "pending",
                     "Macro Analyst": "pending",

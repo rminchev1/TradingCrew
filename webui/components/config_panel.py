@@ -75,10 +75,10 @@ def create_trading_control_panel():
                                 id="analyst-checklist",
                                 options=[
                                     {"label": " Market", "value": "market"},
+                                    {"label": " Options", "value": "options"},
                                     {"label": " Social", "value": "social"},
-                                    {"label": " News", "value": "news"},
                                 ],
-                                value=["market", "social", "news"],
+                                value=["market", "options", "social"],
                                 inline=True,
                                 className="mb-1"
                             ),
@@ -87,11 +87,11 @@ def create_trading_control_panel():
                             dbc.Checklist(
                                 id="analyst-checklist-2",
                                 options=[
+                                    {"label": " News", "value": "news"},
                                     {"label": " Fundamentals", "value": "fundamentals"},
                                     {"label": " Macro", "value": "macro"},
-                                    {"label": " Options", "value": "options"},
                                 ],
-                                value=["fundamentals", "macro"],
+                                value=["news", "fundamentals", "macro"],
                                 inline=True,
                             ),
                         ], width=12),
@@ -104,7 +104,7 @@ def create_trading_control_panel():
                         dbc.Checkbox(id="analyst-news", value=True, style={"display": "none"}),
                         dbc.Checkbox(id="analyst-fundamentals", value=True, style={"display": "none"}),
                         dbc.Checkbox(id="analyst-macro", value=True, style={"display": "none"}),
-                        dbc.Checkbox(id="analyst-options", value=False, style={"display": "none"}),
+                        dbc.Checkbox(id="analyst-options", value=True, style={"display": "none"}),
                     ], style={"display": "none"}),
 
                     html.Hr(className="my-2"),

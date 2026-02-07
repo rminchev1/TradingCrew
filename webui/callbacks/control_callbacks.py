@@ -461,14 +461,16 @@ def register_control_callbacks(app):
                                allow_shorts, loop_enabled, loop_interval, trade_enabled, trade_amount,
                                market_hour_enabled, market_hours_input):
         # Parse selected analysts from checklists
+        # Checklist 1: Market, Options, Social
+        # Checklist 2: News, Fundamentals, Macro
         analyst_checklist_1 = analyst_checklist_1 or []
         analyst_checklist_2 = analyst_checklist_2 or []
         analysts_market = "market" in analyst_checklist_1
+        analysts_options = "options" in analyst_checklist_1
         analysts_social = "social" in analyst_checklist_1
-        analysts_news = "news" in analyst_checklist_1
+        analysts_news = "news" in analyst_checklist_2
         analysts_fundamentals = "fundamentals" in analyst_checklist_2
         analysts_macro = "macro" in analyst_checklist_2
-        analysts_options = "options" in analyst_checklist_2
         """Handle control button clicks"""
         # Detect which property triggered this callback
         triggered_prop = None

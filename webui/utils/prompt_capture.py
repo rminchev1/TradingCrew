@@ -86,12 +86,13 @@ class PromptCapture:
         """
         return {
             "market_report": "Market analyst prompt not yet captured from live execution",
-            "sentiment_report": "Social media analyst prompt not yet captured from live execution", 
+            "sentiment_report": "Social media analyst prompt not yet captured from live execution",
             "news_report": "News analyst prompt not yet captured from live execution",
             "fundamentals_report": "Fundamentals analyst prompt not yet captured from live execution",
             "macro_report": "Macro analyst prompt not yet captured from live execution",
+            "options_report": "Options analyst prompt not yet captured from live execution",
             "bull_report": "Bull researcher prompt not yet captured from live execution",
-            "bear_report": "Bear researcher prompt not yet captured from live execution", 
+            "bear_report": "Bear researcher prompt not yet captured from live execution",
             "research_manager_report": "Research manager prompt not yet captured from live execution",
             "trader_investment_plan": "Trader prompt not yet captured from live execution"
         }

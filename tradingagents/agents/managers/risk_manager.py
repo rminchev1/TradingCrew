@@ -24,12 +24,13 @@ def create_risk_manager(llm, memory, config=None):
 
         history = state["risk_debate_state"]["history"]
         risk_debate_state = state["risk_debate_state"]
-        market_research_report = state["market_report"]
-        news_report = state["news_report"]
-        fundamentals_report = state["news_report"]
-        sentiment_report = state["sentiment_report"]
-        trader_plan = state["investment_plan"]
-        macro_report = state["macro_report"]
+        market_research_report = state.get("market_report", "")
+        news_report = state.get("news_report", "")
+        fundamentals_report = state.get("fundamentals_report", "")
+        sentiment_report = state.get("sentiment_report", "")
+        trader_plan = state.get("investment_plan", "")
+        macro_report = state.get("macro_report", "")
+        options_report = state.get("options_report", "")
 
         # Get trading mode from config
         allow_shorts = config.get("allow_shorts", False) if config else False

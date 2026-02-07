@@ -18,11 +18,11 @@ def create_bull_researcher(llm, memory):
         bull_history = investment_debate_state.get("bull_history", "")
 
         current_response = investment_debate_state.get("current_response", "")
-        market_research_report = state["market_report"]
-        sentiment_report = state["sentiment_report"]
-        news_report = state["news_report"]
-        fundamentals_report = state["fundamentals_report"]
-        macro_report = state["macro_report"]
+        market_research_report = state.get("market_report", "")
+        sentiment_report = state.get("sentiment_report", "")
+        news_report = state.get("news_report", "")
+        fundamentals_report = state.get("fundamentals_report", "")
+        macro_report = state.get("macro_report", "")
         options_report = state.get("options_report", "")
 
         curr_situation = f"{macro_report}\n\n{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{options_report}"

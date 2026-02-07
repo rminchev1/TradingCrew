@@ -90,11 +90,11 @@ def create_reports_panel():
                 html.Span("Analysts", className="nav-group-label"),
                 dbc.Nav([
                     dbc.NavItem(dbc.NavLink("📊 Market", id="nav-tab-market", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink("📉 Options", id="nav-tab-options", className="report-nav-pill")),
                     dbc.NavItem(dbc.NavLink("📱 Social", id="nav-tab-social", className="report-nav-pill")),
                     dbc.NavItem(dbc.NavLink("📰 News", id="nav-tab-news", className="report-nav-pill")),
                     dbc.NavItem(dbc.NavLink("📈 Fundamentals", id="nav-tab-fundamentals", className="report-nav-pill")),
                     dbc.NavItem(dbc.NavLink("🌍 Macro", id="nav-tab-macro", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("📉 Options", id="nav-tab-options", className="report-nav-pill")),
                 ], pills=True, className="nav-pills-group")
             ], className="nav-group"),
 
@@ -129,6 +129,12 @@ def create_reports_panel():
                 label="Market", tab_id="market-analysis"
             ),
             dbc.Tab(
+                html.Div(id="options-analysis-tab-content", children=[
+                    dcc.Markdown("📉 **Loading Options Analysis...**", className='enhanced-markdown-content')
+                ]),
+                label="Options", tab_id="options-analysis"
+            ),
+            dbc.Tab(
                 html.Div(id="social-sentiment-tab-content", children=[
                     dcc.Markdown("📱 **Loading Social Sentiment...**", className='enhanced-markdown-content')
                 ]),
@@ -151,12 +157,6 @@ def create_reports_panel():
                     dcc.Markdown("🌍 **Loading Macro Analysis...**", className='enhanced-markdown-content')
                 ]),
                 label="Macro", tab_id="macro-analysis"
-            ),
-            dbc.Tab(
-                html.Div(id="options-analysis-tab-content", children=[
-                    dcc.Markdown("📉 **Loading Options Analysis...**", className='enhanced-markdown-content')
-                ]),
-                label="Options", tab_id="options-analysis"
             ),
             dbc.Tab(
                 html.Div(id="researcher-debate-tab-content", className="debate-content-wrapper", children=[

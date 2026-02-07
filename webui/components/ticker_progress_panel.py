@@ -9,11 +9,11 @@ from dash import html
 # Agent abbreviations mapping - ordered by execution phase
 ANALYST_AGENTS = {
     "MA": "Market Analyst",
+    "OP": "Options Analyst",
     "SA": "Social Analyst",
     "NA": "News Analyst",
     "FA": "Fundamentals Analyst",
     "MC": "Macro Analyst",
-    "OP": "Options Analyst",
 }
 
 RESEARCH_AGENTS = {

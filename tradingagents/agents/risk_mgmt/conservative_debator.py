@@ -21,11 +21,11 @@ def create_safe_debator(llm, config=None):
         current_risky_response = risk_debate_state.get("current_risky_response", "")
         current_neutral_response = risk_debate_state.get("current_neutral_response", "")
 
-        market_research_report = state["market_report"]
-        sentiment_report = state["sentiment_report"]
-        news_report = state["news_report"]
-        fundamentals_report = state["fundamentals_report"]
-        macro_report = state["macro_report"]
+        market_research_report = state.get("market_report", "")
+        sentiment_report = state.get("sentiment_report", "")
+        news_report = state.get("news_report", "")
+        fundamentals_report = state.get("fundamentals_report", "")
+        macro_report = state.get("macro_report", "")
         options_report = state.get("options_report", "")
 
         trader_decision = state["trader_investment_plan"]
