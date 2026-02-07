@@ -170,6 +170,7 @@ class AppState:
                 "News Analyst": "pending",
                 "Fundamentals Analyst": "pending",
                 "Macro Analyst": "pending",
+                "Options Analyst": "pending",
                 "Bull Researcher": "pending",
                 "Bear Researcher": "pending",
                 "Research Manager": "pending",
@@ -185,6 +186,7 @@ class AppState:
                 "news_report": None,
                 "fundamentals_report": None,
                 "macro_report": None,
+                "options_report": None,
                 "bull_report": None,
                 "bear_report": None,
                 "research_manager_report": None,
@@ -202,6 +204,7 @@ class AppState:
                 "news_report": None,
                 "fundamentals_report": None,
                 "macro_report": None,
+                "options_report": None,
                 "bull_report": None,
                 "bear_report": None,
                 "research_manager_report": None,
@@ -566,10 +569,11 @@ class AppState:
         # Map report types to agent names
         report_to_agent = {
             "market_report": "Market Analyst",
-            "sentiment_report": "Social Analyst", 
+            "sentiment_report": "Social Analyst",
             "news_report": "News Analyst",
             "fundamentals_report": "Fundamentals Analyst",
             "macro_report": "Macro Analyst",
+            "options_report": "Options Analyst",
             "bull_report": "Bull Researcher",
             "bear_report": "Bear Researcher",
             "research_manager_report": "Research Manager",
@@ -579,7 +583,7 @@ class AppState:
             "safe_report": "Safe Analyst",
             "neutral_report": "Neutral Analyst",
         }
-        
+
         # Determine the analyst execution sequence based on user selection (if available)
         default_sequence = [
             "Market Analyst",
@@ -587,6 +591,7 @@ class AppState:
             "News Analyst",
             "Fundamentals Analyst",
             "Macro Analyst",
+            "Options Analyst",
         ]
         # If the UI has stored the list of active analysts, respect that (and preserve order)
         if hasattr(self, "active_analysts") and self.active_analysts:
