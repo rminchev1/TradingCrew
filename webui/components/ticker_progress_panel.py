@@ -13,6 +13,7 @@ ANALYST_AGENTS = {
     "NA": "News Analyst",
     "FA": "Fundamentals Analyst",
     "MC": "Macro Analyst",
+    "OP": "Options Analyst",
 }
 
 RESEARCH_AGENTS = {

@@ -604,7 +604,7 @@ class AppState:
             analyst_sequence = default_sequence
         
         # Update analyst reports and manage status transitions
-        for report_type in ["market_report", "sentiment_report", "news_report", "fundamentals_report", "macro_report"]:
+        for report_type in ["market_report", "sentiment_report", "news_report", "fundamentals_report", "macro_report", "options_report"]:
             if report_type in chunk:
                 new_report = chunk[report_type]
                 # Skip if report content is None or empty/whitespace only
