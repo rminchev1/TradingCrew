@@ -101,7 +101,7 @@ def register_ux_callbacks(app):
             is_analyzing = current_symbol in app_state.analyzing_symbols
             if is_analyzing:
                 return html.Div([
-                    dbc.Spinner(size="sm", color="primary", className="me-2"),
+                    dbc.Spinner(size="sm", color="primary", spinner_class_name="me-2"),
                     html.Span("Analyzing...", className="text-muted small")
                 ], className="text-center py-2")
             return html.Div(

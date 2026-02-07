@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from webui.utils.state import app_state
 from webui.components.analysis import start_analysis
+from webui.utils.history import save_analysis_run
 
 # Configuration for parallel ticker analysis
 MAX_PARALLEL_TICKERS = 3  # Maximum number of tickers to analyze in parallel
@@ -639,6 +640,14 @@ def register_control_callbacks(app):
                                 print(f"[MARKET_HOUR] {symbol} raised exception: {e}")
                     
                     if not app_state.stop_market_hour:
+                        # Auto-save analysis after market hour analysis completes
+                        try:
+                            run_id = save_analysis_run(app_state, symbols)
+                            if run_id:
+                                print(f"[AUTO-SAVE] Market hour {next_hour}:00 analysis saved: {run_id}")
+                        except Exception as e:
+                            print(f"[AUTO-SAVE] Error saving market hour analysis: {e}")
+
                         print(f"[MARKET_HOUR] Analysis completed for {next_hour}:00. Waiting for next execution time.")
             
             elif loop_enabled:
@@ -700,7 +709,15 @@ def register_control_callbacks(app):
 
                     if app_state.stop_loop:
                         break
-                    
+
+                    # Auto-save analysis after each loop iteration
+                    try:
+                        run_id = save_analysis_run(app_state, symbols)
+                        if run_id:
+                            print(f"[AUTO-SAVE] Loop iteration {loop_iteration} saved: {run_id}")
+                    except Exception as e:
+                        print(f"[AUTO-SAVE] Error saving loop iteration: {e}")
+
                     print(f"[LOOP] Iteration {loop_iteration} completed. Waiting {app_state.loop_interval_minutes} minutes...")
                     
                     # Wait for the specified interval (checking for stop every 30 seconds)
@@ -755,7 +772,17 @@ def register_control_callbacks(app):
                                 print(f"[PARALLEL] {sym} analysis failed: {error}")
                         except Exception as e:
                             print(f"[PARALLEL] {symbol} analysis raised exception: {e}")
-            
+
+                # Auto-save analysis after single run completes
+                try:
+                    run_id = save_analysis_run(app_state, symbols)
+                    if run_id:
+                        print(f"[AUTO-SAVE] Analysis saved: {run_id}")
+                    else:
+                        print("[AUTO-SAVE] No data to save or save failed")
+                except Exception as e:
+                    print(f"[AUTO-SAVE] Error saving analysis: {e}")
+
             app_state.analysis_running = False
 
         if not app_state.analysis_running:

@@ -26,10 +26,11 @@ def register_history_callbacks(app):
         Output("history-selector", "options"),
         [Input("refresh-history-btn", "n_clicks"),
          Input("save-history-btn", "n_clicks"),
-         Input("reports-panel-collapse", "is_open")],
+         Input("reports-panel-collapse", "is_open"),
+         Input("refresh-interval", "n_intervals")],
         prevent_initial_call=False
     )
-    def refresh_history_dropdown(refresh_clicks, save_clicks, is_open):
+    def refresh_history_dropdown(refresh_clicks, save_clicks, is_open, n_intervals):
         """Refresh the history dropdown options."""
         options = [{"label": "📍 Current Session", "value": "current"}]
 
@@ -101,6 +102,8 @@ def register_history_callbacks(app):
         """Load a historical run into the reports view."""
         if not run_id or run_id == "current":
             # Switch back to current session
+            app_state.viewing_history = False
+            app_state.historical_run = None
             # Re-trigger the normal report pagination update
             symbols = list(app_state.symbol_states.keys())
             if symbols:
@@ -130,8 +133,8 @@ def register_history_callbacks(app):
         [Output("market-analysis-tab-content", "children", allow_duplicate=True),
          Output("social-sentiment-tab-content", "children", allow_duplicate=True),
          Output("news-analysis-tab-content", "children", allow_duplicate=True),
-         Output("fundamentals-tab-content", "children", allow_duplicate=True),
-         Output("macro-tab-content", "children", allow_duplicate=True)],
+         Output("fundamentals-analysis-tab-content", "children", allow_duplicate=True),
+         Output("macro-analysis-tab-content", "children", allow_duplicate=True)],
         [Input("history-selector", "value"),
          Input("report-pagination", "active_page")],
         prevent_initial_call=True
