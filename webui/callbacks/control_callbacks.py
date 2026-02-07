@@ -554,6 +554,7 @@ def register_control_callbacks(app):
                     'analysts_news': analysts_news,
                     'analysts_fundamentals': analysts_fundamentals,
                     'analysts_macro': analysts_macro,
+                    'analysts_options': analysts_options,
                     'research_depth': research_depth,
                     'allow_shorts': allow_shorts,
                     'quick_llm': quick_llm,
@@ -612,7 +613,7 @@ def register_control_callbacks(app):
                             start_analysis(
                                 symbol,
                                 analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                                research_depth, allow_shorts, quick_llm, deep_llm
+                                research_depth, allow_shorts, quick_llm, deep_llm, analysts_options
                             )
                             print(f"[MARKET_HOUR-PARALLEL] Completed analysis for {symbol}")
                             return symbol, True, None
@@ -660,6 +661,7 @@ def register_control_callbacks(app):
                     'analysts_news': analysts_news,
                     'analysts_fundamentals': analysts_fundamentals,
                     'analysts_macro': analysts_macro,
+                    'analysts_options': analysts_options,
                     'research_depth': research_depth,
                     'allow_shorts': allow_shorts,
                     'quick_llm': quick_llm,
@@ -677,7 +679,7 @@ def register_control_callbacks(app):
                         start_analysis(
                             symbol,
                             analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                            research_depth, allow_shorts, quick_llm, deep_llm
+                            research_depth, allow_shorts, quick_llm, deep_llm, analysts_options
                         )
                         print(f"[LOOP-PARALLEL] Completed analysis for {symbol}")
                         return symbol, True, None
@@ -747,7 +749,7 @@ def register_control_callbacks(app):
                         start_analysis(
                             symbol,
                             analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                            research_depth, allow_shorts, quick_llm, deep_llm
+                            research_depth, allow_shorts, quick_llm, deep_llm, analysts_options
                         )
                         print(f"[PARALLEL] Completed analysis for {symbol}")
                         return symbol, True, None

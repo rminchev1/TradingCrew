@@ -223,9 +223,9 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
 
 
 def start_analysis(ticker, analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                 research_depth, allow_shorts, quick_llm, deep_llm, progress=None):
+                 research_depth, allow_shorts, quick_llm, deep_llm, analysts_options=False, progress=None):
     """Start real-time analysis function for the UI"""
-    
+
     # Parse selected analysts
     selected_analysts = []
     if analysts_market:
@@ -238,6 +238,8 @@ def start_analysis(ticker, analysts_market, analysts_social, analysts_news, anal
         selected_analysts.append("fundamentals")
     if analysts_macro:
         selected_analysts.append("macro")
+    if analysts_options:
+        selected_analysts.append("options")
     
     if not selected_analysts:
         return "Please select at least one analyst type."
