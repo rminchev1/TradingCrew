@@ -468,6 +468,7 @@ def register_control_callbacks(app):
         analysts_news = "news" in analyst_checklist_1
         analysts_fundamentals = "fundamentals" in analyst_checklist_2
         analysts_macro = "macro" in analyst_checklist_2
+        analysts_options = "options" in analyst_checklist_2
         """Handle control button clicks"""
         # Detect which property triggered this callback
         triggered_prop = None
@@ -522,6 +523,7 @@ def register_control_callbacks(app):
         if analysts_news: app_state.active_analysts.append("News Analyst")
         if analysts_fundamentals: app_state.active_analysts.append("Fundamentals Analyst")
         if analysts_macro: app_state.active_analysts.append("Macro Analyst")
+        if analysts_options: app_state.active_analysts.append("Options Analyst")
 
         # Set loop configuration
         app_state.loop_interval_minutes = loop_interval if loop_interval and loop_interval > 0 else 60

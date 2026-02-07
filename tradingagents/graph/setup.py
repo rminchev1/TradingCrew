@@ -12,6 +12,7 @@ from langgraph.prebuilt import ToolNode
 
 from tradingagents.agents import *
 from tradingagents.agents.analysts.macro_analyst import create_macro_analyst
+from tradingagents.agents.analysts.options_analyst import create_options_analyst
 from tradingagents.agents.utils.agent_states import AgentState
 from tradingagents.agents.utils.agent_utils import Toolkit
 
@@ -283,6 +284,13 @@ class GraphSetup:
             )
             delete_nodes["macro"] = create_msg_delete()
             tool_nodes["macro"] = self.tool_nodes["macro"]
+
+        if "options" in selected_analysts:
+            analyst_nodes["options"] = create_options_analyst(
+                self.quick_thinking_llm, self.toolkit
+            )
+            delete_nodes["options"] = create_msg_delete()
+            tool_nodes["options"] = self.tool_nodes["options"]
 
         # Create researcher and manager nodes
         bull_researcher_node = create_bull_researcher(

@@ -89,6 +89,7 @@ def create_trading_control_panel():
                                 options=[
                                     {"label": " Fundamentals", "value": "fundamentals"},
                                     {"label": " Macro", "value": "macro"},
+                                    {"label": " Options", "value": "options"},
                                 ],
                                 value=["fundamentals", "macro"],
                                 inline=True,
@@ -103,6 +104,7 @@ def create_trading_control_panel():
                         dbc.Checkbox(id="analyst-news", value=True, style={"display": "none"}),
                         dbc.Checkbox(id="analyst-fundamentals", value=True, style={"display": "none"}),
                         dbc.Checkbox(id="analyst-macro", value=True, style={"display": "none"}),
+                        dbc.Checkbox(id="analyst-options", value=False, style={"display": "none"}),
                     ], style={"display": "none"}),
 
                     html.Hr(className="my-2"),

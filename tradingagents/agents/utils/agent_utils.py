@@ -793,8 +793,40 @@ class Toolkit:
         """
         
         yield_curve_results = interface.get_yield_curve_analysis(curr_date)
-        
+
         return yield_curve_results
+
+    @staticmethod
+    @tool
+    @timing_wrapper("OPTIONS")
+    def get_options_positioning(
+        ticker: Annotated[str, "Stock ticker symbol (e.g., AAPL, TSLA)"],
+        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+    ) -> str:
+        """
+        Retrieve comprehensive options market positioning analysis for a stock.
+
+        Includes:
+        - Put/Call ratios (volume and open interest) for sentiment
+        - Max pain calculation (price magnet at expiration)
+        - Key OI levels (support/resistance from options positioning)
+        - Implied volatility metrics and expected move
+        - Unusual options activity detection
+
+        Use this to understand institutional positioning and market expectations.
+        Only available for stocks with listed options - not available for crypto.
+
+        Args:
+            ticker (str): Stock ticker symbol
+            curr_date (str): Current date in yyyy-mm-dd format
+
+        Returns:
+            str: Comprehensive options market positioning analysis
+        """
+
+        options_results = interface.get_options_positioning(ticker, curr_date)
+
+        return options_results
 
     @staticmethod
     @tool

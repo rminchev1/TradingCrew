@@ -195,6 +195,12 @@ class TradingAgentsGraph:
                     self.toolkit.get_yield_curve_analysis,
                 ]
             ),
+            "options": ToolNode(
+                [
+                    # options market positioning tools
+                    self.toolkit.get_options_positioning,
+                ]
+            ),
         }
 
     def propagate(self, company_name, trade_date):

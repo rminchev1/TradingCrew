@@ -1354,3 +1354,30 @@ def get_yield_curve_analysis(
     """
     
     return get_treasury_yield_curve(curr_date)
+
+
+# =====================================================
+# OPTIONS MARKET POSITIONING ANALYSIS
+# =====================================================
+
+def get_options_positioning(
+    ticker: Annotated[str, "Stock ticker symbol (e.g., AAPL, TSLA)"],
+    curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+) -> str:
+    """
+    Retrieve comprehensive options market positioning analysis for a stock.
+
+    Includes put/call ratios, max pain, key OI levels, IV metrics, and unusual activity.
+    This data helps understand institutional positioning and expected price movements.
+
+    Note: Only available for stocks with listed options. Not available for crypto.
+
+    Args:
+        ticker (str): Stock ticker symbol
+        curr_date (str): Current date in yyyy-mm-dd format
+
+    Returns:
+        str: Comprehensive options market positioning analysis
+    """
+    from .options_utils import get_full_options_analysis
+    return get_full_options_analysis(ticker, curr_date)
