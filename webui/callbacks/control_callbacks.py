@@ -442,11 +442,8 @@ def register_control_callbacks(app):
         [Input("control-btn", "n_clicks"),
          Input("control-btn", "children")],
         [State("ticker-input", "value"),
-         State("analyst-market", "value"),
-         State("analyst-social", "value"),
-         State("analyst-news", "value"),
-         State("analyst-fundamentals", "value"),
-         State("analyst-macro", "value"),
+         State("analyst-checklist", "value"),
+         State("analyst-checklist-2", "value"),
          State("research-depth", "value"),
          State("quick-llm", "value"),
          State("deep-llm", "value"),
@@ -458,10 +455,18 @@ def register_control_callbacks(app):
          State("market-hour-enabled", "value"),
          State("market-hours-input", "value")]
     )
-    def on_control_button_click(n_clicks, button_children, tickers, analysts_market, analysts_social, analysts_news, 
-                               analysts_fundamentals, analysts_macro, research_depth, quick_llm, deep_llm, 
+    def on_control_button_click(n_clicks, button_children, tickers, analyst_checklist_1, analyst_checklist_2,
+                               research_depth, quick_llm, deep_llm,
                                allow_shorts, loop_enabled, loop_interval, trade_enabled, trade_amount,
                                market_hour_enabled, market_hours_input):
+        # Parse selected analysts from checklists
+        analyst_checklist_1 = analyst_checklist_1 or []
+        analyst_checklist_2 = analyst_checklist_2 or []
+        analysts_market = "market" in analyst_checklist_1
+        analysts_social = "social" in analyst_checklist_1
+        analysts_news = "news" in analyst_checklist_1
+        analysts_fundamentals = "fundamentals" in analyst_checklist_2
+        analysts_macro = "macro" in analyst_checklist_2
         """Handle control button clicks"""
         # Detect which property triggered this callback
         triggered_prop = None
