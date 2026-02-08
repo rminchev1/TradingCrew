@@ -133,11 +133,11 @@ def register_chart_callbacks(app):
          Input("manual-chart-refresh", "n_clicks"),
          Input("indicator-checklist", "value"),
          Input("chart-store", "data")],
-        [State("ticker-input", "value")],
+        [State("run-watchlist-store", "data")],
         prevent_initial_call=True
     )
     def update_chart(n_5m, n_15m, n_30m, n_1h, n_4h, n_1d, n_1w, n_1mo, n_1y,
-                     active_page, manual_refresh, indicators, chart_store_data, ticker_input):
+                     active_page, manual_refresh, indicators, chart_store_data, run_watchlist_data):
         """Update the chart based on period selection, ticker change, or indicator toggle"""
 
         # Determine which input triggered the callback
@@ -160,9 +160,9 @@ def register_chart_callbacks(app):
         elif chart_store_data and chart_store_data.get("last_symbol"):
             # Fallback to last symbol in store
             symbol = chart_store_data["last_symbol"]
-        elif ticker_input:
-            # Use first ticker from input
-            symbol = ticker_input.split(",")[0].strip().upper()
+        elif run_watchlist_data and run_watchlist_data.get("symbols"):
+            # Use first symbol from Run Queue
+            symbol = run_watchlist_data["symbols"][0]
         else:
             return create_welcome_chart(), "", chart_store_data
 

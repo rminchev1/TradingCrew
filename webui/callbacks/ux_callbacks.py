@@ -69,17 +69,14 @@ def register_ux_callbacks(app):
         Output("agent-quick-summary", "children"),
         [Input("slow-refresh-interval", "n_intervals"),
          Input("chart-pagination", "active_page")],
-        [State("ticker-input", "value")]
+        [State("run-watchlist-store", "data")]
     )
-    def update_agent_quick_summary(n_intervals, active_page, tickers):
+    def update_agent_quick_summary(n_intervals, active_page, run_watchlist_data):
         """Update the quick agent summary with brief insights."""
-        if not tickers:
-            return html.Div(
-                "Agent insights will appear here after analysis",
-                className="text-muted small text-center py-2"
-            )
+        # Get symbols from Run Queue
+        run_store = run_watchlist_data or {"symbols": []}
+        symbols = run_store.get("symbols", [])
 
-        symbols = [s.strip().upper() for s in tickers.split(',') if s.strip()]
         if not symbols:
             return html.Div(
                 "Agent insights will appear here after analysis",
@@ -186,15 +183,15 @@ def register_ux_callbacks(app):
          Output("analysis-toast", "children"),
          Output("analysis-toast", "icon")],
         [Input("slow-refresh-interval", "n_intervals")],
-        [State("ticker-input", "value"),
+        [State("run-watchlist-store", "data"),
          State("analysis-toast", "is_open")]
     )
-    def show_analysis_completion_toast(n_intervals, tickers, is_currently_open):
+    def show_analysis_completion_toast(n_intervals, run_watchlist_data, is_currently_open):
         """Show toast notification when analysis completes for a symbol."""
-        if not tickers:
-            return False, "", "primary"
+        # Get symbols from Run Queue
+        run_store = run_watchlist_data or {"symbols": []}
+        symbols = run_store.get("symbols", [])
 
-        symbols = [s.strip().upper() for s in tickers.split(',') if s.strip()]
         if not symbols:
             return False, "", "primary"
 

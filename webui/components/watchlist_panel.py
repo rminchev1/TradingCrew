@@ -8,6 +8,8 @@ Drag & drop JavaScript is in webui/assets/watchlist_dragdrop.js
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 
+from webui.components.run_watchlist import create_run_watchlist_panel
+
 
 def create_watchlist_panel():
     """Create the watchlist panel component"""
@@ -128,6 +130,14 @@ def create_watchlist_item(symbol, price=None, change=None, change_pct=None, inde
                         title="Analyze"
                     ),
                     dbc.Button(
+                        html.I(className="fas fa-play"),
+                        id={"type": "watchlist-add-run-btn", "symbol": symbol},
+                        color="link",
+                        size="sm",
+                        className="watchlist-action-btn text-success",
+                        title="Add to Run Queue"
+                    ),
+                    dbc.Button(
                         html.I(className="fas fa-times"),
                         id={"type": "watchlist-remove-btn", "symbol": symbol},
                         color="link",
@@ -147,7 +157,7 @@ def create_watchlist_item(symbol, price=None, change=None, change_pct=None, inde
 
 
 def create_watchlist_section():
-    """Create the collapsible watchlist section for the layout"""
+    """Create the collapsible watchlist section for the layout with tabs"""
     return dbc.Card([
         html.Div(
             dbc.Row([
@@ -161,6 +171,15 @@ def create_watchlist_section():
                         color="primary",
                         className="ms-2"
                     ),
+                    html.Span(" / ", className="text-muted mx-1"),
+                    html.Span("▶", className="me-1 text-success"),
+                    html.Span("Run", className="fw-semibold small"),
+                    dbc.Badge(
+                        id="run-watchlist-count-badge",
+                        children="0",
+                        color="success",
+                        className="ms-2"
+                    ),
                 ], width="auto"),
             ], className="align-items-center"),
             id="watchlist-panel-header",
@@ -169,7 +188,23 @@ def create_watchlist_section():
             style={"cursor": "pointer", "padding": "10px 16px"}
         ),
         dbc.Collapse(
-            dbc.CardBody(create_watchlist_panel(), className="p-2"),
+            dbc.CardBody([
+                # Tabs for Watchlist and Run Queue
+                dbc.Tabs([
+                    dbc.Tab(
+                        label="⭐ Watchlist",
+                        tab_id="watchlist-tab",
+                        children=create_watchlist_panel(),
+                        className="pt-2"
+                    ),
+                    dbc.Tab(
+                        label="▶ Run Queue",
+                        tab_id="run-queue-tab",
+                        children=create_run_watchlist_panel(),
+                        className="pt-2"
+                    ),
+                ], id="watchlist-tabs", active_tab="watchlist-tab", className="watchlist-tabs"),
+            ], className="p-2"),
             id="watchlist-panel-collapse",
             is_open=True
         ),

@@ -14,9 +14,9 @@ def register_storage_callbacks(app):
 
     # Callback to load settings from localStorage on page load
     # Uses slow-refresh-interval as a one-time trigger on first interval
+    # Note: ticker-input removed - Run Queue is now persisted separately via run-watchlist-store
     @app.callback(
         [
-            Output("ticker-input", "value"),
             Output("analyst-market", "value"),
             Output("analyst-social", "value"),
             Output("analyst-news", "value"),
@@ -41,7 +41,7 @@ def register_storage_callbacks(app):
 
         # Only load on first call to prevent overwriting user changes
         if _initial_load_done:
-            return [dash.no_update] * 14
+            return [dash.no_update] * 13
 
         _initial_load_done = True
 
@@ -49,7 +49,6 @@ def register_storage_callbacks(app):
             # Return default settings if nothing stored
             defaults = get_default_settings()
             return [
-                defaults["ticker_input"],
                 defaults["analyst_market"],
                 defaults["analyst_social"],
                 defaults["analyst_news"],
@@ -64,9 +63,8 @@ def register_storage_callbacks(app):
                 defaults["quick_llm"],
                 defaults["deep_llm"]
             ]
-        
+
         return [
-            stored_settings.get("ticker_input", "NVDA, AMD, TSLA"),
             stored_settings.get("analyst_market", True),
             stored_settings.get("analyst_social", True),
             stored_settings.get("analyst_news", True),
@@ -83,10 +81,10 @@ def register_storage_callbacks(app):
         ]
     
     # Callback to save settings to localStorage when they change
+    # Note: ticker-input removed - Run Queue is now persisted separately via run-watchlist-store
     @app.callback(
         Output("settings-store", "data"),
         [
-            Input("ticker-input", "value"),
             Input("analyst-market", "value"),
             Input("analyst-social", "value"),
             Input("analyst-news", "value"),
@@ -108,19 +106,18 @@ def register_storage_callbacks(app):
         ],
         prevent_initial_call=True
     )
-    def save_settings(ticker_input, analyst_market, analyst_social, analyst_news,
+    def save_settings(analyst_market, analyst_social, analyst_news,
                      analyst_fundamentals, analyst_macro, research_depth, allow_shorts,
                      loop_interval, market_hours_input,
                      trade_after_analyze, trade_dollar_amount, quick_llm, deep_llm,
                      current_settings, loop_enabled, market_hour_enabled):
         """Save settings to localStorage store"""
-        
+
         # Don't save if triggered by initial load
         if not ctx.triggered:
             return current_settings or get_default_settings()
-        
+
         new_settings = {
-            "ticker_input": ticker_input,
             "analyst_market": analyst_market,
             "analyst_social": analyst_social,
             "analyst_news": analyst_news,
@@ -137,5 +134,5 @@ def register_storage_callbacks(app):
             "quick_llm": quick_llm,
             "deep_llm": deep_llm
         }
-        
+
         return new_settings

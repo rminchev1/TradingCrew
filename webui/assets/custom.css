@@ -2890,3 +2890,128 @@ body.theme-bw .watchlist-drag-handle {
 body.theme-bw .watchlist-drag-handle:hover {
     color: #3B82F6;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RUN QUEUE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.run-watchlist-panel {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.run-watchlist-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.run-watchlist-empty-msg {
+    font-style: italic;
+}
+
+.run-watchlist-item {
+    padding: 10px 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-secondary);
+    transition: all 0.2s ease;
+}
+
+.run-watchlist-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-secondary);
+}
+
+.run-watchlist-symbol {
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.run-watchlist-remove-btn {
+    opacity: 0.6;
+    transition: all 0.2s ease;
+}
+
+.run-watchlist-remove-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Run Queue Status in Config Panel */
+.run-queue-status-container {
+    background: rgba(16, 185, 129, 0.08);
+    border-radius: 8px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.run-queue-status {
+    font-size: 1rem;
+}
+
+/* Watchlist Tabs Styling */
+.watchlist-tabs .nav-tabs {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+}
+
+.watchlist-tabs .nav-tabs .nav-link {
+    color: var(--text-muted);
+    border: none;
+    border-radius: 4px 4px 0 0;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.watchlist-tabs .nav-tabs .nav-link:hover {
+    color: var(--text-primary);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.watchlist-tabs .nav-tabs .nav-link.active {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+    border-bottom: 2px solid var(--accent-primary);
+}
+
+/* Light theme Run Queue adjustments */
+body.theme-bw .run-watchlist-item {
+    background: #F8FAFC;
+    border-color: #E2E8F0;
+    border-left-color: #10B981;
+}
+
+body.theme-bw .run-watchlist-item:hover {
+    background: #F1F5F9;
+    border-color: #10B981;
+}
+
+body.theme-bw .run-watchlist-symbol {
+    color: #1E293B;
+}
+
+body.theme-bw .run-queue-status-container {
+    background: rgba(16, 185, 129, 0.05);
+    border-color: rgba(16, 185, 129, 0.15);
+}
+
+body.theme-bw .watchlist-tabs .nav-tabs {
+    border-color: #E2E8F0;
+}
+
+body.theme-bw .watchlist-tabs .nav-tabs .nav-link {
+    color: #64748B;
+}
+
+body.theme-bw .watchlist-tabs .nav-tabs .nav-link:hover {
+    color: #1E293B;
+}
+
+body.theme-bw .watchlist-tabs .nav-tabs .nav-link.active {
+    color: #1E293B;
+    background: #F1F5F9;
+    border-bottom-color: #3B82F6;
+}

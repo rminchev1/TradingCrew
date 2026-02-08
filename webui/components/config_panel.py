@@ -11,19 +11,19 @@ from datetime import datetime
 def create_trading_control_panel():
     """Create the compact trading control panel for the right sidebar."""
     return html.Div([
-        # Ticker Input Section (prominent)
+        # Run Queue Status Section (replaces ticker input)
         html.Div([
-            dbc.InputGroup([
-                dbc.InputGroupText(html.I(className="fas fa-chart-line")),
-                dbc.Input(
-                    id="ticker-input",
-                    type="text",
-                    placeholder="NVDA, AMD, TSLA",
-                    value="NVDA, AMD, TSLA",
-                    className="ticker-input-field"
-                ),
-            ], size="lg", className="mb-3"),
-        ]),
+            html.Div([
+                html.I(className="fas fa-list-check me-2 text-success"),
+                html.Span("Run Queue: ", className="text-muted"),
+                html.Span(id="config-run-queue-count", children="0", className="fw-bold text-success"),
+                html.Span(" symbols", className="text-muted ms-1"),
+            ], className="d-flex align-items-center run-queue-status"),
+            html.Small(
+                "Add symbols via Watchlist > Run Queue tab",
+                className="text-muted d-block mt-1"
+            ),
+        ], className="mb-3 p-2 run-queue-status-container"),
 
         # Active Settings Summary (inline display)
         html.Div(
@@ -269,14 +269,18 @@ def create_config_panel():
         dbc.CardBody([
             html.H4("Analysis Configuration", className="mb-3"),
             html.Hr(),
+            # Run Queue Status (replaces ticker input)
             dbc.Row([
                 dbc.Col([
-                    dbc.Input(
-                        id="ticker-input",
-                        type="text",
-                        placeholder="Enter stock symbols (e.g., AAPL,NVDA)",
-                        value="NVDA, AMD, TSLA",
-                        className="mb-2"
+                    html.Div([
+                        html.I(className="fas fa-list-check me-2 text-success"),
+                        html.Span("Run Queue: ", className="text-muted"),
+                        html.Span(id="config-run-queue-count-legacy", children="0", className="fw-bold text-success"),
+                        html.Span(" symbols", className="text-muted ms-1"),
+                    ], className="d-flex align-items-center mb-2"),
+                    html.Small(
+                        "Add symbols via Watchlist > Run Queue tab",
+                        className="text-muted"
                     ),
                 ], width=12),
             ]),

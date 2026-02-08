@@ -442,7 +442,7 @@ def register_control_callbacks(app):
          Output("report-pagination", "active_page")],
         [Input("control-btn", "n_clicks"),
          Input("control-btn", "children")],
-        [State("ticker-input", "value"),
+        [State("run-watchlist-store", "data"),
          State("analyst-checklist", "value"),
          State("analyst-checklist-2", "value"),
          State("research-depth", "value"),
@@ -456,7 +456,7 @@ def register_control_callbacks(app):
          State("market-hour-enabled", "value"),
          State("market-hours-input", "value")]
     )
-    def on_control_button_click(n_clicks, button_children, tickers, analyst_checklist_1, analyst_checklist_2,
+    def on_control_button_click(n_clicks, button_children, run_watchlist_data, analyst_checklist_1, analyst_checklist_2,
                                research_depth, quick_llm, deep_llm,
                                allow_shorts, loop_enabled, loop_interval, trade_enabled, trade_amount,
                                market_hour_enabled, market_hours_input):
@@ -511,9 +511,11 @@ def register_control_callbacks(app):
         if app_state.analysis_running:
             return "Analysis already in progress. Please wait.", dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
-        symbols = [s.strip().upper() for s in tickers.split(',') if s.strip()]
+        # Get symbols from Run Queue store
+        run_store = run_watchlist_data or {"symbols": []}
+        symbols = run_store.get("symbols", [])
         if not symbols:
-            return "Please enter at least one stock symbol.", {}, 1, 1, 1, 1
+            return "No symbols in Run Queue. Add symbols from the Watchlist tab.", {}, 1, 1, 1, 1
 
         if not app_state.analysis_running:
             app_state.reset()

@@ -259,13 +259,13 @@ def register_scanner_callbacks(app):
         )
 
     @app.callback(
-        Output("ticker-input", "value", allow_duplicate=True),
+        Output("run-watchlist-store", "data", allow_duplicate=True),
         Input({"type": "scanner-analyze-btn", "symbol": ALL}, "n_clicks"),
-        State("ticker-input", "value"),
+        State("run-watchlist-store", "data"),
         prevent_initial_call=True
     )
-    def add_scanner_result_to_analysis(n_clicks_list, current_value):
-        """Add a scanner result to the analysis input when Analyze button is clicked."""
+    def add_scanner_result_to_run_queue(n_clicks_list, store_data):
+        """Add a scanner result to the Run Queue when Analyze button is clicked."""
         ctx = callback_context
 
         if not ctx.triggered:
@@ -290,15 +290,16 @@ def register_scanner_callbacks(app):
         if not symbol:
             raise PreventUpdate
 
-        # Add symbol to ticker input
-        # If there's already a value, append with comma
-        if current_value and current_value.strip():
-            # Check if symbol is already in the list
-            existing_symbols = [s.strip().upper() for s in current_value.split(",")]
-            if symbol.upper() not in existing_symbols:
-                return f"{current_value}, {symbol}"
-            else:
-                # Symbol already in list, don't duplicate
-                raise PreventUpdate
+        # Add symbol to Run Queue
+        if not store_data:
+            store_data = {"symbols": []}
+
+        symbols = store_data.get("symbols", [])
+        if symbol.upper() not in symbols:
+            symbols.append(symbol.upper())
+            store_data["symbols"] = symbols
+            print(f"[SCANNER] Added {symbol} to Run Queue")
+            return store_data
         else:
-            return symbol
+            # Symbol already in Run Queue, don't duplicate
+            raise PreventUpdate

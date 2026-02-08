@@ -6,6 +6,7 @@ from dash import Input, Output, State, callback_context, html, ALL, MATCH, clien
 import dash_bootstrap_components as dbc
 import dash
 from webui.components.watchlist_panel import create_watchlist_item
+from webui.components.run_watchlist import create_run_watchlist_item
 
 
 def get_stock_quote(symbol):
@@ -208,15 +209,15 @@ def register_watchlist_callbacks(app):
             print(f"[WATCHLIST] Error handling reorder: {e}")
             return dash.no_update
 
-    # Add to ticker input when analyze button clicked
+    # Add to Run Queue when analyze button clicked
     @app.callback(
-        Output("ticker-input", "value", allow_duplicate=True),
+        Output("run-watchlist-store", "data", allow_duplicate=True),
         Input({"type": "watchlist-analyze-btn", "symbol": ALL}, "n_clicks"),
-        State("ticker-input", "value"),
+        State("run-watchlist-store", "data"),
         prevent_initial_call=True
     )
-    def analyze_from_watchlist(n_clicks_list, current_tickers):
-        """Add symbol to ticker input for analysis"""
+    def analyze_from_watchlist(n_clicks_list, store_data):
+        """Add symbol to Run Queue for analysis"""
         ctx = callback_context
 
         if not ctx.triggered:
@@ -234,41 +235,41 @@ def register_watchlist_callbacks(app):
 
             symbol = triggered_id.get("symbol")
             if symbol:
-                # Add to existing tickers or replace
-                if current_tickers and current_tickers.strip():
-                    existing = [s.strip().upper() for s in current_tickers.split(",")]
-                    if symbol.upper() not in existing:
-                        return f"{current_tickers}, {symbol}"
-                    return current_tickers
-                return symbol
+                if not store_data:
+                    store_data = {"symbols": []}
+
+                symbols = store_data.get("symbols", [])
+                if symbol.upper() not in symbols:
+                    symbols.append(symbol.upper())
+                    store_data["symbols"] = symbols
+                    print(f"[WATCHLIST] Added {symbol} to Run Queue for analysis")
+                    return store_data
 
         return dash.no_update
 
     # Update chart when chart button clicked
     @app.callback(
-        [Output("ticker-input", "value", allow_duplicate=True),
-         Output("chart-store", "data", allow_duplicate=True)],
+        Output("chart-store", "data", allow_duplicate=True),
         Input({"type": "watchlist-chart-btn", "symbol": ALL}, "n_clicks"),
-        [State("ticker-input", "value"),
-         State("chart-store", "data")],
+        State("chart-store", "data"),
         prevent_initial_call=True
     )
-    def view_chart_from_watchlist(n_clicks_list, current_tickers, chart_store):
+    def view_chart_from_watchlist(n_clicks_list, chart_store):
         """View chart for a watchlist symbol"""
         ctx = callback_context
 
         if not ctx.triggered:
-            return dash.no_update, dash.no_update
+            return dash.no_update
 
         triggered_id = ctx.triggered_id
         if not triggered_id:
-            return dash.no_update, dash.no_update
+            return dash.no_update
 
         if isinstance(triggered_id, dict) and triggered_id.get("type") == "watchlist-chart-btn":
             # Check that button was actually clicked
             triggered_value = ctx.triggered[0].get("value")
             if not triggered_value or triggered_value < 1:
-                return dash.no_update, dash.no_update
+                return dash.no_update
 
             symbol = triggered_id.get("symbol")
             if symbol:
@@ -277,9 +278,9 @@ def register_watchlist_callbacks(app):
                     chart_store = {}
                 chart_store["last_symbol"] = symbol
 
-                return symbol, chart_store
+                return chart_store
 
-        return dash.no_update, dash.no_update
+        return dash.no_update
 
     # Collapse toggle for watchlist panel
     @app.callback(
@@ -336,3 +337,120 @@ def register_watchlist_callbacks(app):
                     return store_data
 
         return dash.no_update
+
+    # =========================================================================
+    # RUN QUEUE CALLBACKS
+    # =========================================================================
+
+    # Add symbol to Run Queue from watchlist
+    @app.callback(
+        Output("run-watchlist-store", "data", allow_duplicate=True),
+        Input({"type": "watchlist-add-run-btn", "symbol": ALL}, "n_clicks"),
+        State("run-watchlist-store", "data"),
+        prevent_initial_call=True
+    )
+    def add_to_run_queue(n_clicks_list, store_data):
+        """Add a symbol from watchlist to the Run Queue"""
+        ctx = callback_context
+
+        if not ctx.triggered:
+            return dash.no_update
+
+        triggered_id = ctx.triggered_id
+        if not triggered_id:
+            return dash.no_update
+
+        if isinstance(triggered_id, dict) and triggered_id.get("type") == "watchlist-add-run-btn":
+            # Check that button was actually clicked
+            triggered_value = ctx.triggered[0].get("value")
+            if not triggered_value or triggered_value < 1:
+                return dash.no_update
+
+            symbol = triggered_id.get("symbol")
+            if symbol:
+                if not store_data:
+                    store_data = {"symbols": []}
+
+                symbols = store_data.get("symbols", [])
+                if symbol not in symbols:
+                    symbols.append(symbol)
+                    store_data["symbols"] = symbols
+                    print(f"[RUN_QUEUE] Added {symbol} to Run Queue")
+                    return store_data
+
+        return dash.no_update
+
+    # Remove symbol from Run Queue
+    @app.callback(
+        Output("run-watchlist-store", "data", allow_duplicate=True),
+        Input({"type": "run-watchlist-remove-btn", "symbol": ALL}, "n_clicks"),
+        State("run-watchlist-store", "data"),
+        prevent_initial_call=True
+    )
+    def remove_from_run_queue(n_clicks_list, store_data):
+        """Remove a symbol from the Run Queue"""
+        ctx = callback_context
+
+        if not ctx.triggered:
+            return dash.no_update
+
+        triggered_id = ctx.triggered_id
+        if not triggered_id:
+            return dash.no_update
+
+        if isinstance(triggered_id, dict) and triggered_id.get("type") == "run-watchlist-remove-btn":
+            # Check that button was actually clicked
+            triggered_value = ctx.triggered[0].get("value")
+            if not triggered_value or triggered_value < 1:
+                return dash.no_update
+
+            symbol = triggered_id.get("symbol")
+            if symbol and store_data:
+                symbols = store_data.get("symbols", [])
+                if symbol in symbols:
+                    symbols.remove(symbol)
+                    store_data["symbols"] = symbols
+                    print(f"[RUN_QUEUE] Removed {symbol} from Run Queue")
+                    return store_data
+
+        return dash.no_update
+
+    # Clear all symbols from Run Queue
+    @app.callback(
+        Output("run-watchlist-store", "data", allow_duplicate=True),
+        Input("run-watchlist-clear-btn", "n_clicks"),
+        prevent_initial_call=True
+    )
+    def clear_run_queue(n_clicks):
+        """Clear all symbols from the Run Queue"""
+        if n_clicks:
+            print("[RUN_QUEUE] Cleared Run Queue")
+            return {"symbols": []}
+        return dash.no_update
+
+    # Update Run Queue display
+    @app.callback(
+        [Output("run-watchlist-items-container", "children"),
+         Output("run-watchlist-count", "children"),
+         Output("run-watchlist-count-badge", "children"),
+         Output("config-run-queue-count", "children")],
+        Input("run-watchlist-store", "data")
+    )
+    def update_run_queue_display(store_data):
+        """Update the Run Queue items display"""
+        if not store_data or not store_data.get("symbols"):
+            empty_msg = html.Div(
+                "Add symbols from Watchlist",
+                className="text-muted text-center py-4 run-watchlist-empty-msg"
+            )
+            return [empty_msg], "0", "0", "0"
+
+        symbols = store_data.get("symbols", [])
+        items = []
+
+        for index, symbol in enumerate(symbols):
+            item = create_run_watchlist_item(symbol, index=index)
+            items.append(item)
+
+        count = str(len(symbols))
+        return items, count, count, count

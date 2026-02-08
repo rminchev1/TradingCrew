@@ -6,8 +6,8 @@ import json
 from typing import Dict, Any
 
 # Default settings structure for trading panel
+# Note: ticker_input removed - Run Queue is now persisted via run-watchlist-store
 DEFAULT_SETTINGS = {
-    "ticker_input": "NVDA, AMD, TSLA",
     "analyst_market": True,
     "analyst_social": True,
     "analyst_news": True,

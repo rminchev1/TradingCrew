@@ -53,18 +53,17 @@ def register_history_callbacks(app):
         [Output("history-selector", "value", allow_duplicate=True),
          Output("save-history-btn", "children")],
         [Input("save-history-btn", "n_clicks")],
-        [State("ticker-input", "value")],
+        [State("run-watchlist-store", "data")],
         prevent_initial_call=True
     )
-    def save_current_analysis(n_clicks, tickers):
+    def save_current_analysis(n_clicks, run_watchlist_data):
         """Save the current analysis to history."""
         if not n_clicks:
             return no_update, no_update
 
-        if not tickers:
-            return no_update, [html.I(className="fas fa-exclamation me-1"), "No Data"]
-
-        symbols = [s.strip().upper() for s in tickers.split(',') if s.strip()]
+        # Get symbols from Run Queue
+        run_store = run_watchlist_data or {"symbols": []}
+        symbols = run_store.get("symbols", [])
 
         if not symbols or not app_state.symbol_states:
             return no_update, [html.I(className="fas fa-exclamation me-1"), "No Data"]
