@@ -84,17 +84,18 @@ def create_reports_panel():
         ], className="mb-3 symbol-nav-row"),
 
         # Row 2: Navigation pills grouped by category
+        # Labels include a span for dynamic data indicator (✓ when report has content)
         html.Div([
             # Analysts Group
             html.Div([
                 html.Span("Analysts", className="nav-group-label"),
                 dbc.Nav([
-                    dbc.NavItem(dbc.NavLink("📊 Market", id="nav-tab-market", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("📉 Options", id="nav-tab-options", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("📱 Social", id="nav-tab-social", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("📰 News", id="nav-tab-news", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("📈 Fundamentals", id="nav-tab-fundamentals", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("🌍 Macro", id="nav-tab-macro", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-market", children="📊 Market")], id="nav-tab-market", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-options", children="📉 Options")], id="nav-tab-options", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-social", children="📱 Social")], id="nav-tab-social", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-news", children="📰 News")], id="nav-tab-news", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-fundamentals", children="📈 Fundamentals")], id="nav-tab-fundamentals", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-macro", children="🌍 Macro")], id="nav-tab-macro", className="report-nav-pill")),
                 ], pills=True, className="nav-pills-group")
             ], className="nav-group"),
 
@@ -102,9 +103,9 @@ def create_reports_panel():
             html.Div([
                 html.Span("Research", className="nav-group-label"),
                 dbc.Nav([
-                    dbc.NavItem(dbc.NavLink("🔍 Debate", id="nav-tab-researcher", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("🎯 Manager", id="nav-tab-research-mgr", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("🧠 Trader", id="nav-tab-trader", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-researcher", children="🔍 Debate")], id="nav-tab-researcher", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-research-mgr", children="🎯 Manager")], id="nav-tab-research-mgr", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-trader", children="🧠 Trader")], id="nav-tab-trader", className="report-nav-pill")),
                 ], pills=True, className="nav-pills-group")
             ], className="nav-group"),
 
@@ -112,8 +113,8 @@ def create_reports_panel():
             html.Div([
                 html.Span("Decision", className="nav-group-label"),
                 dbc.Nav([
-                    dbc.NavItem(dbc.NavLink("⚖️ Risk", id="nav-tab-risk", className="report-nav-pill")),
-                    dbc.NavItem(dbc.NavLink("⚡ Final", id="nav-tab-final", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-risk", children="⚖️ Risk")], id="nav-tab-risk", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-final", children="⚡ Final")], id="nav-tab-final", className="report-nav-pill")),
                 ], pills=True, className="nav-pills-group")
             ], className="nav-group"),
         ], className="nav-groups-container")

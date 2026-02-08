@@ -899,6 +899,91 @@ def register_report_callbacks(app):
 
         return tuple(active_states)
 
+    @app.callback(
+        [Output("nav-label-market", "children"),
+         Output("nav-label-options", "children"),
+         Output("nav-label-social", "children"),
+         Output("nav-label-news", "children"),
+         Output("nav-label-fundamentals", "children"),
+         Output("nav-label-macro", "children"),
+         Output("nav-label-researcher", "children"),
+         Output("nav-label-research-mgr", "children"),
+         Output("nav-label-trader", "children"),
+         Output("nav-label-risk", "children"),
+         Output("nav-label-final", "children")],
+        [Input("medium-refresh-interval", "n_intervals"),
+         Input("report-pagination", "active_page")]
+    )
+    def update_nav_data_indicators(n_intervals, active_page):
+        """Update navigation labels with ✓ indicator when report has data"""
+        from webui.utils.state import app_state
+
+        # Default labels (no data)
+        labels = {
+            "market": "📊 Market",
+            "options": "📉 Options",
+            "social": "📱 Social",
+            "news": "📰 News",
+            "fundamentals": "📈 Fundamentals",
+            "macro": "🌍 Macro",
+            "researcher": "🔍 Debate",
+            "research-mgr": "🎯 Manager",
+            "trader": "🧠 Trader",
+            "risk": "⚖️ Risk",
+            "final": "⚡ Final",
+        }
+
+        # Map nav labels to report keys in state
+        report_mapping = {
+            "market": "market_report",
+            "options": "options_report",
+            "social": "sentiment_report",
+            "news": "news_report",
+            "fundamentals": "fundamentals_report",
+            "macro": "macro_report",
+            "researcher": ["bull_report", "bear_report"],  # Has data if either exists
+            "research-mgr": "research_manager_report",
+            "trader": "trader_investment_plan",
+            "risk": ["risky_report", "safe_report", "neutral_report"],  # Has data if any exist
+            "final": "final_trade_decision",
+        }
+
+        # Get current symbol state
+        state = app_state.get_current_state()
+        if state:
+            reports = state.get("current_reports", {})
+
+            for key, report_key in report_mapping.items():
+                has_data = False
+
+                if isinstance(report_key, list):
+                    # Check if any of the reports have data
+                    has_data = any(
+                        reports.get(rk) and str(reports.get(rk)).strip()
+                        for rk in report_key
+                    )
+                else:
+                    content = reports.get(report_key)
+                    has_data = content and str(content).strip()
+
+                if has_data:
+                    # Add green checkmark indicator
+                    labels[key] = labels[key] + " ✓"
+
+        return (
+            labels["market"],
+            labels["options"],
+            labels["social"],
+            labels["news"],
+            labels["fundamentals"],
+            labels["macro"],
+            labels["researcher"],
+            labels["research-mgr"],
+            labels["trader"],
+            labels["risk"],
+            labels["final"],
+        )
+
     # Prompt Modal Callbacks
     @app.callback(
         [Output("prompt-modal", "is_open"),
