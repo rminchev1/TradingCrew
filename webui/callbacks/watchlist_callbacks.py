@@ -85,23 +85,32 @@ def register_watchlist_callbacks(app):
     def remove_from_watchlist(n_clicks_list, store_data):
         """Remove a symbol from the watchlist"""
         ctx = callback_context
-        if not ctx.triggered or not any(n_clicks_list):
+
+        # Check if callback was actually triggered by a click
+        if not ctx.triggered:
             return dash.no_update
 
-        # Get the symbol from the triggered button
-        triggered = ctx.triggered[0]
-        prop_id = triggered["prop_id"]
+        # Use triggered_id for reliable pattern-matching detection
+        triggered_id = ctx.triggered_id
+        if not triggered_id:
+            return dash.no_update
 
-        if "watchlist-remove-btn" in prop_id:
-            import json
-            button_id = json.loads(prop_id.split(".")[0])
-            symbol = button_id.get("symbol")
+        # triggered_id is a dict for pattern-matching components
+        if isinstance(triggered_id, dict) and triggered_id.get("type") == "watchlist-remove-btn":
+            symbol = triggered_id.get("symbol")
+
+            # Check that the button was actually clicked (n_clicks > 0)
+            # Find the click count for this specific button
+            triggered_value = ctx.triggered[0].get("value")
+            if not triggered_value or triggered_value < 1:
+                return dash.no_update
 
             if symbol and store_data:
                 symbols = store_data.get("symbols", [])
                 if symbol in symbols:
                     symbols.remove(symbol)
                     store_data["symbols"] = symbols
+                    print(f"[WATCHLIST] Removed {symbol} from watchlist")
                     return store_data
 
         return dash.no_update
@@ -151,17 +160,21 @@ def register_watchlist_callbacks(app):
     def analyze_from_watchlist(n_clicks_list, current_tickers):
         """Add symbol to ticker input for analysis"""
         ctx = callback_context
-        if not ctx.triggered or not any(n_clicks_list):
+
+        if not ctx.triggered:
             return dash.no_update
 
-        triggered = ctx.triggered[0]
-        prop_id = triggered["prop_id"]
+        triggered_id = ctx.triggered_id
+        if not triggered_id:
+            return dash.no_update
 
-        if "watchlist-analyze-btn" in prop_id:
-            import json
-            button_id = json.loads(prop_id.split(".")[0])
-            symbol = button_id.get("symbol")
+        if isinstance(triggered_id, dict) and triggered_id.get("type") == "watchlist-analyze-btn":
+            # Check that button was actually clicked
+            triggered_value = ctx.triggered[0].get("value")
+            if not triggered_value or triggered_value < 1:
+                return dash.no_update
 
+            symbol = triggered_id.get("symbol")
             if symbol:
                 # Add to existing tickers or replace
                 if current_tickers and current_tickers.strip():
@@ -185,17 +198,21 @@ def register_watchlist_callbacks(app):
     def view_chart_from_watchlist(n_clicks_list, current_tickers, chart_store):
         """View chart for a watchlist symbol"""
         ctx = callback_context
-        if not ctx.triggered or not any(n_clicks_list):
+
+        if not ctx.triggered:
             return dash.no_update, dash.no_update
 
-        triggered = ctx.triggered[0]
-        prop_id = triggered["prop_id"]
+        triggered_id = ctx.triggered_id
+        if not triggered_id:
+            return dash.no_update, dash.no_update
 
-        if "watchlist-chart-btn" in prop_id:
-            import json
-            button_id = json.loads(prop_id.split(".")[0])
-            symbol = button_id.get("symbol")
+        if isinstance(triggered_id, dict) and triggered_id.get("type") == "watchlist-chart-btn":
+            # Check that button was actually clicked
+            triggered_value = ctx.triggered[0].get("value")
+            if not triggered_value or triggered_value < 1:
+                return dash.no_update, dash.no_update
 
+            symbol = triggered_id.get("symbol")
             if symbol:
                 # Update chart store to show this symbol
                 if chart_store is None:
@@ -234,17 +251,21 @@ def register_watchlist_callbacks(app):
     def add_scanner_to_watchlist(n_clicks_list, store_data):
         """Add a scanner result to the watchlist"""
         ctx = callback_context
-        if not ctx.triggered or not any(n_clicks_list):
+
+        if not ctx.triggered:
             return dash.no_update
 
-        triggered = ctx.triggered[0]
-        prop_id = triggered["prop_id"]
+        triggered_id = ctx.triggered_id
+        if not triggered_id:
+            return dash.no_update
 
-        if "scanner-add-watchlist-btn" in prop_id:
-            import json
-            button_id = json.loads(prop_id.split(".")[0])
-            symbol = button_id.get("symbol")
+        if isinstance(triggered_id, dict) and triggered_id.get("type") == "scanner-add-watchlist-btn":
+            # Check that button was actually clicked
+            triggered_value = ctx.triggered[0].get("value")
+            if not triggered_value or triggered_value < 1:
+                return dash.no_update
 
+            symbol = triggered_id.get("symbol")
             if symbol:
                 if not store_data:
                     store_data = {"symbols": []}
@@ -253,6 +274,7 @@ def register_watchlist_callbacks(app):
                 if symbol not in symbols:
                     symbols.append(symbol)
                     store_data["symbols"] = symbols
+                    print(f"[WATCHLIST] Added {symbol} from scanner")
                     return store_data
 
         return dash.no_update
