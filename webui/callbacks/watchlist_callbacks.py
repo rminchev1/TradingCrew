@@ -2,7 +2,7 @@
 Watchlist callbacks for TradingAgents WebUI
 """
 
-from dash import Input, Output, State, callback_context, html, ALL, MATCH
+from dash import Input, Output, State, callback_context, html, ALL, MATCH, clientside_callback
 import dash_bootstrap_components as dbc
 import dash
 from webui.components.watchlist_panel import create_watchlist_item
@@ -35,6 +35,27 @@ def get_stock_quote(symbol):
 
 def register_watchlist_callbacks(app):
     """Register all watchlist-related callbacks"""
+
+    # Clientside callback to poll for pending reorder from JavaScript fallback
+    app.clientside_callback(
+        """
+        function(n_intervals, currentData) {
+            if (window._watchlistReorderPending) {
+                const pending = window._watchlistReorderPending;
+                // Check if this is a new reorder (timestamp changed)
+                if (!currentData || pending.timestamp > (currentData.timestamp || 0)) {
+                    window._watchlistReorderPending = null;  // Clear after processing
+                    return {order: pending.order, timestamp: pending.timestamp};
+                }
+            }
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output("watchlist-reorder-store", "data"),
+        Input("watchlist-refresh-interval", "n_intervals"),
+        State("watchlist-reorder-store", "data"),
+        prevent_initial_call=True
+    )
 
     # Add symbol to watchlist
     @app.callback(
@@ -154,25 +175,20 @@ def register_watchlist_callbacks(app):
     # Handle watchlist reorder from drag and drop
     @app.callback(
         Output("watchlist-store", "data", allow_duplicate=True),
-        Input("watchlist-reorder-input", "value"),
+        Input("watchlist-reorder-store", "data"),
         State("watchlist-store", "data"),
         prevent_initial_call=True
     )
-    def handle_watchlist_reorder(reorder_value, store_data):
+    def handle_watchlist_reorder(reorder_data, store_data):
         """Handle watchlist reorder from drag and drop"""
-        if not reorder_value or not store_data:
+        if not reorder_data or not store_data:
             return dash.no_update
 
-        # Parse the reorder value (format: "SYM1,SYM2,SYM3|timestamp")
         try:
-            parts = reorder_value.split("|")
-            if len(parts) != 2:
-                return dash.no_update
+            new_order = reorder_data.get("order", [])
+            timestamp = reorder_data.get("timestamp", 0)
 
-            new_order = parts[0].split(",")
-            new_order = [s.strip() for s in new_order if s.strip()]
-
-            if not new_order:
+            if not new_order or timestamp == 0:
                 return dash.no_update
 
             # Validate that all symbols exist in the current list

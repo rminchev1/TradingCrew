@@ -5,6 +5,7 @@
 (function() {
     let draggedItem = null;
     let draggedSymbol = null;
+    let listenersAttached = false;
 
     function initDragDrop() {
         const container = document.getElementById('watchlist-items-container');
@@ -13,12 +14,16 @@
             return;
         }
 
-        container.addEventListener('dragstart', handleDragStart);
-        container.addEventListener('dragend', handleDragEnd);
-        container.addEventListener('dragover', handleDragOver);
-        container.addEventListener('dragenter', handleDragEnter);
-        container.addEventListener('dragleave', handleDragLeave);
-        container.addEventListener('drop', handleDrop);
+        // Only attach listeners once
+        if (!listenersAttached) {
+            container.addEventListener('dragstart', handleDragStart);
+            container.addEventListener('dragend', handleDragEnd);
+            container.addEventListener('dragover', handleDragOver);
+            container.addEventListener('dragenter', handleDragEnter);
+            container.addEventListener('dragleave', handleDragLeave);
+            container.addEventListener('drop', handleDrop);
+            listenersAttached = true;
+        }
     }
 
     function handleDragStart(e) {
@@ -89,16 +94,24 @@
         symbols.splice(draggedIndex, 1);
         symbols.splice(targetIndex, 0, draggedSymbol);
 
-        // Trigger Dash callback via hidden input
-        const reorderInput = document.getElementById('watchlist-reorder-input');
-        if (reorderInput) {
-            reorderInput.value = symbols.join(',') + '|' + Date.now();
+        // Update the Dash store using set_props
+        if (window.dash_clientside && window.dash_clientside.set_props) {
+            window.dash_clientside.set_props('watchlist-reorder-store', {
+                data: {
+                    order: symbols,
+                    timestamp: Date.now()
+                }
+            });
+            console.log('[WATCHLIST] Reorder triggered:', symbols);
+        } else {
+            // Fallback: Try to find and update the store directly
+            console.log('[WATCHLIST] dash_clientside.set_props not available, using fallback');
 
-            var event = new Event('input', { bubbles: true });
-            reorderInput.dispatchEvent(event);
-
-            var changeEvent = new Event('change', { bubbles: true });
-            reorderInput.dispatchEvent(changeEvent);
+            // Store the new order in a global variable that a polling callback can pick up
+            window._watchlistReorderPending = {
+                order: symbols,
+                timestamp: Date.now()
+            };
         }
     }
 
@@ -112,7 +125,7 @@
     // Re-initialize when DOM changes (for dynamic content)
     var observer = new MutationObserver(function(mutations) {
         var container = document.getElementById('watchlist-items-container');
-        if (container) {
+        if (container && !listenersAttached) {
             initDragDrop();
         }
     });

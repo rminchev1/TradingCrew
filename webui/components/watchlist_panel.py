@@ -44,11 +44,11 @@ def create_watchlist_panel():
             ]
         ),
 
-        # Hidden input to capture reorder events from JavaScript
-        dcc.Input(
-            id="watchlist-reorder-input",
-            type="hidden",
-            value=""
+        # Store to capture reorder events from JavaScript
+        # JavaScript will use window.dash_clientside.set_props to update this
+        dcc.Store(
+            id="watchlist-reorder-store",
+            data={"order": [], "timestamp": 0}
         ),
 
         # Store for watchlist data (persisted in localStorage)
