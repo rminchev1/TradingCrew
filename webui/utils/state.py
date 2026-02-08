@@ -92,6 +92,29 @@ class AppState:
         self.viewing_history = False
         self.historical_run = None
 
+        # System settings (loaded from localStorage, overrides env vars)
+        self.system_settings = {
+            "openai_api_key": None,
+            "alpaca_api_key": None,
+            "alpaca_secret_key": None,
+            "alpaca_use_paper": "True",
+            "finnhub_api_key": None,
+            "fred_api_key": None,
+            "coindesk_api_key": None,
+            "deep_think_llm": "o3-mini",
+            "quick_think_llm": "gpt-4o-mini",
+            "max_debate_rounds": 4,
+            "max_risk_discuss_rounds": 3,
+            "parallel_analysts": True,
+            "online_tools": True,
+            "max_recur_limit": 200,
+            "scanner_num_results": 20,
+            "scanner_use_llm_sentiment": False,
+            "scanner_use_options_flow": True,
+            "scanner_cache_ttl": 300,
+            "scanner_dynamic_universe": True,
+        }
+
     def add_symbols_to_queue(self, symbols):
         """Add a list of symbols to the analysis queue."""
         self.analysis_queue.extend(symbols)

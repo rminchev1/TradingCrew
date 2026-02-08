@@ -1,0 +1,488 @@
+"""
+webui/components/system_settings.py - System Settings Page Component
+Global configuration options for API keys, LLM models, and analysis settings.
+"""
+
+import dash_bootstrap_components as dbc
+from dash import html, dcc
+import os
+
+
+def create_api_key_input(key_id, label, env_var, has_test=True):
+    """Create a password-masked API key input with reveal toggle and optional test button."""
+    # Check if env var is set
+    env_value = os.getenv(env_var)
+    has_env_value = bool(env_value)
+
+    cols = [
+        dbc.Col(dbc.Label(label, className="mb-0"), width=3),
+        dbc.Col(
+            dbc.InputGroup([
+                dbc.Input(
+                    id=f"setting-{key_id}",
+                    type="password",
+                    placeholder=f"{'••••••••' if has_env_value else f'Enter {label}'}",
+                    className="border-end-0"
+                ),
+                dbc.Button(
+                    html.I(className="fas fa-eye"),
+                    id=f"reveal-{key_id}",
+                    color="secondary",
+                    outline=True,
+                    className="border-start-0"
+                )
+            ], size="sm"),
+            width=5 if has_test else 7
+        ),
+    ]
+
+    if has_test:
+        cols.append(dbc.Col(
+            dbc.Button("Test", id=f"test-{key_id}", size="sm", color="info", outline=True),
+            width=2
+        ))
+
+    cols.append(dbc.Col(
+        html.Span(
+            id=f"status-{key_id}",
+            children=[
+                html.I(className="fas fa-check-circle text-success me-1") if has_env_value else html.I(className="fas fa-times-circle text-warning me-1"),
+                "From env" if has_env_value else "Not set"
+            ]
+        ),
+        width=2
+    ))
+
+    return dbc.Row(cols, className="mb-2 align-items-center")
+
+
+def create_settings_card(title, content, icon=None):
+    """Create a card wrapper for a settings section."""
+    header_content = [html.Span(title, className="fw-semibold")]
+    if icon:
+        header_content.insert(0, html.I(className=f"{icon} me-2"))
+
+    return dbc.Card([
+        dbc.CardHeader(header_content),
+        dbc.CardBody(content, className="py-3")
+    ], className="mb-3")
+
+
+def create_api_keys_section():
+    """Create the API Keys & Credentials section."""
+    return html.Div([
+        # OpenAI
+        create_api_key_input("openai-api-key", "OpenAI API Key", "OPENAI_API_KEY"),
+
+        html.Hr(className="my-2"),
+
+        # Alpaca
+        create_api_key_input("alpaca-api-key", "Alpaca API Key", "ALPACA_API_KEY"),
+        create_api_key_input("alpaca-secret-key", "Alpaca Secret Key", "ALPACA_SECRET_KEY", has_test=False),
+
+        # Paper/Live Mode
+        dbc.Row([
+            dbc.Col(dbc.Label("Trading Mode", className="mb-0"), width=3),
+            dbc.Col(
+                dbc.Select(
+                    id="setting-alpaca-paper-mode",
+                    options=[
+                        {"label": "Paper Trading (Recommended)", "value": "True"},
+                        {"label": "Live Trading", "value": "False"}
+                    ],
+                    value=os.getenv("ALPACA_USE_PAPER", "True"),
+                    size="sm"
+                ),
+                width=5
+            ),
+            dbc.Col(width=2),
+            dbc.Col(
+                html.Span(
+                    id="status-alpaca-mode",
+                    children=[
+                        html.I(className="fas fa-flask text-info me-1"),
+                        "PAPER MODE"
+                    ]
+                ),
+                width=2
+            )
+        ], className="mb-2 align-items-center"),
+
+        html.Hr(className="my-2"),
+
+        # Finnhub
+        create_api_key_input("finnhub-api-key", "Finnhub API Key", "FINNHUB_API_KEY"),
+
+        # FRED
+        create_api_key_input("fred-api-key", "FRED API Key", "FRED_API_KEY"),
+
+        # CoinDesk
+        create_api_key_input("coindesk-api-key", "CoinDesk API Key", "COINDESK_API_KEY"),
+    ])
+
+
+def create_llm_section():
+    """Create the LLM Models section."""
+    return html.Div([
+        dbc.Row([
+            dbc.Col(dbc.Label("Deep Think Model", className="mb-0"), width=3),
+            dbc.Col(
+                dbc.Select(
+                    id="setting-deep-think-llm",
+                    options=[
+                        {"label": "o3-mini (Recommended)", "value": "o3-mini"},
+                        {"label": "o1-mini", "value": "o1-mini"},
+                        {"label": "gpt-4o", "value": "gpt-4o"},
+                        {"label": "gpt-4o-mini", "value": "gpt-4o-mini"},
+                        {"label": "gpt-5-mini", "value": "gpt-5-mini"},
+                        {"label": "gpt-5-nano", "value": "gpt-5-nano"},
+                    ],
+                    value="o3-mini",
+                    size="sm"
+                ),
+                width=5
+            ),
+            dbc.Col(
+                html.Small("Complex reasoning tasks", className="text-muted"),
+                width=4
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Quick Think Model", className="mb-0"), width=3),
+            dbc.Col(
+                dbc.Select(
+                    id="setting-quick-think-llm",
+                    options=[
+                        {"label": "gpt-4o-mini (Recommended)", "value": "gpt-4o-mini"},
+                        {"label": "gpt-4o", "value": "gpt-4o"},
+                        {"label": "gpt-5-mini", "value": "gpt-5-mini"},
+                        {"label": "gpt-5-nano", "value": "gpt-5-nano"},
+                    ],
+                    value="gpt-4o-mini",
+                    size="sm"
+                ),
+                width=5
+            ),
+            dbc.Col(
+                html.Small("Fast analysis tasks", className="text-muted"),
+                width=4
+            )
+        ], className="mb-2 align-items-center"),
+    ])
+
+
+def create_analysis_section():
+    """Create the Analysis Defaults section."""
+    return html.Div([
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Debate Rounds", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-max-debate-rounds",
+                    type="number",
+                    min=1,
+                    max=10,
+                    value=4,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Bull/Bear debate depth (1-10)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Risk Rounds", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-max-risk-rounds",
+                    type="number",
+                    min=1,
+                    max=10,
+                    value=3,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Risk discussion depth (1-10)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Parallel Analysts", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-parallel-analysts",
+                    value=True,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Run analysts concurrently", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Online Tools", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-online-tools",
+                    value=True,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Enable external data fetching", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Recursion Limit", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-max-recur-limit",
+                    type="number",
+                    min=50,
+                    max=500,
+                    value=200,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Graph execution limit (50-500)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+    ])
+
+
+def create_scanner_section():
+    """Create the Market Scanner section."""
+    return html.Div([
+        dbc.Row([
+            dbc.Col(dbc.Label("Results Count", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-scanner-num-results",
+                    type="number",
+                    min=5,
+                    max=50,
+                    value=20,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Top N stocks returned (5-50)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("LLM Sentiment", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-scanner-llm-sentiment",
+                    value=False,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("GPT for news sentiment (costs $)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Options Flow", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-scanner-options-flow",
+                    value=True,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Include options analysis", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Cache TTL (seconds)", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-scanner-cache-ttl",
+                    type="number",
+                    min=60,
+                    max=3600,
+                    value=300,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Cache duration (60-3600s)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Dynamic Universe", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-scanner-dynamic-universe",
+                    value=True,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Top 200 liquid stocks vs predefined", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+    ])
+
+
+def create_settings_actions():
+    """Create the action buttons for the settings page."""
+    return dbc.Card([
+        dbc.CardBody([
+            dbc.Row([
+                dbc.Col([
+                    dbc.Button(
+                        [html.I(className="fas fa-save me-2"), "Save Settings"],
+                        id="settings-save-btn",
+                        color="primary",
+                        className="me-2"
+                    ),
+                    dbc.Button(
+                        [html.I(className="fas fa-undo me-2"), "Reset to Defaults"],
+                        id="settings-reset-btn",
+                        color="secondary",
+                        outline=True,
+                        className="me-2"
+                    ),
+                ], width="auto"),
+                dbc.Col([
+                    dbc.Button(
+                        [html.I(className="fas fa-file-export me-2"), "Export"],
+                        id="settings-export-btn",
+                        color="info",
+                        outline=True,
+                        size="sm",
+                        className="me-2"
+                    ),
+                    dcc.Download(id="settings-export-download"),
+                    dcc.Upload(
+                        id="settings-import-upload",
+                        children=dbc.Button(
+                            [html.I(className="fas fa-file-import me-2"), "Import"],
+                            id="settings-import-btn",
+                            color="info",
+                            outline=True,
+                            size="sm"
+                        ),
+                        accept=".json"
+                    ),
+                ], width="auto", className="ms-auto"),
+            ], className="align-items-center"),
+        ], className="py-2")
+    ], className="mt-3")
+
+
+def create_system_settings_page():
+    """Create the full system settings page."""
+    return dbc.Container([
+        # Hidden store for settings persistence
+        dcc.Store(id='system-settings-store', storage_type='local'),
+
+        # Page header
+        html.H3([
+            html.I(className="fas fa-cog me-2"),
+            "System Settings"
+        ], className="mb-4"),
+
+        # Description
+        html.P(
+            "Configure global settings for API keys, LLM models, and analysis parameters. "
+            "Settings are saved to your browser's local storage and persist across sessions.",
+            className="text-muted mb-4"
+        ),
+
+        # Alert for unsaved changes
+        dbc.Alert(
+            id="settings-unsaved-alert",
+            children=[
+                html.I(className="fas fa-exclamation-triangle me-2"),
+                "You have unsaved changes."
+            ],
+            color="warning",
+            is_open=False,
+            dismissable=True,
+            className="mb-3"
+        ),
+
+        # Success/Error toast
+        dbc.Toast(
+            id="settings-toast",
+            header="Settings",
+            icon="success",
+            is_open=False,
+            dismissable=True,
+            duration=4000,
+            style={"position": "fixed", "top": 66, "right": 10, "width": 350, "zIndex": 1050},
+        ),
+
+        # Settings sections
+        dbc.Row([
+            dbc.Col([
+                # API Keys Section
+                create_settings_card(
+                    "API Keys & Credentials",
+                    create_api_keys_section(),
+                    icon="fas fa-key"
+                ),
+
+                # LLM Models Section
+                create_settings_card(
+                    "LLM Models",
+                    create_llm_section(),
+                    icon="fas fa-brain"
+                ),
+            ], lg=6),
+
+            dbc.Col([
+                # Analysis Defaults Section
+                create_settings_card(
+                    "Analysis Defaults",
+                    create_analysis_section(),
+                    icon="fas fa-sliders-h"
+                ),
+
+                # Scanner Settings Section
+                create_settings_card(
+                    "Market Scanner",
+                    create_scanner_section(),
+                    icon="fas fa-search-dollar"
+                ),
+            ], lg=6),
+        ]),
+
+        # Action Buttons
+        create_settings_actions(),
+
+    ], fluid=True, className="py-4")

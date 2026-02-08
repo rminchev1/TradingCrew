@@ -7,6 +7,68 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+
+# =============================================================================
+# API Key Validation Functions
+# =============================================================================
+
+def validate_openai_key(api_key: str) -> bool:
+    """Test OpenAI API key validity by listing models."""
+    if not api_key:
+        return False
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        # Try to list models - minimal API call
+        client.models.list()
+        return True
+    except Exception:
+        return False
+
+
+def validate_alpaca_keys(api_key: str, secret_key: str, paper: bool = True) -> bool:
+    """Test Alpaca API credentials by fetching account info."""
+    if not api_key or not secret_key:
+        return False
+    try:
+        from alpaca.trading.client import TradingClient
+        client = TradingClient(api_key, secret_key, paper=paper)
+        client.get_account()
+        return True
+    except Exception:
+        return False
+
+
+def validate_finnhub_key(api_key: str) -> bool:
+    """Test Finnhub API key by fetching a company profile."""
+    if not api_key:
+        return False
+    try:
+        import finnhub
+        client = finnhub.Client(api_key=api_key)
+        # Try to get AAPL profile - minimal API call
+        result = client.company_profile2(symbol='AAPL')
+        return bool(result)
+    except Exception:
+        return False
+
+
+def validate_fred_key(api_key: str) -> bool:
+    """Test FRED API key by fetching a series."""
+    if not api_key:
+        return False
+    try:
+        import requests
+        # Try to fetch GDP series info - minimal API call
+        url = f"https://api.stlouisfed.org/fred/series?series_id=GDP&api_key={api_key}&file_type=json"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return "seriess" in data
+        return False
+    except Exception:
+        return False
+
 # Use default config but allow it to be overridden
 _config: Optional[Dict] = None
 DATA_DIR: Optional[str] = None

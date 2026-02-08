@@ -107,13 +107,86 @@ def execute_trade_after_analysis(ticker, allow_shorts, trade_amount):
             state["trading_results"] = {"error": f"Trading execution error: {str(e)}"}
 
 
+def merge_system_settings_into_config(config):
+    """Merge system settings from AppState into the config dict.
+
+    System settings from the UI take precedence over defaults.
+    Environment variables are checked as fallback for API keys.
+    """
+    import os
+    system_settings = app_state.system_settings
+
+    # LLM Models (UI values override defaults)
+    if system_settings.get("deep_think_llm"):
+        config["deep_think_llm"] = system_settings["deep_think_llm"]
+    if system_settings.get("quick_think_llm"):
+        config["quick_think_llm"] = system_settings["quick_think_llm"]
+
+    # Analysis settings
+    if system_settings.get("max_debate_rounds"):
+        config["max_debate_rounds"] = system_settings["max_debate_rounds"]
+    if system_settings.get("max_risk_discuss_rounds"):
+        config["max_risk_discuss_rounds"] = system_settings["max_risk_discuss_rounds"]
+    if "parallel_analysts" in system_settings:
+        config["parallel_analysts"] = system_settings["parallel_analysts"]
+    if "online_tools" in system_settings:
+        config["online_tools"] = system_settings["online_tools"]
+    if system_settings.get("max_recur_limit"):
+        config["max_recur_limit"] = system_settings["max_recur_limit"]
+
+    # Scanner settings
+    if system_settings.get("scanner_num_results"):
+        config["scanner_num_results"] = system_settings["scanner_num_results"]
+    if "scanner_use_llm_sentiment" in system_settings:
+        config["scanner_use_llm_sentiment"] = system_settings["scanner_use_llm_sentiment"]
+    if "scanner_use_options_flow" in system_settings:
+        config["scanner_use_options_flow"] = system_settings["scanner_use_options_flow"]
+    if system_settings.get("scanner_cache_ttl"):
+        config["scanner_cache_ttl"] = system_settings["scanner_cache_ttl"]
+    if "scanner_dynamic_universe" in system_settings:
+        config["scanner_dynamic_universe"] = system_settings["scanner_dynamic_universe"]
+
+    # API Keys: UI value > env var > None
+    # OpenAI
+    openai_key = system_settings.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        config["openai_api_key"] = openai_key
+
+    # Alpaca
+    alpaca_key = system_settings.get("alpaca_api_key") or os.getenv("ALPACA_API_KEY")
+    alpaca_secret = system_settings.get("alpaca_secret_key") or os.getenv("ALPACA_SECRET_KEY")
+    alpaca_paper = system_settings.get("alpaca_use_paper", os.getenv("ALPACA_USE_PAPER", "True"))
+    if alpaca_key:
+        config["alpaca_api_key"] = alpaca_key
+    if alpaca_secret:
+        config["alpaca_secret_key"] = alpaca_secret
+    config["alpaca_use_paper"] = alpaca_paper
+
+    # Finnhub
+    finnhub_key = system_settings.get("finnhub_api_key") or os.getenv("FINNHUB_API_KEY")
+    if finnhub_key:
+        config["finnhub_api_key"] = finnhub_key
+
+    # FRED
+    fred_key = system_settings.get("fred_api_key") or os.getenv("FRED_API_KEY")
+    if fred_key:
+        config["fred_api_key"] = fred_key
+
+    # CoinDesk
+    coindesk_key = system_settings.get("coindesk_api_key") or os.getenv("COINDESK_API_KEY")
+    if coindesk_key:
+        config["coindesk_api_key"] = coindesk_key
+
+    return config
+
+
 def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_llm, deep_llm, progress=None):
     """Run the trading analysis using current/real-time data"""
     try:
         # Always use current date for real-time analysis
         from datetime import datetime
         current_date = datetime.now().strftime("%Y-%m-%d")
-        
+
         print(f"Starting real-time analysis for {ticker} with current date: {current_date}")
         current_state = app_state.get_state(ticker)
         if not current_state:
@@ -121,9 +194,14 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
             return
         current_state["analysis_running"] = True
         current_state["analysis_complete"] = False
-        
+
         # Create config with selected options
         config = DEFAULT_CONFIG.copy()
+
+        # Merge system settings from UI (API keys, LLM models, etc.)
+        config = merge_system_settings_into_config(config)
+
+        # Override with function parameters (these come from the trading panel)
         config["max_debate_rounds"] = research_depth
         config["max_risk_discuss_rounds"] = research_depth
         config["allow_shorts"] = allow_shorts

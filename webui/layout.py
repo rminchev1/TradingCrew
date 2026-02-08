@@ -17,6 +17,7 @@ from webui.components.scanner_panel import create_scanner_panel
 from webui.components.ticker_progress_panel import create_ticker_progress_panel
 from webui.components.watchlist_panel import create_watchlist_section
 from webui.components.log_panel import create_log_panel
+from webui.components.system_settings import create_system_settings_page
 from webui.config.constants import COLORS, REFRESH_INTERVALS
 
 
@@ -90,12 +91,8 @@ def create_collapsible_section(section_id, title, icon, content, default_open=Tr
     ], className="mb-2" if compact else "mb-3")
 
 
-def create_main_layout():
-    """Create the main application layout - Pro Trader optimized"""
-
-    # Compact header
-    header = create_header()
-
+def create_trading_content():
+    """Create the trading tab content."""
     # ═══════════════════════════════════════════════════════════════════════
     # ROW 1: Compact Account Summary Bar
     # ═══════════════════════════════════════════════════════════════════════
@@ -256,8 +253,39 @@ def create_main_layout():
         html.Div(id="refresh-status", children="⏸️ Updates paused", style={"display": "none"}),
     ], style={"display": "none"})
 
+    return html.Div([
+        # Account Summary Bar
+        account_bar,
+
+        # Market Scanner & Watchlist (top for quick access)
+        scanner_section,
+        watchlist_section,
+
+        # Main Trading Area (Chart + Controls)
+        main_trading_row,
+
+        # Positions & Orders
+        positions_orders_section,
+
+        # Agent Reports
+        reports_section,
+
+        # Application Logs (Live Streaming)
+        create_log_panel(),
+
+        # Hidden components
+        hidden_components,
+    ])
+
+
+def create_main_layout():
+    """Create the main application layout - Pro Trader optimized with tabs"""
+
+    # Compact header
+    header = create_header()
+
     # ═══════════════════════════════════════════════════════════════════════
-    # ASSEMBLE LAYOUT
+    # ASSEMBLE LAYOUT WITH TABS
     # ═══════════════════════════════════════════════════════════════════════
     layout = dbc.Container([
         *create_intervals(),
@@ -294,27 +322,21 @@ def create_main_layout():
             id="toast-container"
         ),
 
-        # Account Summary Bar
-        account_bar,
-
-        # Market Scanner & Watchlist (top for quick access)
-        scanner_section,
-        watchlist_section,
-
-        # Main Trading Area (Chart + Controls)
-        main_trading_row,
-
-        # Positions & Orders
-        positions_orders_section,
-
-        # Agent Reports
-        reports_section,
-
-        # Application Logs (Live Streaming)
-        create_log_panel(),
-
-        # Hidden components
-        hidden_components,
+        # Tab Navigation
+        dbc.Tabs([
+            dbc.Tab(
+                label="Trading",
+                tab_id="tab-trading",
+                children=create_trading_content(),
+                className="pt-3"
+            ),
+            dbc.Tab(
+                label="Settings",
+                tab_id="tab-settings",
+                children=create_system_settings_page(),
+                className="pt-3"
+            ),
+        ], id="main-tabs", active_tab="tab-trading", className="mb-3"),
 
         # Footer
         create_footer(),
