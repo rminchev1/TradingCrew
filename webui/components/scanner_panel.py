@@ -11,6 +11,9 @@ def create_scanner_panel():
     """Create the market scanner panel."""
     return dbc.Card(
         dbc.CardBody([
+            # Persistent storage for scanner results (survives page refresh)
+            dcc.Store(id="scanner-results-store", storage_type="local"),
+
             dbc.Row([
                 dbc.Col([
                     html.H4("Market Scanner", className="mb-0"),
@@ -25,6 +28,10 @@ def create_scanner_panel():
                     ),
                 ], width=4, className="d-flex align-items-center"),
             ], className="mb-3"),
+
+            # Timestamp display (shows when last scan was performed)
+            html.Div(id="scanner-timestamp-display", className="text-muted small text-end mb-2"),
+
             html.Hr(),
 
             # Progress indicator (hidden by default)

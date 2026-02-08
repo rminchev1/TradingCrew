@@ -86,6 +86,7 @@ class AppState:
         self.scanner_progress = 0.0
         self.scanner_stage = ""  # Current stage: "fetching", "technical", "news", "ranking", "rationale", "complete"
         self.scanner_error = None
+        self.scanner_timestamp = None  # Datetime when last scan completed
 
         # History viewing state
         self.viewing_history = False
@@ -937,13 +938,27 @@ class AppState:
 
     def set_scanner_results(self, results):
         """Set scanner results and mark as complete."""
+        import datetime
         with self._lock:
             self.scanner_results = results
             self.scanner_running = False
             self.scanner_progress = 1.0
             self.scanner_stage = "complete"
+            self.scanner_timestamp = datetime.datetime.now()
             self.needs_ui_update = True
-            print(f"[STATE] Scanner complete with {len(results)} results")
+            print(f"[STATE] Scanner complete with {len(results)} results at {self.scanner_timestamp}")
+
+    def get_scanner_timestamp(self):
+        """Get the timestamp of the last scanner run."""
+        return self.scanner_timestamp
+
+    def load_scanner_results(self, results, timestamp):
+        """Load scanner results from persistence (e.g., localStorage)."""
+        import datetime
+        with self._lock:
+            self.scanner_results = results
+            self.scanner_timestamp = timestamp if isinstance(timestamp, datetime.datetime) else datetime.datetime.fromisoformat(timestamp) if timestamp else None
+            print(f"[STATE] Loaded {len(results)} scanner results from persistence")
 
     def set_scanner_error(self, error: str):
         """Set scanner error and stop running."""
