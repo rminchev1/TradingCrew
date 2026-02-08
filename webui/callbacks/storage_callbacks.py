@@ -3,12 +3,17 @@ Storage callbacks for persisting user settings in localStorage
 """
 
 from dash import Input, Output, State, callback_context as ctx
+import dash
 from webui.utils.storage import get_default_settings
+
+# Track if initial load has happened to prevent circular dependency
+_initial_load_done = False
 
 def register_storage_callbacks(app):
     """Register storage-related callbacks"""
-    
+
     # Callback to load settings from localStorage on page load
+    # Uses slow-refresh-interval as a one-time trigger on first interval
     @app.callback(
         [
             Output("ticker-input", "value"),
@@ -26,10 +31,20 @@ def register_storage_callbacks(app):
             Output("quick-llm", "value"),
             Output("deep-llm", "value")
         ],
-        Input("settings-store", "data")
+        Input("slow-refresh-interval", "n_intervals"),
+        State("settings-store", "data"),
+        prevent_initial_call=False
     )
-    def load_settings(stored_settings):
-        """Load settings from localStorage store"""
+    def load_settings(n_intervals, stored_settings):
+        """Load settings from localStorage store on first interval only"""
+        global _initial_load_done
+
+        # Only load on first call to prevent overwriting user changes
+        if _initial_load_done:
+            return [dash.no_update] * 14
+
+        _initial_load_done = True
+
         if not stored_settings:
             # Return default settings if nothing stored
             defaults = get_default_settings()
