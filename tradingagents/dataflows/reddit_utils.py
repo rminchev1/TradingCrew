@@ -7,6 +7,7 @@ from typing import Annotated, List
 import os
 import re
 from .alpaca_utils import AlpacaUtils
+from .external_data_logger import log_api_error
 
 
 def get_company_name(ticker: str) -> str:

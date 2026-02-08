@@ -3,6 +3,7 @@
 import requests
 import datetime
 from typing import List, Dict, Tuple, Optional
+from .external_data_logger import log_external_error, log_api_error
 
 """defillama_utils.py — lightweight helpers that pull free on‑chain fundamentals
 from DeFi Llama’s open API so your agent can issue Buy / Sell / Hold
@@ -123,6 +124,12 @@ def _get_chain_fundamentals(symbol: str, lookback_days: int = 30) -> str:
         return "\n".join(lines)
         
     except Exception as exc:
+        log_api_error(
+            system="defillama",
+            operation="_get_chain_fundamentals",
+            error_message=f"Error fetching chain fundamentals for {chain_name}: {exc}",
+            symbol=symbol
+        )
         return f"Error fetching chain fundamentals for {chain_name}: {exc}"
 
 
@@ -161,6 +168,12 @@ def get_fundamentals(symbol: str, lookback_days: int = 30) -> str:
         proto_json = _fetch_json(f"/protocol/{slug}")
         tvl_series = sorted(proto_json.get("tvl", []), key=lambda d: d["date"])
     except Exception as exc:
+        log_api_error(
+            system="defillama",
+            operation="get_fundamentals_tvl",
+            error_message=f"Error fetching TVL data: {exc}",
+            symbol=symbol
+        )
         return f"Error fetching TVL data: {exc}"
 
     if not tvl_series:

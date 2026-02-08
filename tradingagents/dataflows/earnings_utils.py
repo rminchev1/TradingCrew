@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Annotated, Dict, List, Optional
 from .config import get_api_key, DATA_DIR
+from .external_data_logger import log_external_error, log_api_error
 import os
 import pandas as pd
 
@@ -93,6 +94,12 @@ def get_finnhub_earnings_calendar(
         return result
         
     except Exception as e:
+        log_api_error(
+            system="earnings",
+            operation="get_finnhub_earnings_calendar",
+            error_message=f"Error fetching earnings data for {ticker}: {str(e)}",
+            symbol=ticker
+        )
         return f"Error fetching earnings data for {ticker}: {str(e)}"
 
 
@@ -244,4 +251,10 @@ def get_earnings_surprises_analysis(
         return result
         
     except Exception as e:
+        log_api_error(
+            system="earnings",
+            operation="get_earnings_surprises_analysis",
+            error_message=f"Error analyzing earnings surprises for {ticker}: {str(e)}",
+            symbol=ticker
+        )
         return f"Error analyzing earnings surprises for {ticker}: {str(e)}" 

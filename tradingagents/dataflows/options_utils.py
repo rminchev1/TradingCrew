@@ -9,6 +9,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 import warnings
+from .external_data_logger import log_external_error, log_api_error
 
 warnings.filterwarnings("ignore")
 
@@ -36,7 +37,12 @@ def get_options_chain(symbol: str) -> Tuple[Optional[pd.DataFrame], Optional[pd.
 
         return calls, puts, list(expirations)
     except Exception as e:
-        print(f"[OPTIONS] Error fetching options chain for {symbol}: {e}")
+        log_external_error(
+            system="options",
+            operation="get_options_chain",
+            error=e,
+            symbol=symbol
+        )
         return None, None, []
 
 
@@ -551,6 +557,10 @@ def get_full_options_analysis(symbol: str, curr_date: str = None) -> str:
         return report
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        log_external_error(
+            system="options",
+            operation="get_full_options_analysis",
+            error=e,
+            symbol=symbol
+        )
         return f"Error generating options analysis for {symbol}: {str(e)}"

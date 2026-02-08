@@ -11,6 +11,7 @@ from tenacity import (
     retry_if_exception_type,
     retry_if_result,
 )
+from .external_data_logger import log_api_error
 
 
 def is_rate_limited(response):
@@ -98,7 +99,12 @@ def getNewsData(query, start_date, end_date, max_pages=3):
                         }
                     )
                 except Exception as e:
-                    print(f"Error processing result: {e}")
+                    log_api_error(
+                        system="google",
+                        operation="getNewsData_parse_result",
+                        error_message=f"Error processing result: {e}",
+                        symbol=query
+                    )
                     # If one of the fields is not found, skip this result
                     continue
 
@@ -112,7 +118,12 @@ def getNewsData(query, start_date, end_date, max_pages=3):
             page += 1
 
         except Exception as e:
-            print(f"Failed after multiple retries: {e}")
+            log_api_error(
+                system="google",
+                operation="getNewsData",
+                error_message=f"Failed after multiple retries: {e}",
+                symbol=query
+            )
             break
 
     return news_results

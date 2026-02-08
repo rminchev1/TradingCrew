@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Annotated, Dict, List, Optional
 from .config import get_api_key, DATA_DIR
+from .external_data_logger import log_external_error, log_api_error
 import os
 import pandas as pd
 
@@ -51,6 +52,12 @@ def get_fred_data(series_id: str, start_date: str, end_date: str) -> Dict:
         response.raise_for_status()
         return response.json()
     except Exception as e:
+        log_api_error(
+            system="fred",
+            operation="get_fred_data",
+            error_message=f"Failed to fetch FRED data for {series_id}: {str(e)}",
+            symbol=series_id
+        )
         return {"error": f"Failed to fetch FRED data for {series_id}: {str(e)}"}
 
 

@@ -2,6 +2,7 @@ import json
 import os
 import finnhub
 from .config import get_finnhub_api_key
+from .external_data_logger import log_external_error
 
 
 def get_finnhub_client():

@@ -14,6 +14,7 @@ from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import GetAssetsRequest, GetOrdersRequest, MarketOrderRequest, ClosePositionRequest
 from alpaca.trading.enums import AssetClass, OrderSide, TimeInForce
 from .config import get_api_key
+from .external_data_logger import log_external_error, ExternalSystem
 
 
 # Fallback dictionary for company names
@@ -208,7 +209,13 @@ class AlpacaUtils:
                     print(f"[ALPACA] Retry {attempt + 1}/{max_retries} for {symbol} after {delay:.1f}s: {e}")
                     time.sleep(delay)
                 else:
-                    print(f"Error fetching data for {symbol}: {e}")
+                    log_external_error(
+                        system="alpaca",
+                        operation="get_stock_data",
+                        error=e,
+                        symbol=symbol,
+                        params={"start_date": str(start), "timeframe": str(tf)}
+                    )
                     return pd.DataFrame()
 
     @staticmethod
@@ -231,7 +238,12 @@ class AlpacaUtils:
                 "timestamp": quote.timestamp
             }
         except Exception as e:
-            print(f"Error fetching latest quote for {symbol}: {e}")
+            log_external_error(
+                system="alpaca",
+                operation="get_latest_quote",
+                error=e,
+                symbol=symbol
+            )
             return {}
 
     
@@ -296,9 +308,12 @@ class AlpacaUtils:
                 return ticker_to_company_fallback.get(symbol, symbol)
                 
         except Exception as e:
-            print(f"Error fetching company name for {symbol}: {e}")
-            print("This might be due to invalid API keys or insufficient permissions.")
-            print("If you recently reset your paper trading account, you may need to generate new API keys.")
+            log_external_error(
+                system="alpaca",
+                operation="get_company_name",
+                error=e,
+                symbol=symbol
+            )
             return ticker_to_company_fallback.get(symbol, symbol) 
 
     @staticmethod
@@ -337,7 +352,11 @@ class AlpacaUtils:
             
             return positions_data
         except Exception as e:
-            print(f"Error fetching positions: {e}")
+            log_external_error(
+                system="alpaca",
+                operation="get_positions_data",
+                error=e
+            )
             return []
 
     @staticmethod
@@ -397,7 +416,12 @@ class AlpacaUtils:
             return page_data
 
         except Exception as e:
-            print(f"Error fetching orders: {e}")
+            log_external_error(
+                system="alpaca",
+                operation="get_recent_orders",
+                error=e,
+                params={"page": page, "page_size": page_size}
+            )
             if return_total:
                 return [], 0
             return []
@@ -426,7 +450,11 @@ class AlpacaUtils:
                 "daily_change_percent": daily_change_percent
             }
         except Exception as e:
-            print(f"Error fetching account info: {e}")
+            log_external_error(
+                system="alpaca",
+                operation="get_account_info",
+                error=e
+            )
             return {
                 "buying_power": 0,
                 "cash": 0,
@@ -481,7 +509,12 @@ class AlpacaUtils:
             return "NEUTRAL"
         except Exception as e:
             # Log and default to neutral so agent prompts still work.
-            print(f"Error determining current position for {symbol}: {e}")
+            log_external_error(
+                system="alpaca",
+                operation="get_current_position_state",
+                error=e,
+                symbol=symbol
+            )
             return "NEUTRAL"
 
     @staticmethod
@@ -547,7 +580,13 @@ class AlpacaUtils:
             
         except Exception as e:
             error_msg = f"Error placing {side} order for {symbol}: {e}"
-            print(error_msg)
+            log_external_error(
+                system="alpaca",
+                operation="place_market_order",
+                error=e,
+                symbol=symbol,
+                params={"side": side, "notional": notional, "qty": qty}
+            )
             return {"success": False, "error": error_msg}
 
     @staticmethod
@@ -591,7 +630,13 @@ class AlpacaUtils:
             
         except Exception as e:
             error_msg = f"Error closing position for {symbol}: {e}"
-            print(error_msg)
+            log_external_error(
+                system="alpaca",
+                operation="close_position",
+                error=e,
+                symbol=symbol,
+                params={"percentage": percentage}
+            )
             return {"success": False, "error": error_msg}
 
     @staticmethod
@@ -752,5 +797,11 @@ class AlpacaUtils:
             
         except Exception as e:
             error_msg = f"Error executing trading action for {symbol}: {e}"
-            print(error_msg)
+            log_external_error(
+                system="alpaca",
+                operation="execute_trading_action",
+                error=e,
+                symbol=symbol,
+                params={"signal": signal, "dollar_amount": dollar_amount, "allow_shorts": allow_shorts}
+            )
             return {"success": False, "error": error_msg} 

@@ -4,6 +4,7 @@ from typing import Annotated
 import os
 from .config import get_config
 from .alpaca_utils import AlpacaUtils
+from .external_data_logger import log_api_error
 
 
 class StockstatsUtils:
@@ -284,4 +285,10 @@ class StockstatsUtils:
                         return f"N/A: No trading data available on or before {curr_date_str}"
 
             except Exception as e:
+                log_api_error(
+                    system="stockstats",
+                    operation="get_stock_stats",
+                    error_message=f"Error processing data for {symbol}: {str(e)}",
+                    symbol=symbol
+                )
                 return f"N/A: Error processing data for {symbol}: {str(e)}" 

@@ -7,6 +7,7 @@ import pandas as pd
 from functools import wraps
 
 from .utils import save_output, SavePathType, decorate_all_methods
+from .external_data_logger import log_external_error
 
 
 def init_ticker(func: Callable) -> Callable:

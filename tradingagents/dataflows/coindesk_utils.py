@@ -2,6 +2,7 @@ import requests
 import re
 import datetime
 from .config import get_api_key
+from .external_data_logger import log_external_error, log_api_error
 
 
 def get_news(symbol: str, n: int = 5):
@@ -51,6 +52,18 @@ def get_news(symbol: str, n: int = 5):
         return "".join(formatted_news)
 
     except requests.exceptions.RequestException as e:
+        log_api_error(
+            system="coindesk",
+            operation="get_news",
+            error_message=f"Error fetching news from CryptoCompare: {e}",
+            symbol=symbol
+        )
         return f"Error fetching news from CryptoCompare: {e}"
     except Exception as e:
+        log_api_error(
+            system="coindesk",
+            operation="get_news",
+            error_message=f"An error occurred: {e}",
+            symbol=symbol
+        )
         return f"An error occurred: {e}" 
