@@ -987,5 +987,10 @@ def analyze():
     run_analysis()
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the CLI when installed as a package."""
     app()
+
+
+if __name__ == "__main__":
+    main()

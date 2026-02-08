@@ -1,0 +1,32 @@
+# Include documentation
+include README.md
+include CLAUDE.md
+include LICENSE
+include requirements.txt
+include pyproject.toml
+
+# Include web UI assets
+recursive-include webui/assets *
+
+# Include CLI static files
+recursive-include cli/static *
+
+# Include tests
+recursive-include tests *.py
+
+# Exclude development and cache files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude *.egg-info
+global-exclude .git
+global-exclude .gitignore
+global-exclude .env
+global-exclude .env.*
+
+# Exclude data caches and analysis history
+prune tradingagents/dataflows/data_cache
+prune analysis_history
+prune .pytest_cache
+prune .mypy_cache
+prune .ruff_cache
