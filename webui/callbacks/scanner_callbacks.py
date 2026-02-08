@@ -154,10 +154,11 @@ def register_scanner_callbacks(app):
         """Update the scanner results display and start scanner if button clicked."""
         ctx = callback_context
 
-        # Check if the button was clicked (not just interval refresh)
-        triggered_id = ctx.triggered[0]["prop_id"] if ctx.triggered else ""
+        # Check if the button was clicked - check ALL triggered inputs, not just first
+        triggered_ids = [t["prop_id"] for t in ctx.triggered] if ctx.triggered else []
+        button_clicked = any("scanner-btn" in tid for tid in triggered_ids) and n_clicks
 
-        if "scanner-btn" in triggered_id and n_clicks:
+        if button_clicked:
             # Button was clicked - start the scanner if not already running
             if not app_state.is_scanner_running():
                 # Start scanner in background thread

@@ -206,10 +206,17 @@ def create_main_layout():
         "Market Scanner",
         "🔍",
         dbc.CardBody([
+            # Persistent storage for scanner results (survives page refresh)
+            dcc.Store(id="scanner-results-store", storage_type="local"),
+
             dbc.Row([
                 dbc.Col([
                     html.Small("Find trading opportunities", className="text-muted"),
-                ], md=8),
+                ], md=6),
+                dbc.Col([
+                    # Timestamp display
+                    html.Div(id="scanner-timestamp-display", className="text-muted small text-end"),
+                ], md=3),
                 dbc.Col([
                     dbc.Button(
                         [html.I(className="bi bi-search me-2"), "Scan"],
@@ -218,7 +225,7 @@ def create_main_layout():
                         size="sm",
                         className="w-100"
                     ),
-                ], md=4),
+                ], md=3),
             ], className="mb-2 align-items-center"),
             html.Div(
                 id="scanner-progress-container",
@@ -233,7 +240,7 @@ def create_main_layout():
                 html.Div("Click 'Scan' to find opportunities.", className="text-center text-muted py-2 small")
             ]),
         ], className="p-2"),
-        default_open=False,
+        default_open=True,
         compact=True
     )
 
