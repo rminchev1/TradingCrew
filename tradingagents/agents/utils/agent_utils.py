@@ -290,6 +290,33 @@ class Toolkit:
 
     @staticmethod
     @tool
+    @timing_wrapper("NEWS")
+    def get_finnhub_news_online(
+        ticker: Annotated[str, "Stock ticker symbol, e.g. 'AAPL', 'TSLA'"],
+        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+        look_back_days: Annotated[int, "Number of days to look back for news"] = 7,
+    ):
+        """
+        Retrieve LIVE news about a company from Finnhub API.
+        This is the preferred tool for getting real-time stock news.
+
+        Args:
+            ticker (str): Stock ticker symbol (e.g., 'AAPL', 'NVDA')
+            curr_date (str): Current date in yyyy-mm-dd format
+            look_back_days (int): Number of days to look back (default: 7)
+
+        Returns:
+            str: Formatted news articles with headlines, summaries, sources, and dates
+        """
+
+        finnhub_news_result = interface.get_finnhub_news_online(
+            ticker, curr_date, look_back_days
+        )
+
+        return finnhub_news_result
+
+    @staticmethod
+    @tool
     @timing_wrapper("SOCIAL")
     def get_reddit_stock_info(
         ticker: Annotated[

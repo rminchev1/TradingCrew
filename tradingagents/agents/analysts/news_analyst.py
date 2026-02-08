@@ -20,7 +20,15 @@ def create_news_analyst(llm, toolkit):
         is_crypto = "/" in ticker or "USD" in ticker.upper() or "USDT" in ticker.upper()
 
         if toolkit.config["online_tools"]:
-            tools = [toolkit.get_global_news_openai, toolkit.get_google_news]
+            if is_crypto:
+                tools = [toolkit.get_global_news_openai, toolkit.get_google_news]
+            else:
+                # For stocks with online_tools: use live Finnhub API + OpenAI
+                tools = [
+                    toolkit.get_finnhub_news_online,
+                    toolkit.get_global_news_openai,
+                    toolkit.get_google_news,
+                ]
         else:
             if is_crypto:
                 tools = [
@@ -29,8 +37,9 @@ def create_news_analyst(llm, toolkit):
                     toolkit.get_google_news,
                 ]
             else:
+                # For stocks: use live Finnhub API as primary source
                 tools = [
-                    toolkit.get_finnhub_news,
+                    toolkit.get_finnhub_news_online,
                     toolkit.get_reddit_news,
                     toolkit.get_google_news,
                 ]

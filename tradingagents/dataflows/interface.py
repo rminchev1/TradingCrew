@@ -2,7 +2,7 @@ from typing import Annotated, Dict
 from .reddit_utils import fetch_top_from_category
 from .stockstats_utils import *
 from .googlenews_utils import *
-from .finnhub_utils import get_data_in_range
+from .finnhub_utils import get_data_in_range, get_finnhub_client
 from .alpaca_utils import AlpacaUtils
 from .coindesk_utils import get_news as get_coindesk_news_util
 from .defillama_utils import get_fundamentals as get_defillama_fundamentals_util
@@ -85,6 +85,75 @@ def get_finnhub_news(
             combined_result += current_news + "\n\n"
 
     return f"## {ticker} News, from {before} to {curr_date}:\n" + str(combined_result)
+
+
+def get_finnhub_news_online(
+    ticker: Annotated[str, "Stock ticker symbol, e.g. 'AAPL', 'TSLA'"],
+    curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+    look_back_days: Annotated[int, "Number of days to look back for news"] = 7,
+):
+    """
+    Retrieve LIVE news about a company from Finnhub API.
+
+    This is an online tool that fetches real-time news data from Finnhub.
+
+    Args:
+        ticker (str): Stock ticker symbol (e.g., 'AAPL', 'NVDA')
+        curr_date (str): Current date in yyyy-mm-dd format
+        look_back_days (int): Number of days to look back (default: 7)
+
+    Returns:
+        str: Formatted news articles with headlines, summaries, and sources
+    """
+    from .external_data_logger import log_api_error
+
+    try:
+        # Calculate date range
+        end_date = datetime.strptime(curr_date, "%Y-%m-%d")
+        start_date = end_date - relativedelta(days=look_back_days)
+
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
+
+        # Get Finnhub client and fetch news
+        client = get_finnhub_client()
+        news = client.company_news(ticker, _from=start_str, to=end_str)
+
+        if not news:
+            return f"No recent news found for {ticker} from {start_str} to {end_str}."
+
+        # Format news articles
+        combined_result = ""
+        for article in news[:15]:  # Limit to 15 most recent articles
+            headline = article.get("headline", "No headline")
+            summary = article.get("summary", "No summary available")
+            source = article.get("source", "Unknown")
+            url = article.get("url", "")
+            timestamp = article.get("datetime", 0)
+
+            # Convert timestamp to date
+            if timestamp:
+                article_date = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
+            else:
+                article_date = "Unknown date"
+
+            current_news = f"### {headline}\n"
+            current_news += f"**Source:** {source} | **Date:** {article_date}\n"
+            current_news += f"{summary}\n"
+            if url:
+                current_news += f"[Read more]({url})\n"
+            combined_result += current_news + "\n"
+
+        return f"## {ticker} Live News (Finnhub), from {start_str} to {end_str}:\n\n{combined_result}"
+
+    except Exception as e:
+        log_api_error(
+            system="finnhub",
+            operation="get_finnhub_news_online",
+            error_message=f"Failed to fetch live news for {ticker}: {str(e)}",
+            symbol=ticker
+        )
+        return f"Error fetching live news for {ticker}: {str(e)}"
 
 
 def get_finnhub_company_insider_sentiment(
