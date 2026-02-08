@@ -1,5 +1,11 @@
-import chromadb
-from chromadb.config import Settings
+try:
+    import chromadb
+    from chromadb.config import Settings
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    chromadb = None
+
 from openai import OpenAI
 import numpy as np
 from tradingagents.dataflows.config import get_api_key
@@ -7,6 +13,11 @@ from tradingagents.dataflows.config import get_api_key
 
 class FinancialSituationMemory:
     def __init__(self, name):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "chromadb is required for FinancialSituationMemory. "
+                "Install it with: pip install chromadb"
+            )
         # Get API key from environment variables or config
         api_key = get_api_key("openai_api_key", "OPENAI_API_KEY")
         self.client = OpenAI(api_key=api_key)
@@ -24,7 +35,7 @@ class FinancialSituationMemory:
             half_chars = max_chars // 2
             text = text[:half_chars] + "\n...[TRUNCATED]...\n" + text[-half_chars:]
             print(f"[MEMORY] Warning: Text truncated to ~{max_chars} characters for embedding")
-        
+
         response = self.client.embeddings.create(
             model="text-embedding-ada-002", input=text
         )
@@ -105,7 +116,7 @@ if __name__ == "__main__":
 
     # Example query
     current_situation = """
-    Market showing increased volatility in tech sector, with institutional investors 
+    Market showing increased volatility in tech sector, with institutional investors
     reducing positions and rising interest rates affecting growth stock valuations
     """
 
