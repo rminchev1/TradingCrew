@@ -19,30 +19,19 @@ def create_news_analyst(llm, toolkit):
         
         is_crypto = "/" in ticker or "USD" in ticker.upper() or "USDT" in ticker.upper()
 
-        if toolkit.config["online_tools"]:
-            if is_crypto:
-                tools = [toolkit.get_global_news_openai, toolkit.get_google_news]
-            else:
-                # For stocks with online_tools: use live Finnhub API + OpenAI
-                tools = [
-                    toolkit.get_finnhub_news_online,
-                    toolkit.get_global_news_openai,
-                    toolkit.get_google_news,
-                ]
+        if is_crypto:
+            tools = [
+                toolkit.get_coindesk_news,
+                toolkit.get_reddit_news,
+                toolkit.get_google_news,
+            ]
         else:
-            if is_crypto:
-                tools = [
-                    toolkit.get_coindesk_news,
-                    toolkit.get_reddit_news,
-                    toolkit.get_google_news,
-                ]
-            else:
-                # For stocks: use live Finnhub API as primary source
-                tools = [
-                    toolkit.get_finnhub_news_online,
-                    toolkit.get_reddit_news,
-                    toolkit.get_google_news,
-                ]
+            # For stocks: use live Finnhub API as primary source
+            tools = [
+                toolkit.get_finnhub_news_online,
+                toolkit.get_reddit_news,
+                toolkit.get_google_news,
+            ]
 
         system_message = (
             f"You are an EOD TRADING news analyst specializing in identifying news events and market developments that could drive overnight and next-day price movements for {ticker}. Focus on after-hours catalysts and sentiment shifts that create EOD trading opportunities."
@@ -59,7 +48,6 @@ def create_news_analyst(llm, toolkit):
             + "- Assess news impact magnitude (minor <2%, moderate 2-5%, major >5% overnight/next-day moves) \n"
             + "- Consider news durability (will impact persist through next day or just overnight?) \n"
             + "- Analyze market reaction patterns to similar news in overnight/pre-market sessions \n"
-            + f"**IMPORTANT:** When using get_global_news_openai, ALWAYS pass ticker_context='{ticker}' to get {('crypto-relevant global news (regulation, institutional adoption, DeFi developments)' if is_crypto else 'sector-relevant global news')} instead of generic macro news.\n"
             + "**AVOID:** Generic market commentary, long-term trends, intraday noise. Focus on EOD-relevant news with overnight impact potential.\n"
             + """ Make sure to append a Markdown table at the end organizing:
 | News Event | Date/Time | Impact Level | Price Direction | EOD Trading Implication |

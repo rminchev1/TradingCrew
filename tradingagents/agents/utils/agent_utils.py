@@ -657,30 +657,6 @@ class Toolkit:
 
     @staticmethod
     @tool
-    @timing_wrapper("NEWS")
-    def get_global_news_openai(
-        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
-        ticker_context: Annotated[str, "Ticker symbol for context-aware news (e.g., ETH/USD, AAPL)"] = None,
-    ):
-        """
-        Retrieve the latest global news relevant to the asset being analyzed using OpenAI with web search.
-        For crypto assets (BTC, ETH, etc.), focuses on crypto-relevant global news like regulation, institutional adoption, DeFi developments.
-        For stocks, focuses on macro-economic and sector-specific global news.
-        
-        Args:
-            curr_date (str): Current date in yyyy-mm-dd format
-            ticker_context (str): Ticker symbol to provide context for relevant news (e.g., ETH/USD for crypto, AAPL for stocks)
-            
-        Returns:
-            str: A formatted string containing the latest relevant global news for the asset being analyzed.
-        """
-
-        openai_news_results = interface.get_global_news_openai(curr_date, ticker_context)
-
-        return openai_news_results
-
-    @staticmethod
-    @tool
     @timing_wrapper("FUNDAMENTALS")
     def get_fundamentals_openai(
         ticker: Annotated[str, "the company's ticker"],
