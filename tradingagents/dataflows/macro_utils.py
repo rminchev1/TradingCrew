@@ -23,19 +23,20 @@ def get_fred_api_key():
 def get_fred_data(series_id: str, start_date: str, end_date: str) -> Dict:
     """
     Get economic data from FRED API
-    
+
     Args:
         series_id: FRED series ID (e.g., 'FEDFUNDS', 'CPIAUCSL')
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format
-        
+
     Returns:
         Dictionary with FRED data
     """
     api_key = get_fred_api_key()
     if not api_key:
         return {"error": "FRED API key not found. Please set FRED_API_KEY environment variable."}
-    
+
+
     url = "https://api.stlouisfed.org/fred/series/observations"
     params = {
         'series_id': series_id,
@@ -186,10 +187,10 @@ def get_economic_indicators_report(curr_date: str, lookback_days: int = 90) -> s
             "unit": "Billions",
             "qoq": True
         },
-        "ISM Manufacturing PMI": {
-            "series": "NAPM",
-            "description": "Manufacturing sector health indicator",
-            "unit": "Index"
+        "Industrial Production: Manufacturing": {
+            "series": "IPMAN",
+            "description": "Manufacturing sector output indicator",
+            "unit": "Index (2017=100)"
         },
         "Consumer Confidence": {
             "series": "CSCICP03USM665S",

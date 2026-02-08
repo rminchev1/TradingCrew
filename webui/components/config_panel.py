@@ -38,30 +38,28 @@ def create_trading_control_panel():
             className="mb-2 active-settings-row"
         ),
 
-        # Quick Actions Row
-        dbc.Row([
-            dbc.Col([
+        # Quick Actions Row - Settings and Start Analysis buttons side by side
+        html.Div([
+            dbc.Button(
+                [html.I(className="fas fa-cog me-1"), ""],
+                id="toggle-settings-btn",
+                color="secondary",
+                outline=True,
+                size="md",
+                className="me-2",
+                style={"minWidth": "45px"}
+            ),
+            html.Div(id="control-button-container", children=[
                 dbc.Button(
-                    [html.I(className="fas fa-cog me-2"), "Settings"],
-                    id="toggle-settings-btn",
-                    color="secondary",
-                    outline=True,
+                    [html.I(className="fas fa-play me-2"), "Start Analysis"],
+                    id="control-btn",
+                    color="primary",
                     size="md",
-                    className="w-100"
-                ),
-            ], width=5),
-            dbc.Col([
-                html.Div(id="control-button-container", children=[
-                    dbc.Button(
-                        [html.I(className="fas fa-play me-2"), "Start Analysis"],
-                        id="control-btn",
-                        color="success",
-                        size="md",
-                        className="w-100 fw-bold"
-                    )
-                ])
-            ], width=7),
-        ], className="mb-3"),
+                    className="fw-bold flex-grow-1",
+                    style={"flex": "1"}
+                )
+            ], className="flex-grow-1 d-flex")
+        ], className="d-flex align-items-center mb-3"),
 
         # Collapsible Settings Section
         dbc.Collapse(

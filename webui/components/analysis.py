@@ -304,10 +304,16 @@ def start_analysis(ticker, analysts_market, analysts_social, analysts_news, anal
                  research_depth, allow_shorts, quick_llm, deep_llm, analysts_options=False, progress=None):
     """Start real-time analysis function for the UI"""
 
-    # Parse selected analysts
+    # Debug: Log which analysts are enabled
+    print(f"[ANALYSIS] Starting analysis for {ticker}")
+    print(f"[ANALYSIS] Analyst flags: market={analysts_market}, options={analysts_options}, social={analysts_social}, news={analysts_news}, fundamentals={analysts_fundamentals}, macro={analysts_macro}")
+
+    # Parse selected analysts - order matches UI layout (Market, Options, Social, News, Fundamentals, Macro)
     selected_analysts = []
     if analysts_market:
         selected_analysts.append("market")
+    if analysts_options:
+        selected_analysts.append("options")
     if analysts_social:
         selected_analysts.append("social")
     if analysts_news:
@@ -316,8 +322,8 @@ def start_analysis(ticker, analysts_market, analysts_social, analysts_news, anal
         selected_analysts.append("fundamentals")
     if analysts_macro:
         selected_analysts.append("macro")
-    if analysts_options:
-        selected_analysts.append("options")
+
+    print(f"[ANALYSIS] Selected analysts: {selected_analysts}")
     
     if not selected_analysts:
         return "Please select at least one analyst type."

@@ -272,21 +272,29 @@ def register_scanner_callbacks(app):
             raise PreventUpdate
 
         # Find which button was clicked
-        triggered_id = ctx.triggered[0]["prop_id"]
+        triggered_prop = ctx.triggered[0]["prop_id"]
 
-        if not triggered_id or triggered_id == ".":
+        if not triggered_prop or triggered_prop == ".":
+            raise PreventUpdate
+
+        # CRITICAL: Check if button was actually clicked (n_clicks >= 1)
+        # This prevents false triggers when components re-render
+        triggered_value = ctx.triggered[0].get("value")
+        if not triggered_value or triggered_value < 1:
             raise PreventUpdate
 
         # Parse the button ID to get the symbol
-        import json
         try:
             # Extract the JSON part from the prop_id (format: '{"type":"scanner-analyze-btn","symbol":"AAPL"}.n_clicks')
-            id_json = triggered_id.split(".")[0]
+            id_json = triggered_prop.rsplit(".", 1)[0]
             button_id = json.loads(id_json)
-            symbol = button_id.get("symbol")
         except (json.JSONDecodeError, KeyError, IndexError):
             raise PreventUpdate
 
+        if not isinstance(button_id, dict) or button_id.get("type") != "scanner-analyze-btn":
+            raise PreventUpdate
+
+        symbol = button_id.get("symbol")
         if not symbol:
             raise PreventUpdate
 

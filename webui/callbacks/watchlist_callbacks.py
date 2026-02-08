@@ -223,27 +223,38 @@ def register_watchlist_callbacks(app):
         if not ctx.triggered:
             return dash.no_update
 
-        triggered_id = ctx.triggered_id
-        if not triggered_id:
+        # Get the triggered prop_id and parse it
+        triggered_prop = ctx.triggered[0]["prop_id"]
+        if not triggered_prop or triggered_prop == ".":
             return dash.no_update
 
-        if isinstance(triggered_id, dict) and triggered_id.get("type") == "watchlist-analyze-btn":
-            # Check that button was actually clicked
-            triggered_value = ctx.triggered[0].get("value")
-            if not triggered_value or triggered_value < 1:
-                return dash.no_update
+        # Check if a button was actually clicked (n_clicks >= 1)
+        triggered_value = ctx.triggered[0].get("value")
+        if not triggered_value or triggered_value < 1:
+            return dash.no_update
 
-            symbol = triggered_id.get("symbol")
-            if symbol:
-                if not store_data:
-                    store_data = {"symbols": []}
+        # Parse the button ID from the prop_id
+        import json
+        try:
+            id_json = triggered_prop.rsplit(".", 1)[0]
+            button_id = json.loads(id_json)
+        except (json.JSONDecodeError, ValueError, IndexError):
+            return dash.no_update
 
-                symbols = store_data.get("symbols", [])
-                if symbol.upper() not in symbols:
-                    symbols.append(symbol.upper())
-                    store_data["symbols"] = symbols
-                    print(f"[WATCHLIST] Added {symbol} to Run Queue for analysis")
-                    return store_data
+        if not isinstance(button_id, dict) or button_id.get("type") != "watchlist-analyze-btn":
+            return dash.no_update
+
+        symbol = button_id.get("symbol")
+        if symbol:
+            if not store_data:
+                store_data = {"symbols": []}
+
+            symbols = store_data.get("symbols", [])
+            if symbol.upper() not in symbols:
+                symbols.append(symbol.upper())
+                store_data["symbols"] = symbols
+                print(f"[WATCHLIST] Added {symbol} to Run Queue for analysis")
+                return store_data
 
         return dash.no_update
 
@@ -356,27 +367,38 @@ def register_watchlist_callbacks(app):
         if not ctx.triggered:
             return dash.no_update
 
-        triggered_id = ctx.triggered_id
-        if not triggered_id:
+        # Get the triggered prop_id and parse it
+        triggered_prop = ctx.triggered[0]["prop_id"]
+        if not triggered_prop or triggered_prop == ".":
             return dash.no_update
 
-        if isinstance(triggered_id, dict) and triggered_id.get("type") == "watchlist-add-run-btn":
-            # Check that button was actually clicked
-            triggered_value = ctx.triggered[0].get("value")
-            if not triggered_value or triggered_value < 1:
-                return dash.no_update
+        # Check if a button was actually clicked (n_clicks >= 1)
+        triggered_value = ctx.triggered[0].get("value")
+        if not triggered_value or triggered_value < 1:
+            return dash.no_update
 
-            symbol = triggered_id.get("symbol")
-            if symbol:
-                if not store_data:
-                    store_data = {"symbols": []}
+        # Parse the button ID from the prop_id
+        import json
+        try:
+            id_json = triggered_prop.rsplit(".", 1)[0]
+            button_id = json.loads(id_json)
+        except (json.JSONDecodeError, ValueError, IndexError):
+            return dash.no_update
 
-                symbols = store_data.get("symbols", [])
-                if symbol not in symbols:
-                    symbols.append(symbol)
-                    store_data["symbols"] = symbols
-                    print(f"[RUN_QUEUE] Added {symbol} to Run Queue")
-                    return store_data
+        if not isinstance(button_id, dict) or button_id.get("type") != "watchlist-add-run-btn":
+            return dash.no_update
+
+        symbol = button_id.get("symbol")
+        if symbol:
+            if not store_data:
+                store_data = {"symbols": []}
+
+            symbols = store_data.get("symbols", [])
+            if symbol not in symbols:
+                symbols.append(symbol)
+                store_data["symbols"] = symbols
+                print(f"[RUN_QUEUE] Added {symbol} to Run Queue")
+                return store_data
 
         return dash.no_update
 
@@ -394,24 +416,35 @@ def register_watchlist_callbacks(app):
         if not ctx.triggered:
             return dash.no_update
 
-        triggered_id = ctx.triggered_id
-        if not triggered_id:
+        # Get the triggered prop_id and parse it
+        triggered_prop = ctx.triggered[0]["prop_id"]
+        if not triggered_prop or triggered_prop == ".":
             return dash.no_update
 
-        if isinstance(triggered_id, dict) and triggered_id.get("type") == "run-watchlist-remove-btn":
-            # Check that button was actually clicked
-            triggered_value = ctx.triggered[0].get("value")
-            if not triggered_value or triggered_value < 1:
-                return dash.no_update
+        # Check if a button was actually clicked (n_clicks >= 1)
+        triggered_value = ctx.triggered[0].get("value")
+        if not triggered_value or triggered_value < 1:
+            return dash.no_update
 
-            symbol = triggered_id.get("symbol")
-            if symbol and store_data:
-                symbols = store_data.get("symbols", [])
-                if symbol in symbols:
-                    symbols.remove(symbol)
-                    store_data["symbols"] = symbols
-                    print(f"[RUN_QUEUE] Removed {symbol} from Run Queue")
-                    return store_data
+        # Parse the button ID from the prop_id
+        import json
+        try:
+            id_json = triggered_prop.rsplit(".", 1)[0]
+            button_id = json.loads(id_json)
+        except (json.JSONDecodeError, ValueError, IndexError):
+            return dash.no_update
+
+        if not isinstance(button_id, dict) or button_id.get("type") != "run-watchlist-remove-btn":
+            return dash.no_update
+
+        symbol = button_id.get("symbol")
+        if symbol and store_data:
+            symbols = store_data.get("symbols", [])
+            if symbol in symbols:
+                symbols.remove(symbol)
+                store_data["symbols"] = symbols
+                print(f"[RUN_QUEUE] Removed {symbol} from Run Queue")
+                return store_data
 
         return dash.no_update
 

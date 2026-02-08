@@ -9,6 +9,7 @@ from typing import Dict, Any
 # Note: ticker_input removed - Run Queue is now persisted via run-watchlist-store
 DEFAULT_SETTINGS = {
     "analyst_market": True,
+    "analyst_options": True,
     "analyst_social": True,
     "analyst_news": True,
     "analyst_fundamentals": True,

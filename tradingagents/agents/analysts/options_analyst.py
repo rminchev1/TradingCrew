@@ -40,16 +40,20 @@ def create_options_analyst(llm, toolkit):
     """
 
     def options_analyst_node(state):
-        current_date = state["trade_date"]
-        ticker = state["company_of_interest"]
+        try:
+            current_date = state["trade_date"]
+            ticker = state["company_of_interest"]
 
-        # Check if this is crypto - options not available for crypto
-        is_crypto = "/" in ticker or "USD" in ticker.upper() or "USDT" in ticker.upper()
+            print(f"[OPTIONS] Options Analyst starting for {ticker} on {current_date}")
 
-        if is_crypto:
-            return {
-                "messages": [],
-                "options_report": f"""# OPTIONS ANALYSIS: {ticker}
+            # Check if this is crypto - options not available for crypto
+            is_crypto = "/" in ticker or "USD" in ticker.upper() or "USDT" in ticker.upper()
+
+            if is_crypto:
+                print(f"[OPTIONS] Skipping options analysis for crypto asset: {ticker}")
+                return {
+                    "messages": [],
+                    "options_report": f"""# OPTIONS ANALYSIS: {ticker}
 
 **Note:** Options market analysis is not available for cryptocurrency assets.
 
@@ -58,14 +62,14 @@ For crypto sentiment analysis, please refer to the Social Sentiment Analyst and 
 
 FINAL TRANSACTION PROPOSAL: **HOLD** - Unable to provide options-based recommendation for crypto assets.
 """,
-            }
+                }
 
-        # Tools for options analysis
-        tools = [
-            toolkit.get_options_positioning,
-        ]
+            # Tools for options analysis
+            tools = [
+                toolkit.get_options_positioning,
+            ]
 
-        system_message = """You are an OPTIONS MARKET POSITIONING analyst specializing in understanding institutional positioning and market expectations through options data analysis. Your role is to analyze options market data to provide insights for **STOCK TRADING** decisions (not options trading).
+            system_message = """You are an OPTIONS MARKET POSITIONING analyst specializing in understanding institutional positioning and market expectations through options data analysis. Your role is to analyze options market data to provide insights for **STOCK TRADING** decisions (not options trading).
 
 **YOUR MISSION:**
 Analyze options data to understand:
@@ -114,108 +118,108 @@ Analyze options data to understand:
 **IMPORTANT:** You are analyzing options data to inform STOCK trading decisions, not to recommend options trades. Focus on what the options market reveals about likely stock price direction and key levels.
 """
 
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    " You are a helpful AI assistant, collaborating with other assistants."
-                    " Use the provided tools to progress towards answering the question."
-                    " If you are unable to fully answer, that's OK; another assistant with different tools"
-                    " will help where you left off. Execute what you can to make progress."
-                    " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
-                    " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " You have access to the following tools: {tool_names}.\n{system_message}"
-                    "For your reference, the current date is {current_date}. The stock we want to analyze is {ticker}",
-                ),
-                MessagesPlaceholder(variable_name="messages"),
-            ]
-        )
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        " You are a helpful AI assistant, collaborating with other assistants."
+                        " Use the provided tools to progress towards answering the question."
+                        " If you are unable to fully answer, that's OK; another assistant with different tools"
+                        " will help where you left off. Execute what you can to make progress."
+                        " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
+                        " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
+                        " You have access to the following tools: {tool_names}.\n{system_message}"
+                        "For your reference, the current date is {current_date}. The stock we want to analyze is {ticker}",
+                    ),
+                    MessagesPlaceholder(variable_name="messages"),
+                ]
+            )
 
-        prompt = prompt.partial(system_message=system_message)
-        prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
-        prompt = prompt.partial(current_date=current_date)
-        prompt = prompt.partial(ticker=ticker)
+            prompt = prompt.partial(system_message=system_message)
+            prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
+            prompt = prompt.partial(current_date=current_date)
+            prompt = prompt.partial(ticker=ticker)
 
-        # Capture the complete resolved prompt
-        try:
-            messages_history = list(state["messages"])
-            formatted_messages = prompt.format_messages(messages=messages_history)
+            # Capture the complete resolved prompt
+            try:
+                messages_history = list(state["messages"])
+                formatted_messages = prompt.format_messages(messages=messages_history)
 
-            if formatted_messages and hasattr(formatted_messages[0], 'content'):
-                complete_prompt = formatted_messages[0].content
-            else:
-                tool_names_str = ", ".join([tool.name for tool in tools])
-                complete_prompt = f""" You are a helpful AI assistant, collaborating with other assistants. Use the provided tools to progress towards answering the question. If you are unable to fully answer, that's OK; another assistant with different tools will help where you left off. Execute what you can to make progress. If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable, prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop. You have access to the following tools: {tool_names_str}.
+                if formatted_messages and hasattr(formatted_messages[0], 'content'):
+                    complete_prompt = formatted_messages[0].content
+                else:
+                    tool_names_str = ", ".join([tool.name for tool in tools])
+                    complete_prompt = f""" You are a helpful AI assistant, collaborating with other assistants. Use the provided tools to progress towards answering the question. If you are unable to fully answer, that's OK; another assistant with different tools will help where you left off. Execute what you can to make progress. If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable, prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop. You have access to the following tools: {tool_names_str}.
 
 {system_message}
 
 For your reference, the current date is {current_date}. The stock we want to analyze is {ticker}"""
 
-            capture_agent_prompt("options_report", complete_prompt, ticker)
-        except Exception as e:
-            print(f"[OPTIONS] Warning: Could not capture complete prompt: {e}")
-            capture_agent_prompt("options_report", system_message, ticker)
+                capture_agent_prompt("options_report", complete_prompt, ticker)
+            except Exception as e:
+                print(f"[OPTIONS] Warning: Could not capture complete prompt: {e}")
+                capture_agent_prompt("options_report", system_message, ticker)
 
-        chain = prompt | llm.bind_tools(tools)
+            chain = prompt | llm.bind_tools(tools)
 
-        # Copy the incoming conversation history
-        messages_history = list(state["messages"])
+            # Copy the incoming conversation history
+            messages_history = list(state["messages"])
 
-        # First LLM response
-        result = chain.invoke(messages_history)
-
-        # Handle iterative tool calls
-        while getattr(result, "additional_kwargs", {}).get("tool_calls"):
-            for tool_call in result.additional_kwargs["tool_calls"]:
-                # Handle different tool call structures
-                if isinstance(tool_call, dict):
-                    tool_name = tool_call.get("name") or tool_call.get("function", {}).get("name")
-                    tool_args = tool_call.get("args", {}) or tool_call.get("function", {}).get("arguments", {})
-                    if isinstance(tool_args, str):
-                        try:
-                            tool_args = json.loads(tool_args)
-                        except json.JSONDecodeError:
-                            tool_args = {}
-                else:
-                    tool_name = getattr(tool_call, 'name', None)
-                    tool_args = getattr(tool_call, 'args', {})
-
-                # Find the matching tool
-                tool_fn = next((t for t in tools if t.name == tool_name), None)
-
-                if tool_fn is None:
-                    tool_result = f"Tool '{tool_name}' not found."
-                    print(f"[OPTIONS] Tool '{tool_name}' not found.")
-                else:
-                    try:
-                        if hasattr(tool_fn, "invoke"):
-                            tool_result = tool_fn.invoke(tool_args)
-                        else:
-                            tool_result = tool_fn.run(**tool_args)
-                    except Exception as tool_err:
-                        tool_result = f"Error running tool '{tool_name}': {str(tool_err)}"
-                        print(f"[OPTIONS] Error running tool '{tool_name}': {tool_err}")
-
-                # Append messages
-                tool_call_id = tool_call.get("id") or tool_call.get("tool_call_id")
-                ai_tool_call_msg = AIMessage(
-                    content="",
-                    additional_kwargs={"tool_calls": [tool_call]},
-                )
-                tool_msg = ToolMessage(
-                    content=str(tool_result),
-                    tool_call_id=tool_call_id,
-                )
-
-                messages_history.append(ai_tool_call_msg)
-                messages_history.append(tool_msg)
-
-            # Continue conversation
+            # First LLM response
             result = chain.invoke(messages_history)
 
-        # Ensure final proposal is included
-        if "FINAL TRANSACTION PROPOSAL:" not in result.content:
-            final_prompt = f"""Based on the following options market positioning analysis for {ticker}, please provide your final trading recommendation.
+            # Handle iterative tool calls
+            while getattr(result, "additional_kwargs", {}).get("tool_calls"):
+                for tool_call in result.additional_kwargs["tool_calls"]:
+                    # Handle different tool call structures
+                    if isinstance(tool_call, dict):
+                        tool_name = tool_call.get("name") or tool_call.get("function", {}).get("name")
+                        tool_args = tool_call.get("args", {}) or tool_call.get("function", {}).get("arguments", {})
+                        if isinstance(tool_args, str):
+                            try:
+                                tool_args = json.loads(tool_args)
+                            except json.JSONDecodeError:
+                                tool_args = {}
+                    else:
+                        tool_name = getattr(tool_call, 'name', None)
+                        tool_args = getattr(tool_call, 'args', {})
+
+                    # Find the matching tool
+                    tool_fn = next((t for t in tools if t.name == tool_name), None)
+
+                    if tool_fn is None:
+                        tool_result = f"Tool '{tool_name}' not found."
+                        print(f"[OPTIONS] Tool '{tool_name}' not found.")
+                    else:
+                        try:
+                            if hasattr(tool_fn, "invoke"):
+                                tool_result = tool_fn.invoke(tool_args)
+                            else:
+                                tool_result = tool_fn.run(**tool_args)
+                        except Exception as tool_err:
+                            tool_result = f"Error running tool '{tool_name}': {str(tool_err)}"
+                            print(f"[OPTIONS] Error running tool '{tool_name}': {tool_err}")
+
+                    # Append messages
+                    tool_call_id = tool_call.get("id") or tool_call.get("tool_call_id")
+                    ai_tool_call_msg = AIMessage(
+                        content="",
+                        additional_kwargs={"tool_calls": [tool_call]},
+                    )
+                    tool_msg = ToolMessage(
+                        content=str(tool_result),
+                        tool_call_id=tool_call_id,
+                    )
+
+                    messages_history.append(ai_tool_call_msg)
+                    messages_history.append(tool_msg)
+
+                # Continue conversation
+                result = chain.invoke(messages_history)
+
+            # Ensure final proposal is included
+            if "FINAL TRANSACTION PROPOSAL:" not in result.content:
+                final_prompt = f"""Based on the following options market positioning analysis for {ticker}, please provide your final trading recommendation.
 
 Analysis:
 {result.content}
@@ -228,15 +232,35 @@ Consider:
 
 You must conclude with: FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** followed by a brief justification based on the options market positioning."""
 
-            final_chain = llm
-            final_result = final_chain.invoke(final_prompt)
+                final_chain = llm
+                final_result = final_chain.invoke(final_prompt)
 
-            combined_content = result.content + "\n\n" + final_result.content
-            result = AIMessage(content=combined_content)
+                combined_content = result.content + "\n\n" + final_result.content
+                result = AIMessage(content=combined_content)
 
-        return {
-            "messages": [result],
-            "options_report": result.content,
-        }
+            print(f"[OPTIONS] Options Analyst completed for {ticker}")
+            return {
+                "messages": [result],
+                "options_report": result.content,
+            }
+
+        except Exception as e:
+            print(f"[OPTIONS] ERROR in Options Analyst: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return an error report so analysis can continue
+            ticker = state.get('company_of_interest', 'Unknown')
+            error_report = f"""# OPTIONS ANALYSIS: {ticker}
+
+**Error:** Options analysis encountered an error: {str(e)}
+
+Unable to complete options market analysis. Please check the logs for details.
+
+FINAL TRANSACTION PROPOSAL: **HOLD** - Unable to provide options-based recommendation due to error.
+"""
+            return {
+                "messages": [],
+                "options_report": error_report,
+            }
 
     return options_analyst_node

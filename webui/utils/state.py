@@ -613,13 +613,14 @@ class AppState:
         }
 
         # Determine the analyst execution sequence based on user selection (if available)
+        # Order matches UI layout: Market, Options, Social, News, Fundamentals, Macro
         default_sequence = [
             "Market Analyst",
+            "Options Analyst",
             "Social Analyst",
             "News Analyst",
             "Fundamentals Analyst",
             "Macro Analyst",
-            "Options Analyst",
         ]
         # If the UI has stored the list of active analysts, respect that (and preserve order)
         if hasattr(self, "active_analysts") and self.active_analysts:

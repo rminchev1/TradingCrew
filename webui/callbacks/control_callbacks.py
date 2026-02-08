@@ -520,14 +520,14 @@ def register_control_callbacks(app):
         if not app_state.analysis_running:
             app_state.reset()
 
-        # Store selected analysts for the status table
+        # Store selected analysts for the status table (order matches UI: Market, Options, Social, News, Fundamentals, Macro)
         app_state.active_analysts = []
         if analysts_market: app_state.active_analysts.append("Market Analyst")
+        if analysts_options: app_state.active_analysts.append("Options Analyst")
         if analysts_social: app_state.active_analysts.append("Social Analyst")
         if analysts_news: app_state.active_analysts.append("News Analyst")
         if analysts_fundamentals: app_state.active_analysts.append("Fundamentals Analyst")
         if analysts_macro: app_state.active_analysts.append("Macro Analyst")
-        if analysts_options: app_state.active_analysts.append("Options Analyst")
 
         # Set loop configuration
         app_state.loop_interval_minutes = loop_interval if loop_interval and loop_interval > 0 else 60
