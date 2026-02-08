@@ -135,20 +135,62 @@ def register_watchlist_callbacks(app):
         symbols = store_data.get("symbols", [])
         items = []
 
-        for symbol in symbols:
+        for index, symbol in enumerate(symbols):
             quote = get_stock_quote(symbol)
             if quote:
                 item = create_watchlist_item(
                     symbol,
                     price=quote.get("price"),
                     change=quote.get("change"),
-                    change_pct=quote.get("change_pct")
+                    change_pct=quote.get("change_pct"),
+                    index=index
                 )
             else:
-                item = create_watchlist_item(symbol)
+                item = create_watchlist_item(symbol, index=index)
             items.append(item)
 
         return items, str(len(symbols))
+
+    # Handle watchlist reorder from drag and drop
+    @app.callback(
+        Output("watchlist-store", "data", allow_duplicate=True),
+        Input("watchlist-reorder-input", "value"),
+        State("watchlist-store", "data"),
+        prevent_initial_call=True
+    )
+    def handle_watchlist_reorder(reorder_value, store_data):
+        """Handle watchlist reorder from drag and drop"""
+        if not reorder_value or not store_data:
+            return dash.no_update
+
+        # Parse the reorder value (format: "SYM1,SYM2,SYM3|timestamp")
+        try:
+            parts = reorder_value.split("|")
+            if len(parts) != 2:
+                return dash.no_update
+
+            new_order = parts[0].split(",")
+            new_order = [s.strip() for s in new_order if s.strip()]
+
+            if not new_order:
+                return dash.no_update
+
+            # Validate that all symbols exist in the current list
+            current_symbols = set(store_data.get("symbols", []))
+            new_symbols = set(new_order)
+
+            if current_symbols != new_symbols:
+                print(f"[WATCHLIST] Reorder mismatch: current={current_symbols}, new={new_symbols}")
+                return dash.no_update
+
+            # Update the store with new order
+            store_data["symbols"] = new_order
+            print(f"[WATCHLIST] Reordered to: {new_order}")
+            return store_data
+
+        except Exception as e:
+            print(f"[WATCHLIST] Error handling reorder: {e}")
+            return dash.no_update
 
     # Add to ticker input when analyze button clicked
     @app.callback(

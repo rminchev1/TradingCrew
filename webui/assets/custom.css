@@ -2833,3 +2833,60 @@ body.theme-bw #log-level-filter {
 body.theme-bw #log-auto-scroll .form-check-label {
     color: #64748B;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WATCHLIST DRAG & DROP STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.watchlist-item {
+    cursor: grab;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, background 0.2s ease;
+}
+
+.watchlist-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    background: var(--bg-tertiary);
+}
+
+.watchlist-item.drag-over {
+    border-top: 2px solid var(--accent-primary);
+    padding-top: 6px;
+}
+
+.watchlist-drag-handle {
+    cursor: grab;
+    color: var(--text-muted);
+    margin-right: 8px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.watchlist-item:hover .watchlist-drag-handle {
+    opacity: 1;
+}
+
+.watchlist-drag-handle:hover {
+    color: var(--accent-primary);
+}
+
+/* Light theme drag and drop adjustments */
+body.theme-bw .watchlist-item.dragging {
+    background: #E2E8F0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+body.theme-bw .watchlist-item.drag-over {
+    border-top-color: #3B82F6;
+}
+
+body.theme-bw .watchlist-drag-handle {
+    color: #94A3B8;
+}
+
+body.theme-bw .watchlist-drag-handle:hover {
+    color: #3B82F6;
+}

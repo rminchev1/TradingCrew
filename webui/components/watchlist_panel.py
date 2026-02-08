@@ -1,5 +1,8 @@
 """
 webui/components/watchlist_panel.py - Watchlist component for tracking symbols
+
+Drag & drop styles are in webui/assets/custom.css
+Drag & drop JavaScript is in webui/assets/watchlist_dragdrop.js
 """
 
 import dash_bootstrap_components as dbc
@@ -41,6 +44,13 @@ def create_watchlist_panel():
             ]
         ),
 
+        # Hidden input to capture reorder events from JavaScript
+        dcc.Input(
+            id="watchlist-reorder-input",
+            type="hidden",
+            value=""
+        ),
+
         # Store for watchlist data (persisted in localStorage)
         dcc.Store(id="watchlist-store", storage_type="local", data={"symbols": []}),
 
@@ -53,8 +63,8 @@ def create_watchlist_panel():
     ], className="watchlist-panel")
 
 
-def create_watchlist_item(symbol, price=None, change=None, change_pct=None):
-    """Create a single watchlist item row"""
+def create_watchlist_item(symbol, price=None, change=None, change_pct=None, index=0):
+    """Create a single watchlist item row with drag and drop support"""
     # Determine color based on change
     if change_pct is not None:
         if change_pct > 0:
@@ -79,8 +89,9 @@ def create_watchlist_item(symbol, price=None, change=None, change_pct=None):
     return html.Div([
         # Symbol and price info
         dbc.Row([
-            # Symbol
+            # Drag handle + Symbol
             dbc.Col([
+                html.I(className="fas fa-grip-vertical watchlist-drag-handle"),
                 html.Span(symbol, className="watchlist-symbol fw-bold"),
             ], width=3, className="d-flex align-items-center"),
 
@@ -127,7 +138,12 @@ def create_watchlist_item(symbol, price=None, change=None, change_pct=None):
                 ], size="sm")
             ], width=3, className="d-flex align-items-center justify-content-end"),
         ], className="align-items-center"),
-    ], className="watchlist-item", id={"type": "watchlist-item", "symbol": symbol})
+    ],
+        className="watchlist-item",
+        id={"type": "watchlist-item", "symbol": symbol},
+        draggable="true",
+        **{"data-symbol": symbol, "data-index": str(index)}
+    )
 
 
 def create_watchlist_section():
