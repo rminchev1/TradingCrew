@@ -18,7 +18,7 @@ def register_scanner_callbacks(app):
     @app.callback(
         Output("scanner-btn", "disabled"),
         Output("scanner-btn", "children"),
-        Input("slow-refresh-interval", "n_intervals"),
+        Input("medium-refresh-interval", "n_intervals"),
         Input("scanner-btn", "n_clicks"),
     )
     def update_scanner_button_state(n_intervals, n_clicks):
@@ -34,7 +34,7 @@ def register_scanner_callbacks(app):
         Output("scanner-progress-container", "style"),
         Output("scanner-progress-bar", "value"),
         Output("scanner-progress-text", "children"),
-        Input("slow-refresh-interval", "n_intervals"),
+        Input("medium-refresh-interval", "n_intervals"),
     )
     def update_scanner_progress(n_intervals):
         """Update the scanner progress bar."""
@@ -55,7 +55,7 @@ def register_scanner_callbacks(app):
     @app.callback(
         Output("scanner-error-alert", "children"),
         Output("scanner-error-alert", "is_open"),
-        Input("slow-refresh-interval", "n_intervals"),
+        Input("medium-refresh-interval", "n_intervals"),
     )
     def update_scanner_error(n_intervals):
         """Show scanner error if any."""
@@ -65,7 +65,7 @@ def register_scanner_callbacks(app):
 
     @app.callback(
         Output("scanner-results-container", "children"),
-        Input("slow-refresh-interval", "n_intervals"),
+        Input("medium-refresh-interval", "n_intervals"),
         Input("scanner-btn", "n_clicks"),
         prevent_initial_call=False
     )
@@ -83,15 +83,12 @@ def register_scanner_callbacks(app):
                 def run_scanner():
                     try:
                         from tradingagents.scanner import MarketScanner
+                        from tradingagents.default_config import DEFAULT_CONFIG
 
                         app_state.start_scanner()
 
-                        scanner = MarketScanner(config={
-                            "num_results": 8,
-                            "min_price": 5.0,
-                            "min_volume": 500000,
-                            "use_llm": True
-                        })
+                        # Use default config for scanner settings
+                        scanner = MarketScanner(config=DEFAULT_CONFIG)
 
                         def progress_callback(stage, progress):
                             app_state.update_scanner_progress(stage, progress)

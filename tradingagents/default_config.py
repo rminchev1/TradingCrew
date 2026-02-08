@@ -28,4 +28,10 @@ DEFAULT_CONFIG = {
     "alpaca_secret_key": None,
     "alpaca_use_paper": "True",  # Set to "True" to use paper trading, "False" for live trading
     "coindesk_api_key": None,
+    # Scanner settings
+    "scanner_num_results": 20,  # Number of top stocks to return from scanner
+    "scanner_use_llm_sentiment": False,  # Use GPT-4o-mini for news sentiment (more accurate but costs money)
+    "scanner_use_options_flow": True,  # Include options flow analysis in scanner
+    "scanner_cache_ttl": 300,  # Cache TTL in seconds (5 minutes default)
+    "scanner_dynamic_universe": True,  # True = top 200 liquid stocks from Alpaca, False = predefined ~100 stocks
 }

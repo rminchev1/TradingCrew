@@ -1,12 +1,25 @@
 """
-Technical Screener - Calculates technical indicator scores
+Technical Screener - Calculates technical indicator scores using Alpaca API
 """
 
-import yfinance as yf
+import os
+import sys
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, Tuple
 from datetime import datetime, timedelta
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from .cache import cached
+
+try:
+    from tradingagents.dataflows.alpaca_utils import AlpacaUtils
+    ALPACA_AVAILABLE = True
+except ImportError:
+    ALPACA_AVAILABLE = False
+    AlpacaUtils = None
 
 
 def calculate_rsi(prices: pd.Series, period: int = 14) -> float:
@@ -72,6 +85,39 @@ def calculate_ma_position(prices: pd.Series, period: int) -> str:
         return "neutral"
 
 
+@cached(ttl_seconds=300)  # Cache for 5 minutes
+def _fetch_historical_data(symbol: str, days: int = 365) -> pd.DataFrame:
+    """
+    Fetch historical data for technical analysis using Alpaca.
+
+    Args:
+        symbol: Stock ticker
+        days: Number of days of history
+
+    Returns:
+        DataFrame with OHLCV data
+    """
+    if not ALPACA_AVAILABLE:
+        return pd.DataFrame()
+
+    try:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days + 10)  # Extra buffer
+
+        df = AlpacaUtils.get_stock_data(
+            symbol=symbol,
+            start_date=start_date.strftime("%Y-%m-%d"),
+            end_date=end_date.strftime("%Y-%m-%d"),
+            timeframe="1Day"
+        )
+
+        return df
+
+    except Exception as e:
+        print(f"[TECHNICAL] Error fetching data for {symbol}: {e}")
+        return pd.DataFrame()
+
+
 def score_technical(symbol: str) -> Dict[str, Any]:
     """
     Calculate technical score for a symbol.
@@ -85,8 +131,7 @@ def score_technical(symbol: str) -> Dict[str, Any]:
     """
     try:
         # Get 1 year of data for proper indicator calculation
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(period="1y")
+        hist = _fetch_historical_data(symbol, days=365)
 
         if hist.empty or len(hist) < 50:
             return {
@@ -97,7 +142,19 @@ def score_technical(symbol: str) -> Dict[str, Any]:
                 "technical_score": 50,
             }
 
-        close = hist["Close"]
+        # Handle different column name formats (Alpaca returns lowercase)
+        close_col = 'close' if 'close' in hist.columns else 'Close'
+
+        if close_col not in hist.columns:
+            return {
+                "rsi": 50.0,
+                "macd_signal": "neutral",
+                "price_vs_50ma": "neutral",
+                "price_vs_200ma": "neutral",
+                "technical_score": 50,
+            }
+
+        close = hist[close_col]
 
         # Calculate indicators
         rsi = calculate_rsi(close)

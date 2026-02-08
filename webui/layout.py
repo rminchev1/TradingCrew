@@ -33,7 +33,7 @@ def create_intervals():
             id='medium-refresh-interval',
             interval=REFRESH_INTERVALS["medium"],
             n_intervals=0,
-            disabled=True
+            disabled=False
         ),
         dcc.Interval(
             id='slow-refresh-interval',
@@ -290,9 +290,9 @@ def create_main_layout():
         # Account Summary Bar
         account_bar,
 
-        # Watchlist & Market Scanner (top for quick access)
-        watchlist_section,
+        # Market Scanner & Watchlist (top for quick access)
         scanner_section,
+        watchlist_section,
 
         # Main Trading Area (Chart + Controls)
         main_trading_row,

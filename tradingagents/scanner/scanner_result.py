@@ -3,7 +3,7 @@ Scanner Result Data Structure
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 
 @dataclass
@@ -29,6 +29,10 @@ class ScannerResult:
     news_count: int = 0  # news items in 24h
     news_score: int = 50  # 0-100
 
+    # Options flow
+    options_score: float = 50.0  # 0-100
+    options_signal: str = "neutral"  # "bullish", "bearish", "neutral"
+
     # Combined
     combined_score: int = 50  # 0-100
     rationale: str = ""  # LLM-generated 2-3 sentences
@@ -39,6 +43,19 @@ class ScannerResult:
     # Additional info
     sector: str = ""
     market_cap: Optional[float] = None
+
+    @property
+    def total_score(self) -> float:
+        """
+        Calculate total score including options.
+
+        Weighted: 50% technical, 30% news, 20% options
+        """
+        return (
+            self.technical_score * 0.5 +
+            self.news_score * 0.3 +
+            self.options_score * 0.2
+        )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -57,7 +74,10 @@ class ScannerResult:
             "news_sentiment": self.news_sentiment,
             "news_count": self.news_count,
             "news_score": self.news_score,
+            "options_score": self.options_score,
+            "options_signal": self.options_signal,
             "combined_score": self.combined_score,
+            "total_score": self.total_score,
             "rationale": self.rationale,
             "chart_data": self.chart_data,
             "sector": self.sector,
@@ -67,4 +87,6 @@ class ScannerResult:
     @classmethod
     def from_dict(cls, data: dict) -> "ScannerResult":
         """Create from dictionary."""
+        # Remove computed properties that aren't constructor args
+        data = {k: v for k, v in data.items() if k != "total_score"}
         return cls(**data)
