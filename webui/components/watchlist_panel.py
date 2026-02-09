@@ -53,8 +53,8 @@ def create_watchlist_panel():
             data={"order": [], "timestamp": 0}
         ),
 
-        # Store for watchlist data (persisted in localStorage)
-        dcc.Store(id="watchlist-store", storage_type="local", data={"symbols": []}),
+        # Store for watchlist data (loaded from database via callback on page load)
+        dcc.Store(id="watchlist-store", storage_type="memory", data={"symbols": []}),
 
         # Interval for price updates
         dcc.Interval(

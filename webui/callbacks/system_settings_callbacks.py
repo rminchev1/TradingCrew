@@ -35,28 +35,28 @@ def register_system_settings_callbacks(app):
     # =========================================================================
     @app.callback(
         [
-            Output("setting-openai-api-key", "value"),
-            Output("setting-alpaca-api-key", "value"),
-            Output("setting-alpaca-secret-key", "value"),
-            Output("setting-alpaca-paper-mode", "value"),
-            Output("setting-finnhub-api-key", "value"),
-            Output("setting-fred-api-key", "value"),
-            Output("setting-coindesk-api-key", "value"),
-            Output("setting-deep-think-llm", "value"),
-            Output("setting-quick-think-llm", "value"),
-            Output("setting-max-debate-rounds", "value"),
-            Output("setting-max-risk-rounds", "value"),
-            Output("setting-parallel-analysts", "value"),
-            Output("setting-online-tools", "value"),
-            Output("setting-max-recur-limit", "value"),
-            Output("setting-scanner-num-results", "value"),
-            Output("setting-scanner-llm-sentiment", "value"),
-            Output("setting-scanner-options-flow", "value"),
-            Output("setting-scanner-cache-ttl", "value"),
-            Output("setting-scanner-dynamic-universe", "value"),
+            Output("setting-openai-api-key", "value", allow_duplicate=True),
+            Output("setting-alpaca-api-key", "value", allow_duplicate=True),
+            Output("setting-alpaca-secret-key", "value", allow_duplicate=True),
+            Output("setting-alpaca-paper-mode", "value", allow_duplicate=True),
+            Output("setting-finnhub-api-key", "value", allow_duplicate=True),
+            Output("setting-fred-api-key", "value", allow_duplicate=True),
+            Output("setting-coindesk-api-key", "value", allow_duplicate=True),
+            Output("setting-deep-think-llm", "value", allow_duplicate=True),
+            Output("setting-quick-think-llm", "value", allow_duplicate=True),
+            Output("setting-max-debate-rounds", "value", allow_duplicate=True),
+            Output("setting-max-risk-rounds", "value", allow_duplicate=True),
+            Output("setting-parallel-analysts", "value", allow_duplicate=True),
+            Output("setting-online-tools", "value", allow_duplicate=True),
+            Output("setting-max-recur-limit", "value", allow_duplicate=True),
+            Output("setting-scanner-num-results", "value", allow_duplicate=True),
+            Output("setting-scanner-llm-sentiment", "value", allow_duplicate=True),
+            Output("setting-scanner-options-flow", "value", allow_duplicate=True),
+            Output("setting-scanner-cache-ttl", "value", allow_duplicate=True),
+            Output("setting-scanner-dynamic-universe", "value", allow_duplicate=True),
         ],
         Input("system-settings-store", "data"),
-        prevent_initial_call=False
+        prevent_initial_call=True
     )
     def load_settings_from_store(stored_settings):
         """Load settings from localStorage when page loads."""
@@ -98,10 +98,10 @@ def register_system_settings_callbacks(app):
     @app.callback(
         [
             Output("system-settings-store", "data"),
-            Output("settings-toast", "is_open"),
-            Output("settings-toast", "children"),
-            Output("settings-toast", "icon"),
-            Output("settings-toast", "header"),
+            Output("settings-toast", "is_open", allow_duplicate=True),
+            Output("settings-toast", "children", allow_duplicate=True),
+            Output("settings-toast", "icon", allow_duplicate=True),
+            Output("settings-toast", "header", allow_duplicate=True),
         ],
         Input("settings-save-btn", "n_clicks"),
         [

@@ -71,17 +71,17 @@ def register_control_callbacks(app):
          Output("analyst-checklist-2", "value"),
          Output("research-depth", "value"),
          Output("allow-shorts", "value"),
-         Output("loop-enabled", "value"),
-         Output("loop-interval", "value"),
-         Output("market-hour-enabled", "value"),
-         Output("market-hours-input", "value"),
+         Output("loop-enabled", "value", allow_duplicate=True),
+         Output("loop-interval", "value", allow_duplicate=True),
+         Output("market-hour-enabled", "value", allow_duplicate=True),
+         Output("market-hours-input", "value", allow_duplicate=True),
          Output("trade-after-analyze", "value"),
          Output("trade-dollar-amount", "value"),
          Output("quick-llm", "value"),
          Output("deep-llm", "value")],
         Input("settings-store", "modified_timestamp"),
         State("settings-store", "data"),
-        prevent_initial_call=False
+        prevent_initial_call=True
     )
     def restore_settings_from_db(ts, data):
         """Restore settings from SQLite database on page load"""
@@ -211,8 +211,8 @@ def register_control_callbacks(app):
             ], color="success", className="mb-2")
 
     @app.callback(
-        [Output("loop-enabled", "value"),
-         Output("market-hour-enabled", "value"),
+        [Output("loop-enabled", "value", allow_duplicate=True),
+         Output("market-hour-enabled", "value", allow_duplicate=True),
          Output("loop-interval", "disabled"),
          Output("market-hours-input", "disabled")],
         [Input("loop-enabled", "value"),
@@ -521,12 +521,12 @@ def register_control_callbacks(app):
 
     # Major callback for analysis control
     @app.callback(
-        [Output("result-text", "children"),
+        [Output("result-text", "children", allow_duplicate=True),
          Output("app-store", "data"),
-         Output("chart-pagination", "max_value"),
-         Output("chart-pagination", "active_page"),
-         Output("report-pagination", "max_value"),
-         Output("report-pagination", "active_page")],
+         Output("chart-pagination", "max_value", allow_duplicate=True),
+         Output("chart-pagination", "active_page", allow_duplicate=True),
+         Output("report-pagination", "max_value", allow_duplicate=True),
+         Output("report-pagination", "active_page", allow_duplicate=True)],
         [Input("control-btn", "n_clicks"),
          Input("control-btn", "children")],
         [State("run-watchlist-store", "data"),
@@ -541,7 +541,8 @@ def register_control_callbacks(app):
          State("trade-after-analyze", "value"),
          State("trade-dollar-amount", "value"),
          State("market-hour-enabled", "value"),
-         State("market-hours-input", "value")]
+         State("market-hours-input", "value")],
+        prevent_initial_call=True
     )
     def on_control_button_click(n_clicks, button_children, run_watchlist_data, analyst_checklist_1, analyst_checklist_2,
                                research_depth, quick_llm, deep_llm,

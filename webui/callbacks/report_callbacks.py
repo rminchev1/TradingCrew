@@ -89,9 +89,10 @@ def register_report_callbacks(app):
     """Register all report-related callbacks including symbol pagination"""
 
     @app.callback(
-        Output("report-pagination-container", "children"),
+        Output("report-pagination-container", "children", allow_duplicate=True),
         [Input("app-store", "data"),
-         Input("refresh-interval", "n_intervals")]
+         Input("refresh-interval", "n_intervals")],
+        prevent_initial_call=True
     )
     def update_report_symbol_pagination(store_data, n_intervals):
         """Update the symbol pagination buttons for reports"""
@@ -596,17 +597,18 @@ def register_report_callbacks(app):
         )
 
     @app.callback(
-        [Output("market-analysis-tab-content", "children"),
-         Output("social-sentiment-tab-content", "children"),
-         Output("news-analysis-tab-content", "children"),
-         Output("fundamentals-analysis-tab-content", "children"),
-         Output("macro-analysis-tab-content", "children"),
+        [Output("market-analysis-tab-content", "children", allow_duplicate=True),
+         Output("social-sentiment-tab-content", "children", allow_duplicate=True),
+         Output("news-analysis-tab-content", "children", allow_duplicate=True),
+         Output("fundamentals-analysis-tab-content", "children", allow_duplicate=True),
+         Output("macro-analysis-tab-content", "children", allow_duplicate=True),
          Output("options-analysis-tab-content", "children"),
          Output("research-manager-tab-content", "children"),
          Output("trader-plan-tab-content", "children"),
          Output("final-decision-tab-content", "children")],
         [Input("report-pagination", "active_page"),
-         Input("medium-refresh-interval", "n_intervals")]
+         Input("medium-refresh-interval", "n_intervals")],
+        prevent_initial_call=True
     )
     def update_tabs_content(active_page, n_intervals):
         """Update the content of all tabs with validation to ensure complete reports"""
@@ -807,8 +809,9 @@ def register_report_callbacks(app):
         return decision_text
 
     @app.callback(
-        Output("current-symbol-report-display", "children"),
-        [Input("report-pagination", "active_page")]
+        Output("current-symbol-report-display", "children", allow_duplicate=True),
+        [Input("report-pagination", "active_page")],
+        prevent_initial_call=True
     )
     def update_report_display_text(active_page):
         if not app_state.symbol_states or not active_page:

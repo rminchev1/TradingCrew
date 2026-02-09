@@ -51,7 +51,7 @@ def register_history_callbacks(app):
     # =========================================================================
     @app.callback(
         [Output("history-selector", "value", allow_duplicate=True),
-         Output("save-history-btn", "children")],
+         Output("save-history-btn", "children", allow_duplicate=True)],
         [Input("save-history-btn", "n_clicks")],
         [State("run-watchlist-store", "data")],
         prevent_initial_call=True

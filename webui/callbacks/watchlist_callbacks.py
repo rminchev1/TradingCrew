@@ -38,6 +38,42 @@ def get_stock_quote(symbol):
 def register_watchlist_callbacks(app):
     """Register all watchlist-related callbacks"""
 
+    # =========================================================================
+    # INITIALIZATION CALLBACKS - Load from database on page load
+    # =========================================================================
+
+    # Initialize watchlist from database on page load
+    @app.callback(
+        Output("watchlist-store", "data", allow_duplicate=True),
+        Input("watchlist-refresh-interval", "n_intervals"),
+        State("watchlist-store", "data"),
+        prevent_initial_call="initial_duplicate"
+    )
+    def init_watchlist_from_db(n_intervals, current_data):
+        """Load watchlist from database on first load only"""
+        # Only load on first call (n_intervals=0) to avoid overwriting user changes
+        if n_intervals and n_intervals > 0:
+            return dash.no_update
+        db_data = local_storage.get_watchlist()
+        print(f"[WATCHLIST] Initialized from database: {db_data}")
+        return db_data
+
+    # Initialize run queue from database on page load
+    @app.callback(
+        Output("run-watchlist-store", "data", allow_duplicate=True),
+        Input("watchlist-refresh-interval", "n_intervals"),
+        State("run-watchlist-store", "data"),
+        prevent_initial_call="initial_duplicate"
+    )
+    def init_run_queue_from_db(n_intervals, current_data):
+        """Load run queue from database on first load only"""
+        # Only load on first call (n_intervals=0) to avoid overwriting user changes
+        if n_intervals and n_intervals > 0:
+            return dash.no_update
+        db_data = local_storage.get_run_queue()
+        print(f"[RUN_QUEUE] Initialized from database: {db_data}")
+        return db_data
+
     # Clientside callback to poll for pending reorder from JavaScript fallback
     app.clientside_callback(
         """
@@ -71,6 +107,18 @@ def register_watchlist_callbacks(app):
     )
     def add_to_watchlist(n_clicks, n_submit, symbol, store_data):
         """Add a symbol to the watchlist"""
+        ctx = callback_context
+
+        # Check if actually triggered by user action
+        if not ctx.triggered:
+            return dash.no_update, dash.no_update
+
+        triggered_value = ctx.triggered[0].get("value")
+
+        # Must have a click or submit
+        if not triggered_value:
+            return dash.no_update, dash.no_update
+
         if not symbol or not symbol.strip():
             return dash.no_update, dash.no_update
 
@@ -86,15 +134,13 @@ def register_watchlist_callbacks(app):
         if symbol in symbols:
             return dash.no_update, ""
 
-        # Validate symbol by trying to fetch quote
-        quote = get_stock_quote(symbol)
-        if quote is None:
-            # Still add it, might be a valid symbol that failed temporarily
-            pass
-
         # Add to list
         symbols.append(symbol)
         store_data["symbols"] = symbols
+
+        # Save to database
+        local_storage.save_watchlist(store_data)
+        print(f"[WATCHLIST] Added {symbol} to watchlist")
 
         return store_data, ""
 
@@ -133,7 +179,10 @@ def register_watchlist_callbacks(app):
                 if symbol in symbols:
                     symbols.remove(symbol)
                     store_data["symbols"] = symbols
-                    print(f"[WATCHLIST] Removed {symbol} from watchlist")
+                    local_storage.save_watchlist(store_data)
+                    # Verify save worked
+                    saved = local_storage.get_watchlist()
+                    print(f"[WATCHLIST] Removed {symbol} from watchlist. Saved: {saved}")
                     return store_data
 
         return dash.no_update
@@ -203,6 +252,7 @@ def register_watchlist_callbacks(app):
 
             # Update the store with new order
             store_data["symbols"] = new_order
+            local_storage.save_watchlist(store_data)
             print(f"[WATCHLIST] Reordered to: {new_order}")
             return store_data
 
@@ -254,6 +304,7 @@ def register_watchlist_callbacks(app):
             if symbol.upper() not in symbols:
                 symbols.append(symbol.upper())
                 store_data["symbols"] = symbols
+                local_storage.save_run_queue(store_data)
                 print(f"[WATCHLIST] Added {symbol} to Run Queue for analysis")
                 return store_data
 
@@ -345,6 +396,7 @@ def register_watchlist_callbacks(app):
                 if symbol not in symbols:
                     symbols.append(symbol)
                     store_data["symbols"] = symbols
+                    local_storage.save_watchlist(store_data)
                     print(f"[WATCHLIST] Added {symbol} from scanner")
                     return store_data
 
@@ -398,6 +450,7 @@ def register_watchlist_callbacks(app):
             if symbol not in symbols:
                 symbols.append(symbol)
                 store_data["symbols"] = symbols
+                local_storage.save_run_queue(store_data)
                 print(f"[RUN_QUEUE] Added {symbol} to Run Queue")
                 return store_data
 
@@ -444,6 +497,7 @@ def register_watchlist_callbacks(app):
             if symbol in symbols:
                 symbols.remove(symbol)
                 store_data["symbols"] = symbols
+                local_storage.save_run_queue(store_data)
                 print(f"[RUN_QUEUE] Removed {symbol} from Run Queue")
                 return store_data
 
@@ -458,8 +512,10 @@ def register_watchlist_callbacks(app):
     def clear_run_queue(n_clicks):
         """Clear all symbols from the Run Queue"""
         if n_clicks:
+            empty_data = {"symbols": []}
+            local_storage.save_run_queue(empty_data)
             print("[RUN_QUEUE] Cleared Run Queue")
-            return {"symbols": []}
+            return empty_data
         return dash.no_update
 
     # Update Run Queue display
@@ -489,64 +545,5 @@ def register_watchlist_callbacks(app):
         count = str(len(symbols))
         return items, count, count, count
 
-    # =========================================================================
-    # DATABASE SYNC CALLBACKS
-    # =========================================================================
-
-    # Load watchlist from database on page load
-    @app.callback(
-        Output("watchlist-store", "data"),
-        Input("watchlist-refresh-interval", "n_intervals"),
-        State("watchlist-store", "data"),
-        prevent_initial_call=False
-    )
-    def load_watchlist_from_db(n_intervals, current_data):
-        """Load watchlist from database on initial page load"""
-        # Only load from DB on first interval (page load)
-        if n_intervals == 0 or n_intervals is None:
-            db_data = local_storage.get_watchlist()
-            if db_data and db_data.get("symbols"):
-                return db_data
-        return dash.no_update
-
-    # Save watchlist to database whenever it changes
-    @app.callback(
-        Output("watchlist-store", "data", allow_duplicate=True),
-        Input("watchlist-store", "modified_timestamp"),
-        State("watchlist-store", "data"),
-        prevent_initial_call=True
-    )
-    def save_watchlist_to_db(ts, data):
-        """Save watchlist to database whenever it changes"""
-        if data:
-            local_storage.save_watchlist(data)
-        return dash.no_update
-
-    # Load run queue from database on page load
-    @app.callback(
-        Output("run-watchlist-store", "data"),
-        Input("watchlist-refresh-interval", "n_intervals"),
-        State("run-watchlist-store", "data"),
-        prevent_initial_call=False
-    )
-    def load_run_queue_from_db(n_intervals, current_data):
-        """Load run queue from database on initial page load"""
-        # Only load from DB on first interval (page load)
-        if n_intervals == 0 or n_intervals is None:
-            db_data = local_storage.get_run_queue()
-            if db_data and db_data.get("symbols"):
-                return db_data
-        return dash.no_update
-
-    # Save run queue to database whenever it changes
-    @app.callback(
-        Output("run-watchlist-store", "data", allow_duplicate=True),
-        Input("run-watchlist-store", "modified_timestamp"),
-        State("run-watchlist-store", "data"),
-        prevent_initial_call=True
-    )
-    def save_run_queue_to_db(ts, data):
-        """Save run queue to database whenever it changes"""
-        if data:
-            local_storage.save_run_queue(data)
-        return dash.no_update
+    # Note: Database sync is handled directly in each callback that modifies
+    # the stores (add, remove, reorder, clear) since we use memory storage.

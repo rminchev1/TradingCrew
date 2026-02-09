@@ -63,9 +63,9 @@ def register_log_callbacks(app):
     # Stream Logs (Real-time Update)
     # =========================================================================
     @app.callback(
-        [Output("log-container", "children"),
-         Output("log-last-index", "data"),
-         Output("log-count-badge", "children")],
+        [Output("log-container", "children", allow_duplicate=True),
+         Output("log-last-index", "data", allow_duplicate=True),
+         Output("log-count-badge", "children", allow_duplicate=True)],
         [Input("log-update-interval", "n_intervals")],
         [State("log-last-index", "data"),
          State("log-level-filter", "value"),

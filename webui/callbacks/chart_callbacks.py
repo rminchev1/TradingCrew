@@ -28,9 +28,10 @@ def register_chart_callbacks(app):
     """Register all chart-related callbacks including symbol pagination"""
 
     @app.callback(
-        Output("chart-pagination-container", "children"),
+        Output("chart-pagination-container", "children", allow_duplicate=True),
         [Input("app-store", "data"),
-         Input("refresh-interval", "n_intervals")]
+         Input("refresh-interval", "n_intervals")],
+        prevent_initial_call=True
     )
     def update_chart_symbol_pagination(store_data, n_intervals):
         """Update the symbol pagination buttons for charts"""
