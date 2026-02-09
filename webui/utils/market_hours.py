@@ -156,6 +156,116 @@ def get_next_market_datetime(target_hour: int, from_datetime: datetime.datetime 
     # Fallback - return the target datetime even if we couldn't validate
     return target_dt
 
+def get_local_timezone_info() -> Dict[str, Any]:
+    """
+    Get information about the user's local timezone relative to EST/EDT.
+
+    Returns:
+        Dictionary with timezone information including offset from Eastern time
+    """
+    eastern = pytz.timezone('US/Eastern')
+    local_tz = datetime.datetime.now().astimezone().tzinfo
+
+    # Get current time in both timezones
+    now = datetime.datetime.now()
+    now_eastern = datetime.datetime.now(eastern)
+    now_local = datetime.datetime.now().astimezone()
+
+    # Calculate offset in hours
+    eastern_offset = now_eastern.utcoffset().total_seconds() / 3600
+    local_offset = now_local.utcoffset().total_seconds() / 3600
+    offset_from_eastern = local_offset - eastern_offset
+
+    return {
+        "local_tz_name": now_local.strftime("%Z"),
+        "eastern_tz_name": now_eastern.strftime("%Z"),
+        "offset_hours": offset_from_eastern,
+        "offset_str": f"{'+' if offset_from_eastern >= 0 else ''}{int(offset_from_eastern)}h"
+    }
+
+
+def convert_est_hour_to_local(est_hour: int) -> Dict[str, Any]:
+    """
+    Convert an EST/EDT hour to local time.
+
+    Args:
+        est_hour: Hour in EST/EDT (0-23)
+
+    Returns:
+        Dictionary with local hour info
+    """
+    eastern = pytz.timezone('US/Eastern')
+
+    # Create a datetime for today at the given EST hour
+    now = datetime.datetime.now(eastern)
+    est_datetime = now.replace(hour=est_hour, minute=0, second=0, microsecond=0)
+
+    # Convert to local time
+    local_datetime = est_datetime.astimezone()
+    local_hour = local_datetime.hour
+
+    # Check if day changed
+    day_diff = (local_datetime.date() - est_datetime.date()).days
+    day_indicator = ""
+    if day_diff == 1:
+        day_indicator = " (+1 day)"
+    elif day_diff == -1:
+        day_indicator = " (-1 day)"
+
+    # Format the hour
+    if local_hour == 0:
+        local_formatted = "12:00 AM"
+    elif local_hour < 12:
+        local_formatted = f"{local_hour}:00 AM"
+    elif local_hour == 12:
+        local_formatted = "12:00 PM"
+    else:
+        local_formatted = f"{local_hour-12}:00 PM"
+
+    return {
+        "est_hour": est_hour,
+        "local_hour": local_hour,
+        "local_formatted": local_formatted + day_indicator,
+        "local_tz": local_datetime.strftime("%Z"),
+        "day_changed": day_diff != 0
+    }
+
+
+def get_market_hours_with_local_times(hours: List[int]) -> List[Dict[str, Any]]:
+    """
+    Get market hours with their local time equivalents.
+
+    Args:
+        hours: List of EST/EDT hours
+
+    Returns:
+        List of dictionaries with EST and local time info
+    """
+    result = []
+    for hour in sorted(hours):
+        # Format EST hour
+        if hour == 0:
+            est_formatted = "12:00 AM"
+        elif hour < 12:
+            est_formatted = f"{hour}:00 AM"
+        elif hour == 12:
+            est_formatted = "12:00 PM"
+        else:
+            est_formatted = f"{hour-12}:00 PM"
+
+        local_info = convert_est_hour_to_local(hour)
+
+        result.append({
+            "est_hour": hour,
+            "est_formatted": est_formatted,
+            "local_hour": local_info["local_hour"],
+            "local_formatted": local_info["local_formatted"],
+            "local_tz": local_info["local_tz"]
+        })
+
+    return result
+
+
 def format_market_hours_info(hours: List[int]) -> Dict[str, Any]:
     """
     Format market hours information for display.

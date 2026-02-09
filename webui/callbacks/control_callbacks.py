@@ -182,32 +182,60 @@ def register_control_callbacks(app):
         [Input("market-hours-input", "value")]
     )
     def validate_market_hours_input(hours_input):
-        """Validate market hours input and show validation message"""
+        """Validate market hours input and show validation message with local time conversion"""
         if not hours_input or not hours_input.strip():
             return ""
-        
-        from webui.utils.market_hours import validate_market_hours
-        
+
+        from webui.utils.market_hours import (
+            validate_market_hours,
+            get_market_hours_with_local_times,
+            get_local_timezone_info
+        )
+
         is_valid, hours, error_msg = validate_market_hours(hours_input)
-        
+
         if not is_valid:
             return dbc.Alert([
                 html.I(className="fas fa-exclamation-triangle me-2"),
                 error_msg
             ], color="danger", className="mb-2")
         else:
-            # Format hours for display
-            formatted_hours = []
-            for hour in hours:
-                if hour < 12:
-                    formatted_hours.append(f"{hour}:00 AM")
-                else:
-                    formatted_hours.append(f"{hour-12}:00 PM" if hour > 12 else "12:00 PM")
-            
-            hours_str = " and ".join(formatted_hours)
+            # Get local time equivalents
+            hours_with_local = get_market_hours_with_local_times(hours)
+            tz_info = get_local_timezone_info()
+
+            # Build display with both EST and local times
+            time_rows = []
+            for h in hours_with_local:
+                time_rows.append(
+                    html.Tr([
+                        html.Td(h["est_formatted"], style={"padding": "4px 12px"}),
+                        html.Td("→", style={"padding": "4px 8px", "color": "#6c757d"}),
+                        html.Td(f"{h['local_formatted']} {h['local_tz']}",
+                               style={"padding": "4px 12px", "fontWeight": "bold"})
+                    ])
+                )
+
             return dbc.Alert([
-                html.I(className="fas fa-check-circle me-2"),
-                f"Valid trading hours: {hours_str} EST/EDT"
+                html.Div([
+                    html.I(className="fas fa-check-circle me-2 text-success"),
+                    html.Strong("Valid trading hours"),
+                ], className="mb-2"),
+                html.Table([
+                    html.Thead(
+                        html.Tr([
+                            html.Th("EST/EDT", style={"padding": "4px 12px", "fontWeight": "normal", "color": "#6c757d"}),
+                            html.Th("", style={"padding": "4px 8px"}),
+                            html.Th(f"Your Time ({tz_info['local_tz_name']})",
+                                   style={"padding": "4px 12px", "fontWeight": "normal", "color": "#6c757d"})
+                        ])
+                    ),
+                    html.Tbody(time_rows)
+                ], style={"width": "100%"}),
+                html.Small(
+                    f"Your timezone is {tz_info['offset_str']} from Eastern Time",
+                    className="text-muted mt-2 d-block"
+                )
             ], color="success", className="mb-2")
 
     @app.callback(
@@ -248,64 +276,86 @@ def register_control_callbacks(app):
         """Update the scheduling mode information display based on settings"""
         if market_hour_enabled:
             # Market Hour Mode
-            from webui.utils.market_hours import validate_market_hours, format_market_hours_info
-            
+            from webui.utils.market_hours import (
+                validate_market_hours,
+                format_market_hours_info,
+                get_market_hours_with_local_times,
+                get_local_timezone_info
+            )
+
             if not market_hours_input or not market_hours_input.strip():
                 return dbc.Card([
                     dbc.CardHeader([
-                        html.H6("Market Hour Mode - Incomplete", 
-                               className="mb-0", 
+                        html.H6("Market Hour Mode - Incomplete",
+                               className="mb-0",
                                style={"fontWeight": "bold", "color": "white"})
                     ], style={"backgroundColor": "#dc3545", "border": "none"}),
                     dbc.CardBody([
                         html.P([
-                            html.Strong("Status: ", style={"color": "black"}), 
+                            html.Strong("Status: ", style={"color": "black"}),
                             html.Span("Please enter trading hours to activate", style={"color": "black"})
                         ], className="mb-0")
                     ], style={"backgroundColor": "#f8d7da"})
                 ])
-            
+
             is_valid, hours, error_msg = validate_market_hours(market_hours_input)
-            
+
             if not is_valid:
                 return dbc.Card([
                     dbc.CardHeader([
-                        html.H6("Market Hour Mode - Invalid Hours", 
-                               className="mb-0", 
+                        html.H6("Market Hour Mode - Invalid Hours",
+                               className="mb-0",
                                style={"fontWeight": "bold", "color": "white"})
                     ], style={"backgroundColor": "#dc3545", "border": "none"}),
                     dbc.CardBody([
                         html.P([
-                            html.Strong("Error: ", style={"color": "black"}), 
+                            html.Strong("Error: ", style={"color": "black"}),
                             html.Span(error_msg, style={"color": "black"})
                         ], className="mb-0")
                     ], style={"backgroundColor": "#f8d7da"})
                 ])
-            
-            # Valid market hours
+
+            # Valid market hours - get both EST and local times
             hours_info = format_market_hours_info(hours)
-            
+            hours_with_local = get_market_hours_with_local_times(hours)
+            tz_info = get_local_timezone_info()
+
+            # Build schedule display with EST and local times
+            schedule_rows = []
+            for h in hours_with_local:
+                schedule_rows.append(
+                    html.Li([
+                        html.Span(f"{h['est_formatted']} EST", style={"color": "black"}),
+                        html.Span(" → ", style={"color": "#6c757d"}),
+                        html.Strong(f"{h['local_formatted']} {h['local_tz']}", style={"color": "#155724"})
+                    ], style={"color": "black"})
+                )
+
             next_executions = []
             for exec_info in hours_info["next_executions"]:
                 next_executions.append(f"Next {exec_info['formatted_hour']}: {exec_info['next_formatted']}")
-            
+
             return dbc.Card([
                 dbc.CardHeader([
-                    html.H6("Market Hour Mode Enabled", 
-                           className="mb-0", 
+                    html.H6("Market Hour Mode Enabled",
+                           className="mb-0",
                            style={"fontWeight": "bold", "color": "white"})
                 ], style={"backgroundColor": "#28a745", "border": "none"}),
                 dbc.CardBody([
                     html.P([
-                        html.Strong("Trading Hours: ", style={"color": "black"}), 
-                        html.Span(hours_info["formatted_hours"], style={"color": "black"})
+                        html.Strong("Trading Hours (EST → Your Time):", style={"color": "black"}),
+                        html.Ul(schedule_rows, className="mb-1")
                     ], className="mb-2"),
+                    html.Small(
+                        f"Your timezone ({tz_info['local_tz_name']}) is {tz_info['offset_str']} from Eastern Time",
+                        className="text-muted d-block mb-2"
+                    ),
                     html.P([
                         html.Strong("Behavior:", style={"color": "black"}),
                         html.Ul([
+                            html.Li("Runs immediately if started within a scheduled hour", style={"color": "black"}),
                             html.Li("Wait for market hours and market open status", style={"color": "black"}),
                             html.Li("Check holidays and weekends automatically", style={"color": "black"}),
-                            html.Li("Run analysis at specified times daily", style={"color": "black"}),
                             html.Li("Continue until manually stopped", style={"color": "black"})
                         ], className="mb-1")
                     ], className="mb-2"),

@@ -176,9 +176,13 @@ def create_trading_control_panel():
                             dbc.Input(
                                 id="market-hours-input",
                                 type="text",
-                                placeholder="Hours: 10,15",
+                                placeholder="EST hours: 10,15",
                                 value="",
                                 size="sm"
+                            ),
+                            html.Small(
+                                "Enter hours in EST/EDT (US Eastern Time)",
+                                className="text-warning"
                             ),
                         ], md=6),
                         dbc.Col([
