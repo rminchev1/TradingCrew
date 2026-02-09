@@ -20,6 +20,103 @@ MAX_PARALLEL_TICKERS = 3  # Maximum number of tickers to analyze in parallel
 def register_control_callbacks(app):
     """Register all control and configuration callbacks"""
 
+    # =========================================================================
+    # SETTINGS PERSISTENCE CALLBACKS
+    # =========================================================================
+
+    # Save settings to store whenever any setting changes
+    @app.callback(
+        Output("settings-store", "data"),
+        [Input("analyst-checklist", "value"),
+         Input("analyst-checklist-2", "value"),
+         Input("research-depth", "value"),
+         Input("allow-shorts", "value"),
+         Input("loop-enabled", "value"),
+         Input("loop-interval", "value"),
+         Input("market-hour-enabled", "value"),
+         Input("market-hours-input", "value"),
+         Input("trade-after-analyze", "value"),
+         Input("trade-dollar-amount", "value"),
+         Input("quick-llm", "value"),
+         Input("deep-llm", "value")],
+        State("settings-store", "data"),
+        prevent_initial_call=True
+    )
+    def save_settings_to_store(analyst1, analyst2, depth, shorts, loop, interval,
+                                market_hour, market_hours_input, trade_after, trade_amount,
+                                quick_llm, deep_llm, current_data):
+        """Save all settings to localStorage whenever they change"""
+        return {
+            "analyst_checklist": analyst1 or [],
+            "analyst_checklist_2": analyst2 or [],
+            "research_depth": depth or "Shallow",
+            "allow_shorts": shorts or False,
+            "loop_enabled": loop or False,
+            "loop_interval": interval or 60,
+            "market_hour_enabled": market_hour or False,
+            "market_hours_input": market_hours_input or "",
+            "trade_after_analyze": trade_after or False,
+            "trade_dollar_amount": trade_amount or 4500,
+            "quick_llm": quick_llm or "gpt-5-nano",
+            "deep_llm": deep_llm or "gpt-5-nano",
+        }
+
+    # Restore settings from store on page load
+    @app.callback(
+        [Output("analyst-checklist", "value"),
+         Output("analyst-checklist-2", "value"),
+         Output("research-depth", "value"),
+         Output("allow-shorts", "value"),
+         Output("loop-enabled", "value"),
+         Output("loop-interval", "value"),
+         Output("market-hour-enabled", "value"),
+         Output("market-hours-input", "value"),
+         Output("trade-after-analyze", "value"),
+         Output("trade-dollar-amount", "value"),
+         Output("quick-llm", "value"),
+         Output("deep-llm", "value")],
+        Input("settings-store", "modified_timestamp"),
+        State("settings-store", "data"),
+        prevent_initial_call=False
+    )
+    def restore_settings_from_store(ts, data):
+        """Restore settings from localStorage on page load"""
+        if not data:
+            # Return defaults if no stored data
+            return (
+                ["market", "options", "social"],
+                ["news", "fundamentals", "macro"],
+                "Shallow",
+                False,
+                False,
+                60,
+                False,
+                "",
+                False,
+                4500,
+                "gpt-5-nano",
+                "gpt-5-nano",
+            )
+
+        return (
+            data.get("analyst_checklist", ["market", "options", "social"]),
+            data.get("analyst_checklist_2", ["news", "fundamentals", "macro"]),
+            data.get("research_depth", "Shallow"),
+            data.get("allow_shorts", False),
+            data.get("loop_enabled", False),
+            data.get("loop_interval", 60),
+            data.get("market_hour_enabled", False),
+            data.get("market_hours_input", ""),
+            data.get("trade_after_analyze", False),
+            data.get("trade_dollar_amount", 4500),
+            data.get("quick_llm", "gpt-5-nano"),
+            data.get("deep_llm", "gpt-5-nano"),
+        )
+
+    # =========================================================================
+    # RESEARCH DEPTH AND OTHER CALLBACKS
+    # =========================================================================
+
     @app.callback(
         Output("research-depth-info", "children"),
         [Input("research-depth", "value")]

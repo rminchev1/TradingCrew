@@ -258,6 +258,26 @@ def create_trading_control_panel():
 
         # Result text area
         html.Div(id="result-text", className="mt-2 small"),
+
+        # Settings persistence store (localStorage)
+        dcc.Store(
+            id="settings-store",
+            storage_type="local",
+            data={
+                "analyst_checklist": ["market", "options", "social"],
+                "analyst_checklist_2": ["news", "fundamentals", "macro"],
+                "research_depth": "Shallow",
+                "allow_shorts": False,
+                "loop_enabled": False,
+                "loop_interval": 60,
+                "market_hour_enabled": False,
+                "market_hours_input": "",
+                "trade_after_analyze": False,
+                "trade_dollar_amount": 4500,
+                "quick_llm": "gpt-5-nano",
+                "deep_llm": "gpt-5-nano",
+            }
+        ),
     ], className="trading-control-panel")
 
 
