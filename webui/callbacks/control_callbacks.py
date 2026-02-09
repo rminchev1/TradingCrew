@@ -599,9 +599,17 @@ def register_control_callbacks(app):
         if app_state.analysis_running:
             return "Analysis already in progress. Please wait.", dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
-        # Get symbols from Run Queue store
+        # Get symbols from Run Queue store (with database fallback)
         run_store = run_watchlist_data or {"symbols": []}
         symbols = run_store.get("symbols", [])
+
+        # If store is empty, try loading directly from database as fallback
+        # This handles race conditions where the store hasn't been populated yet
+        if not symbols:
+            db_data = local_storage.get_run_queue()
+            symbols = db_data.get("symbols", [])
+            print(f"[CONTROL] Loaded symbols from database fallback: {symbols}")
+
         if not symbols:
             return "No symbols in Run Queue. Add symbols from the Watchlist tab.", {}, 1, 1, 1, 1
 
