@@ -41,6 +41,12 @@ def create_intervals():
             interval=REFRESH_INTERVALS["slow"],
             n_intervals=0,
             disabled=False
+        ),
+        dcc.Interval(
+            id='clock-interval',
+            interval=1000,  # 1 second for market time clock
+            n_intervals=0,
+            disabled=False
         )
     ]
 

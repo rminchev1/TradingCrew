@@ -4,6 +4,8 @@ Status and refresh-related callbacks for TradingAgents WebUI
 
 from dash import Input, Output, html
 import dash_bootstrap_components as dbc
+from datetime import datetime
+import pytz
 
 from webui.utils.state import app_state
 from webui.config.constants import COLORS
@@ -151,4 +153,47 @@ def register_status_callbacks(app):
             ) if not refresh_disabled else "⏸️ Updates paused until analysis starts"
             status_class = "text-success mt-2" if not refresh_disabled else "text-secondary mt-2"
 
-        return refresh_disabled, medium_refresh_disabled, status_msg, status_class 
+        return refresh_disabled, medium_refresh_disabled, status_msg, status_class
+
+    @app.callback(
+        [Output("market-time-display", "children"),
+         Output("market-status-display", "children"),
+         Output("market-status-display", "className")],
+        Input("clock-interval", "n_intervals")
+    )
+    def update_market_time(n_intervals):
+        """Update the market time display every second."""
+        eastern = pytz.timezone('US/Eastern')
+        now_eastern = datetime.now(eastern)
+
+        # Format time string with timezone abbreviation
+        time_str = now_eastern.strftime("%I:%M:%S %p")
+        tz_abbr = now_eastern.strftime("%Z")  # EST or EDT
+
+        # Check if market is open (9:30 AM - 4:00 PM ET, Mon-Fri)
+        weekday = now_eastern.weekday()  # 0=Monday, 6=Sunday
+        hour = now_eastern.hour
+        minute = now_eastern.minute
+
+        market_open_time = 9 * 60 + 30  # 9:30 AM in minutes
+        market_close_time = 16 * 60  # 4:00 PM in minutes
+        current_time_minutes = hour * 60 + minute
+
+        if weekday >= 5:  # Weekend
+            status = "Closed (Weekend)"
+            status_color = "small text-danger"
+        elif current_time_minutes < market_open_time:
+            mins_until_open = market_open_time - current_time_minutes
+            hrs, mins = divmod(mins_until_open, 60)
+            status = f"Opens in {hrs}h {mins}m"
+            status_color = "small text-warning"
+        elif current_time_minutes >= market_close_time:
+            status = "Closed"
+            status_color = "small text-danger"
+        else:
+            mins_until_close = market_close_time - current_time_minutes
+            hrs, mins = divmod(mins_until_close, 60)
+            status = f"Open ({hrs}h {mins}m left)"
+            status_color = "small text-success"
+
+        return f"{time_str} {tz_abbr}", status, status_color

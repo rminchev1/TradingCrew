@@ -348,6 +348,48 @@ def get_recent_orders(page=1, page_size=7, return_total=False):
             return [], 0
         return []
 
+def get_market_time_info():
+    """Get current market time (EST/EDT) and market status."""
+    eastern = pytz.timezone('US/Eastern')
+    now_eastern = datetime.now(eastern)
+
+    # Format time string with timezone abbreviation
+    time_str = now_eastern.strftime("%I:%M:%S %p")
+    tz_abbr = now_eastern.strftime("%Z")  # EST or EDT
+
+    # Check if market is open (9:30 AM - 4:00 PM ET, Mon-Fri)
+    weekday = now_eastern.weekday()  # 0=Monday, 6=Sunday
+    hour = now_eastern.hour
+    minute = now_eastern.minute
+
+    market_open_time = 9 * 60 + 30  # 9:30 AM in minutes
+    market_close_time = 16 * 60  # 4:00 PM in minutes
+    current_time_minutes = hour * 60 + minute
+
+    if weekday >= 5:  # Weekend
+        is_open = False
+        status = "Closed"
+        status_color = "text-danger"
+    elif current_time_minutes < market_open_time:
+        is_open = False
+        mins_until_open = market_open_time - current_time_minutes
+        hrs, mins = divmod(mins_until_open, 60)
+        status = f"Opens in {hrs}h {mins}m"
+        status_color = "text-warning"
+    elif current_time_minutes >= market_close_time:
+        is_open = False
+        status = "Closed"
+        status_color = "text-danger"
+    else:
+        is_open = True
+        mins_until_close = market_close_time - current_time_minutes
+        hrs, mins = divmod(mins_until_close, 60)
+        status = f"Open ({hrs}h {mins}m left)"
+        status_color = "text-success"
+
+    return time_str, tz_abbr, status, status_color, is_open
+
+
 def render_compact_account_bar():
     """Render a compact horizontal account summary bar for the top of the page."""
     try:
@@ -368,8 +410,25 @@ def render_compact_account_bar():
             change_icon = "fa-arrow-down"
             change_sign = ""
 
+        # Get market time info
+        time_str, tz_abbr, market_status, status_color, is_open = get_market_time_info()
+        market_icon = "fa-clock" if is_open else "fa-moon"
+
         return html.Div([
             dbc.Row([
+                # Market Time (EST/EDT)
+                dbc.Col([
+                    html.Div([
+                        html.I(className=f"fas {market_icon} me-2 {status_color}"),
+                        html.Span(id="market-time-display", children=f"{time_str} {tz_abbr}", className="fw-bold text-white"),
+                        html.Span(" · ", className="text-muted mx-1"),
+                        html.Span(id="market-status-display", children=market_status, className=f"small {status_color}")
+                    ], className="d-flex align-items-center")
+                ], width="auto"),
+                # Divider
+                dbc.Col([
+                    html.Span("|", className="text-muted mx-2")
+                ], width="auto", className="px-0"),
                 # Buying Power
                 dbc.Col([
                     html.Div([
@@ -419,17 +478,44 @@ def render_compact_account_bar():
         ], className="compact-account-bar", id="compact-account-bar")
 
     except Exception as e:
+        # Still show market time even if account data fails
+        time_str, tz_abbr, market_status, status_color, is_open = get_market_time_info()
+        market_icon = "fa-clock" if is_open else "fa-moon"
+
         return html.Div([
-            html.I(className="fas fa-exclamation-triangle me-2 text-warning"),
-            html.Span("Unable to load account data", className="text-muted"),
-            html.Button([
-                html.I(className="fas fa-sync-alt")
-            ],
-            id="refresh-alpaca-btn",
-            className="btn btn-sm btn-outline-secondary ms-3",
-            title="Refresh account data"
-            )
-        ], className="compact-account-bar d-flex align-items-center", id="compact-account-bar")
+            dbc.Row([
+                # Market Time (EST/EDT)
+                dbc.Col([
+                    html.Div([
+                        html.I(className=f"fas {market_icon} me-2 {status_color}"),
+                        html.Span(id="market-time-display", children=f"{time_str} {tz_abbr}", className="fw-bold text-white"),
+                        html.Span(" · ", className="text-muted mx-1"),
+                        html.Span(id="market-status-display", children=market_status, className=f"small {status_color}")
+                    ], className="d-flex align-items-center")
+                ], width="auto"),
+                # Divider
+                dbc.Col([
+                    html.Span("|", className="text-muted mx-2")
+                ], width="auto", className="px-0"),
+                # Error message
+                dbc.Col([
+                    html.Div([
+                        html.I(className="fas fa-exclamation-triangle me-2 text-warning"),
+                        html.Span("Unable to load account data", className="text-muted")
+                    ], className="d-flex align-items-center")
+                ], width="auto"),
+                # Refresh button on right
+                dbc.Col([
+                    html.Button([
+                        html.I(className="fas fa-sync-alt")
+                    ],
+                    id="refresh-alpaca-btn",
+                    className="btn btn-sm btn-outline-secondary",
+                    title="Refresh account data"
+                    )
+                ], width="auto", className="ms-auto")
+            ], className="align-items-center g-0", justify="start")
+        ], className="compact-account-bar", id="compact-account-bar")
 
 
 def render_positions_orders_section():
