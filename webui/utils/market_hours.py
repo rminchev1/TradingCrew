@@ -115,44 +115,46 @@ def is_market_open(target_datetime: datetime.datetime = None) -> Tuple[bool, str
 def get_next_market_datetime(target_hour: int, from_datetime: datetime.datetime = None) -> datetime.datetime:
     """
     Get the next market datetime for the specified hour.
-    
+
     Args:
         target_hour: Hour to target (e.g., 11 for 11 AM)
-        from_datetime: Starting datetime (defaults to current time)
-        
+        from_datetime: Starting datetime (defaults to current time in Eastern)
+
     Returns:
         Next datetime when market will be open at the target hour
     """
-    if from_datetime is None:
-        from_datetime = datetime.datetime.now()
-        
-    # Convert to Eastern Time
     eastern = pytz.timezone('US/Eastern')
-    if from_datetime.tzinfo is None:
+
+    if from_datetime is None:
+        # Get current time in Eastern timezone (not local time!)
+        from_datetime = datetime.datetime.now(eastern)
+    elif from_datetime.tzinfo is None:
+        # If no timezone, assume it's meant to be Eastern
         from_datetime = eastern.localize(from_datetime)
     else:
+        # Convert to Eastern
         from_datetime = from_datetime.astimezone(eastern)
-    
-    # Start with today at the target hour
+
+    # Start with today at the target hour in Eastern time
     target_dt = from_datetime.replace(hour=target_hour, minute=0, second=0, microsecond=0)
-    
+
     # If the target time today has already passed, start with tomorrow
     if target_dt <= from_datetime:
         target_dt += datetime.timedelta(days=1)
-        
+
     # Keep advancing until we find a valid market day
     max_attempts = 10  # Prevent infinite loops
     attempts = 0
-    
+
     while attempts < max_attempts:
         is_open, reason = is_market_open(target_dt)
         if is_open:
             return target_dt
-        
+
         # Move to next day
         target_dt += datetime.timedelta(days=1)
         attempts += 1
-    
+
     # Fallback - return the target datetime even if we couldn't validate
     return target_dt
 
