@@ -58,8 +58,8 @@ def register_control_callbacks(app):
             "market_hours_input": market_hours_input or "",
             "trade_after_analyze": trade_after or False,
             "trade_dollar_amount": trade_amount or 4500,
-            "quick_llm": quick_llm or "gpt-4o-mini",
-            "deep_llm": deep_llm or "o3-mini",
+            "quick_llm": quick_llm or "gpt-4.1-nano",
+            "deep_llm": deep_llm or "o4-mini",
         }
         # Save to SQLite database
         local_storage.save_settings(settings)
@@ -99,8 +99,8 @@ def register_control_callbacks(app):
             settings.get("market_hours_input", ""),
             settings.get("trade_after_analyze", False),
             settings.get("trade_dollar_amount", 4500),
-            settings.get("quick_llm", "gpt-4o-mini"),
-            settings.get("deep_llm", "o3-mini"),
+            settings.get("quick_llm", "gpt-4.1-nano"),
+            settings.get("deep_llm", "o4-mini"),
         )
 
     # =========================================================================

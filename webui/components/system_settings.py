@@ -130,16 +130,20 @@ def create_llm_section():
                 dbc.Select(
                     id="setting-deep-think-llm",
                     options=[
-                        {"label": "o3-mini (Recommended)", "value": "o3-mini"},
+                        {"label": "gpt-5.2-pro (Best)", "value": "gpt-5.2-pro"},
+                        {"label": "gpt-5.2", "value": "gpt-5.2"},
+                        {"label": "gpt-5.1", "value": "gpt-5.1"},
+                        {"label": "gpt-5", "value": "gpt-5"},
+                        {"label": "o4-mini (Recommended)", "value": "o4-mini"},
+                        {"label": "o3-pro", "value": "o3-pro"},
                         {"label": "o3", "value": "o3"},
-                        {"label": "o1-mini", "value": "o1-mini"},
-                        {"label": "o1", "value": "o1"},
+                        {"label": "o3-mini", "value": "o3-mini"},
                         {"label": "gpt-4.1", "value": "gpt-4.1"},
                         {"label": "gpt-4.1-mini", "value": "gpt-4.1-mini"},
                         {"label": "gpt-4o", "value": "gpt-4o"},
                         {"label": "gpt-4o-mini", "value": "gpt-4o-mini"},
                     ],
-                    value="o3-mini",
+                    value="o4-mini",
                     size="sm"
                 ),
                 width=5
@@ -156,13 +160,16 @@ def create_llm_section():
                 dbc.Select(
                     id="setting-quick-think-llm",
                     options=[
-                        {"label": "gpt-4o-mini (Recommended)", "value": "gpt-4o-mini"},
+                        {"label": "gpt-5.2-instant (Best)", "value": "gpt-5.2-instant"},
+                        {"label": "gpt-5-mini", "value": "gpt-5-mini"},
+                        {"label": "gpt-5-nano", "value": "gpt-5-nano"},
+                        {"label": "gpt-4.1-nano (Recommended)", "value": "gpt-4.1-nano"},
                         {"label": "gpt-4.1-mini", "value": "gpt-4.1-mini"},
-                        {"label": "gpt-4.1-nano", "value": "gpt-4.1-nano"},
+                        {"label": "gpt-4.1", "value": "gpt-4.1"},
+                        {"label": "gpt-4o-mini", "value": "gpt-4o-mini"},
                         {"label": "gpt-4o", "value": "gpt-4o"},
-                        {"label": "gpt-3.5-turbo", "value": "gpt-3.5-turbo"},
                     ],
-                    value="gpt-4o-mini",
+                    value="gpt-4.1-nano",
                     size="sm"
                 ),
                 width=5

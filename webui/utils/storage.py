@@ -22,8 +22,8 @@ DEFAULT_SETTINGS = {
     "market_hours_input": "",
     "trade_after_analyze": False,
     "trade_dollar_amount": 4500,
-    "quick_llm": "gpt-4o-mini",
-    "deep_llm": "o3-mini"
+    "quick_llm": "gpt-4.1-nano",
+    "deep_llm": "o4-mini"
 }
 
 # Default system settings structure
@@ -37,8 +37,8 @@ DEFAULT_SYSTEM_SETTINGS = {
     "fred_api_key": None,
     "coindesk_api_key": None,
     # LLM Models
-    "deep_think_llm": "o3-mini",
-    "quick_think_llm": "gpt-4o-mini",
+    "deep_think_llm": "o4-mini",
+    "quick_think_llm": "gpt-4.1-nano",
     # Analysis Settings
     "max_debate_rounds": 4,
     "max_risk_discuss_rounds": 3,

@@ -78,8 +78,8 @@ def register_system_settings_callbacks(app):
             settings.get("finnhub_api_key") or "",
             settings.get("fred_api_key") or "",
             settings.get("coindesk_api_key") or "",
-            settings.get("deep_think_llm", "o3-mini"),
-            settings.get("quick_think_llm", "gpt-4o-mini"),
+            settings.get("deep_think_llm", "o4-mini"),
+            settings.get("quick_think_llm", "gpt-4.1-nano"),
             settings.get("max_debate_rounds", 4),
             settings.get("max_risk_discuss_rounds", 3),
             settings.get("parallel_analysts", True),
@@ -222,8 +222,8 @@ def register_system_settings_callbacks(app):
             "",
             "",
             "",
-            defaults.get("deep_think_llm", "o3-mini"),
-            defaults.get("quick_think_llm", "gpt-4o-mini"),
+            defaults.get("deep_think_llm", "o4-mini"),
+            defaults.get("quick_think_llm", "gpt-4.1-nano"),
             defaults.get("max_debate_rounds", 4),
             defaults.get("max_risk_discuss_rounds", 3),
             defaults.get("parallel_analysts", True),
@@ -304,8 +304,8 @@ def register_system_settings_callbacks(app):
             imported = import_settings(decoded)
 
             return (
-                imported.get("deep_think_llm", "o3-mini"),
-                imported.get("quick_think_llm", "gpt-4o-mini"),
+                imported.get("deep_think_llm", "o4-mini"),
+                imported.get("quick_think_llm", "gpt-4.1-nano"),
                 imported.get("max_debate_rounds", 4),
                 imported.get("max_risk_discuss_rounds", 3),
                 imported.get("parallel_analysts", True),
