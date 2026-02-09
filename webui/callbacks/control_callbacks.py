@@ -666,36 +666,97 @@ def register_control_callbacks(app):
                 
                 # Market hour scheduling loop
                 import datetime
+                import pytz
                 from webui.utils.market_hours import get_next_market_datetime, is_market_open
-                
+
+                # Track if we've done an initial run to avoid duplicate runs in the same hour
+                initial_run_done = False
+                last_run_hour = None
+
                 while not app_state.stop_market_hour:
-                    # Find next execution time
-                    now = datetime.datetime.now()
-                    next_execution_times = []
-                    
-                    for hour in app_state.market_hours:
-                        next_dt = get_next_market_datetime(hour, now)
-                        next_execution_times.append((hour, next_dt))
-                    
-                    # Sort by next execution time
-                    next_execution_times.sort(key=lambda x: x[1])
-                    next_hour, next_dt = next_execution_times[0]
-                    
-                    print(f"[MARKET_HOUR] Next execution: {next_dt.strftime('%A, %B %d at %I:%M %p %Z')} (Hour {next_hour})")
-                    
-                    # Wait until next execution time
-                    while datetime.datetime.now() < next_dt.replace(tzinfo=None) and not app_state.stop_market_hour:
-                        time.sleep(60)  # Check every minute
-                    
-                    if app_state.stop_market_hour:
-                        break
-                    
-                    # Check if market is actually open
-                    is_open, reason = is_market_open()
-                    if not is_open:
-                        print(f"[MARKET_HOUR] Market is closed: {reason}. Waiting for next execution time.")
-                        continue
-                    
+                    # Get current Eastern time
+                    eastern = pytz.timezone('US/Eastern')
+                    now_eastern = datetime.datetime.now(eastern)
+                    current_hour = now_eastern.hour
+                    current_date = now_eastern.date()
+
+                    # Check if we should run immediately (first iteration, within scheduled hour)
+                    if not initial_run_done:
+                        initial_run_done = True
+                        # Check if current hour is one of the scheduled hours
+                        if current_hour in app_state.market_hours:
+                            # Check if market is open
+                            is_open, reason = is_market_open()
+                            if is_open:
+                                print(f"[MARKET_HOUR] Currently within scheduled hour {current_hour}:00 - running immediately!")
+                                last_run_hour = (current_date, current_hour)
+                                # Skip to analysis (below the wait loop)
+                                next_hour = current_hour
+
+                                # Reset states for new analysis
+                                app_state.reset_for_loop()
+
+                                # Initialize symbol states
+                                for symbol in symbols:
+                                    app_state.init_symbol_state(symbol)
+
+                                # Jump to analysis execution
+                                goto_analysis = True
+                            else:
+                                print(f"[MARKET_HOUR] Within scheduled hour but market closed: {reason}")
+                                goto_analysis = False
+                        else:
+                            print(f"[MARKET_HOUR] Current hour ({current_hour}) not in schedule {app_state.market_hours}")
+                            goto_analysis = False
+                    else:
+                        goto_analysis = False
+
+                    if not goto_analysis:
+                        # Find next execution time
+                        now = datetime.datetime.now()
+                        next_execution_times = []
+
+                        for hour in app_state.market_hours:
+                            next_dt = get_next_market_datetime(hour, now)
+                            # Skip if we already ran this hour today
+                            if last_run_hour == (next_dt.date(), hour):
+                                continue
+                            next_execution_times.append((hour, next_dt))
+
+                        if not next_execution_times:
+                            # All hours for today have been executed, recalculate for tomorrow
+                            time.sleep(60)
+                            continue
+
+                        # Sort by next execution time
+                        next_execution_times.sort(key=lambda x: x[1])
+                        next_hour, next_dt = next_execution_times[0]
+
+                        print(f"[MARKET_HOUR] Next execution: {next_dt.strftime('%A, %B %d at %I:%M %p %Z')} (Hour {next_hour})")
+
+                        # Wait until next execution time
+                        while datetime.datetime.now() < next_dt.replace(tzinfo=None) and not app_state.stop_market_hour:
+                            time.sleep(60)  # Check every minute
+
+                        if app_state.stop_market_hour:
+                            break
+
+                        # Check if market is actually open
+                        is_open, reason = is_market_open()
+                        if not is_open:
+                            print(f"[MARKET_HOUR] Market is closed: {reason}. Waiting for next execution time.")
+                            continue
+
+                        # Track this run to avoid duplicates
+                        last_run_hour = (next_dt.date(), next_hour)
+
+                        # Reset states for new analysis
+                        app_state.reset_for_loop()
+
+                        # Initialize symbol states
+                        for symbol in symbols:
+                            app_state.init_symbol_state(symbol)
+
                     print(f"[MARKET_HOUR] Market is open, starting analysis at {next_hour}:00")
                     
                     # Reset states for new analysis
