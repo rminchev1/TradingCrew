@@ -612,10 +612,11 @@ def register_report_callbacks(app):
     )
     def update_tabs_content(active_page, n_intervals):
         """Update the content of all tabs with validation to ensure complete reports"""
-        # print(f"[REPORTS] Called with active_page={active_page}, symbol_states={list(app_state.symbol_states.keys()) if app_state.symbol_states else []}")
+        # Debug every 10th call to reduce spam
+        if n_intervals and n_intervals % 10 == 0:
+            print(f"[REPORTS] active_page={active_page}, symbols={list(app_state.symbol_states.keys()) if app_state.symbol_states else 'None'}")
 
         if not app_state.symbol_states or not active_page:
-            # print(f"[REPORTS] No symbol states or no active page, returning default content")
             return [create_markdown_content("", "No analysis available yet.")] * 9
         
         # Safeguard against accessing invalid page index (e.g., after page refresh)

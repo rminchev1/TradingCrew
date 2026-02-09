@@ -243,6 +243,7 @@ def create_reports_panel():
             dbc.Pagination(
                 id="report-pagination",
                 max_value=1,
+                active_page=1,  # Explicitly set to 1 to avoid None default
                 fully_expanded=True,
                 first_last=True,
                 previous_next=True,

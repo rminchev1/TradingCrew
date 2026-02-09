@@ -210,8 +210,11 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         config["deep_think_llm"] = deep_llm
         
         # Initialize TradingAgentsGraph
-        print(f"Initializing TradingAgentsGraph with analysts: {selected_analysts}")
+        print(f"[ANALYSIS] Initializing TradingAgentsGraph with analysts: {selected_analysts}")
+        print(f"[ANALYSIS] Config: quick_llm={config.get('quick_think_llm')}, deep_llm={config.get('deep_think_llm')}")
+        print(f"[ANALYSIS] API keys configured: openai={bool(config.get('openai_api_key'))}, finnhub={bool(config.get('finnhub_api_key'))}")
         graph = TradingAgentsGraph(selected_analysts, config=config, debug=True)
+        print(f"[ANALYSIS] TradingAgentsGraph initialized successfully")
         
         # Status updates are now handled in the parallel execution coordinator
         
@@ -287,15 +290,20 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         app_state.needs_ui_update = True
         
     except Exception as e:
-        print(f"Analysis error: {e}")
+        print(f"[ANALYSIS ERROR] Analysis failed for {ticker}: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
+        # Store error in state so UI can display it
+        if current_state:
+            current_state["current_reports"]["error"] = f"Analysis failed: {type(e).__name__}: {str(e)}"
+            current_state["analysis_complete"] = True  # Mark complete so UI updates
         if progress is not None:
             progress(1.0)  # Complete the progress bar
     finally:
         # Mark analysis as no longer running
-        print(f"Real-time analysis for {ticker} completed")
-        current_state["analysis_running"] = False
+        print(f"[ANALYSIS] Real-time analysis for {ticker} finished (success={current_state.get('analysis_complete', False) if current_state else False})")
+        if current_state:
+            current_state["analysis_running"] = False
         
     return "Real-time analysis complete"
 
