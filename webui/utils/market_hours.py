@@ -37,38 +37,57 @@ US_MARKET_HOLIDAYS_2025 = [
 MARKET_OPEN_HOUR = 9   # 9:30 AM (use 9 for conservative approach)
 MARKET_CLOSE_HOUR = 16  # 4:00 PM
 
-def validate_market_hours(hours_str: str) -> Tuple[bool, List[int], str]:
+def validate_market_hours(hours_str: str) -> Tuple[bool, List[Tuple[int, int]], str]:
     """
     Validate market hours input string.
-    
+
     Args:
-        hours_str: String like "11" or "11,13" representing hours
-        
+        hours_str: String like "11", "11:30", or "10:30,14:15" representing times
+
     Returns:
-        Tuple of (is_valid, parsed_hours_list, error_message)
+        Tuple of (is_valid, parsed_times_list as [(hour, minute), ...], error_message)
     """
     if not hours_str or not hours_str.strip():
-        return False, [], "Please enter at least one trading hour"
-    
+        return False, [], "Please enter at least one trading time"
+
     try:
-        # Parse comma-separated hours
-        hours_parts = [h.strip() for h in hours_str.split(',') if h.strip()]
-        if not hours_parts:
-            return False, [], "Please enter at least one trading hour"
-        
-        hours = []
-        for hour_str in hours_parts:
-            hour = int(hour_str)
-            if hour < MARKET_OPEN_HOUR or hour > MARKET_CLOSE_HOUR:
-                return False, [], f"Hour {hour} is outside market hours ({MARKET_OPEN_HOUR}AM-{MARKET_CLOSE_HOUR}PM EST/EDT)"
-            hours.append(hour)
-        
-        # Remove duplicates and sort
-        hours = sorted(list(set(hours)))
-        return True, hours, ""
-        
+        # Parse comma-separated times
+        time_parts = [t.strip() for t in hours_str.split(',') if t.strip()]
+        if not time_parts:
+            return False, [], "Please enter at least one trading time"
+
+        times = []
+        for time_str in time_parts:
+            # Parse HH:MM or just HH format
+            if ':' in time_str:
+                parts = time_str.split(':')
+                if len(parts) != 2:
+                    return False, [], f"Invalid time format: {time_str}. Use HH:MM (e.g., 10:30)"
+                hour = int(parts[0])
+                minute = int(parts[1])
+                if minute < 0 or minute > 59:
+                    return False, [], f"Invalid minute: {minute}. Must be 0-59"
+            else:
+                hour = int(time_str)
+                minute = 0
+
+            # Validate hour is within market hours
+            # Market opens at 9:30 and closes at 16:00
+            time_in_minutes = hour * 60 + minute
+            market_open_minutes = 9 * 60 + 30  # 9:30 AM
+            market_close_minutes = 16 * 60  # 4:00 PM
+
+            if time_in_minutes < market_open_minutes or time_in_minutes > market_close_minutes:
+                return False, [], f"{hour}:{minute:02d} is outside market hours (9:30AM-4:00PM EST)"
+
+            times.append((hour, minute))
+
+        # Remove duplicates and sort by time
+        times = sorted(list(set(times)), key=lambda x: x[0] * 60 + x[1])
+        return True, times, ""
+
     except ValueError:
-        return False, [], "Please enter valid hour numbers (e.g., 11,13)"
+        return False, [], "Invalid format. Use HH:MM (e.g., 10:30) or just hour (e.g., 11)"
 
 def is_market_open(target_datetime: datetime.datetime = None) -> Tuple[bool, str]:
     """
@@ -112,18 +131,19 @@ def is_market_open(target_datetime: datetime.datetime = None) -> Tuple[bool, str
     
     return True, "Market is open"
 
-def get_next_market_datetime(target_hour: int, from_datetime: datetime.datetime = None) -> datetime.datetime:
+def get_next_market_datetime(target_time: Tuple[int, int], from_datetime: datetime.datetime = None) -> datetime.datetime:
     """
-    Get the next market datetime for the specified hour.
+    Get the next market datetime for the specified time.
 
     Args:
-        target_hour: Hour to target (e.g., 11 for 11 AM)
+        target_time: Tuple of (hour, minute) to target (e.g., (11, 30) for 11:30 AM)
         from_datetime: Starting datetime (defaults to current time in Eastern)
 
     Returns:
-        Next datetime when market will be open at the target hour
+        Next datetime when market will be open at the target time
     """
     eastern = pytz.timezone('US/Eastern')
+    target_hour, target_minute = target_time
 
     if from_datetime is None:
         # Get current time in Eastern timezone (not local time!)
@@ -135,8 +155,8 @@ def get_next_market_datetime(target_hour: int, from_datetime: datetime.datetime 
         # Convert to Eastern
         from_datetime = from_datetime.astimezone(eastern)
 
-    # Start with today at the target hour in Eastern time
-    target_dt = from_datetime.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+    # Start with today at the target time in Eastern time
+    target_dt = from_datetime.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
 
     # If the target time today has already passed, start with tomorrow
     if target_dt <= from_datetime:
@@ -268,47 +288,55 @@ def get_market_hours_with_local_times(hours: List[int]) -> List[Dict[str, Any]]:
     return result
 
 
-def format_market_hours_info(hours: List[int]) -> Dict[str, Any]:
+def format_time(hour: int, minute: int) -> str:
+    """Format hour and minute as readable time string."""
+    if hour == 0:
+        return f"12:{minute:02d} AM"
+    elif hour < 12:
+        return f"{hour}:{minute:02d} AM"
+    elif hour == 12:
+        return f"12:{minute:02d} PM"
+    else:
+        return f"{hour-12}:{minute:02d} PM"
+
+
+def format_market_hours_info(times: List[Tuple[int, int]]) -> Dict[str, Any]:
     """
     Format market hours information for display.
-    
+
     Args:
-        hours: List of hours (e.g., [11, 13])
-        
+        times: List of (hour, minute) tuples (e.g., [(11, 0), (13, 30)])
+
     Returns:
         Dictionary with formatted information
     """
-    if not hours:
-        return {"error": "No hours provided"}
-    
-    # Format hours for display
-    formatted_hours = []
-    for hour in sorted(hours):
-        if hour == 0:
-            formatted_hours.append("12:00 AM")
-        elif hour < 12:
-            formatted_hours.append(f"{hour}:00 AM")
-        elif hour == 12:
-            formatted_hours.append("12:00 PM")
-        else:
-            formatted_hours.append(f"{hour-12}:00 PM")
-    
-    hours_str = " and ".join(formatted_hours)
-    
+    if not times:
+        return {"error": "No times provided"}
+
+    # Sort by time
+    sorted_times = sorted(times, key=lambda x: x[0] * 60 + x[1])
+
+    # Format times for display
+    formatted_times = []
+    for hour, minute in sorted_times:
+        formatted_times.append(format_time(hour, minute))
+
+    times_str = " and ".join(formatted_times)
+
     # Calculate next execution times
     next_executions = []
-    for hour in hours:
-        next_dt = get_next_market_datetime(hour)
+    for i, (hour, minute) in enumerate(sorted_times):
+        next_dt = get_next_market_datetime((hour, minute))
         next_executions.append({
-            "hour": hour,
-            "formatted_hour": formatted_hours[hours.index(hour)],
+            "time": (hour, minute),
+            "formatted_time": formatted_times[i],
             "next_datetime": next_dt,
             "next_formatted": next_dt.strftime("%A, %B %d at %I:%M %p %Z")
         })
-    
+
     return {
-        "hours": hours,
-        "formatted_hours": hours_str,
+        "times": sorted_times,
+        "formatted_times": times_str,
         "next_executions": next_executions,
         "market_timezone": "US/Eastern"
     } 

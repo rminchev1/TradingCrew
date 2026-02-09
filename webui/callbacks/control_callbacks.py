@@ -186,9 +186,9 @@ def register_control_callbacks(app):
         if not hours_input or not hours_input.strip():
             return ""
 
-        from webui.utils.market_hours import validate_market_hours
+        from webui.utils.market_hours import validate_market_hours, format_time
 
-        is_valid, hours, error_msg = validate_market_hours(hours_input)
+        is_valid, times, error_msg = validate_market_hours(hours_input)
 
         if not is_valid:
             return html.Span([
@@ -196,13 +196,8 @@ def register_control_callbacks(app):
                 html.Span(error_msg, className="text-danger small")
             ])
         else:
-            # Format hours for display
-            formatted = []
-            for hour in hours:
-                if hour < 12:
-                    formatted.append(f"{hour}AM")
-                else:
-                    formatted.append(f"{hour-12}PM" if hour > 12 else "12PM")
+            # Format times for display
+            formatted = [format_time(h, m) for h, m in times]
 
             return html.Span([
                 html.I(className="fas fa-check-circle me-1 text-success"),
@@ -257,12 +252,12 @@ def register_control_callbacks(app):
             if not is_valid:
                 return html.Small(error_msg, className="text-danger")
 
-            # Valid market hours
-            hours_info = format_market_hours_info(hours)
+            # Valid market times
+            times_info = format_market_hours_info(hours)
 
             next_executions = []
-            for exec_info in hours_info["next_executions"]:
-                next_executions.append(f"{exec_info['formatted_hour']}: {exec_info['next_formatted']}")
+            for exec_info in times_info["next_executions"]:
+                next_executions.append(f"{exec_info['formatted_time']}: {exec_info['next_formatted']}")
 
             return html.Div([
                 html.Small([
@@ -622,29 +617,41 @@ def register_control_callbacks(app):
                 import pytz
                 from webui.utils.market_hours import get_next_market_datetime, is_market_open
 
-                # Track if we've done an initial run to avoid duplicate runs in the same hour
+                # Track completed runs to avoid duplicates: set of (date, hour, minute)
                 initial_run_done = False
-                last_run_hour = None
+                last_run_time = None
+                next_time = None  # Will be (hour, minute) tuple
 
                 while not app_state.stop_market_hour:
                     # Get current Eastern time
                     eastern = pytz.timezone('US/Eastern')
                     now_eastern = datetime.datetime.now(eastern)
                     current_hour = now_eastern.hour
+                    current_minute = now_eastern.minute
                     current_date = now_eastern.date()
 
-                    # Check if we should run immediately (first iteration, within scheduled hour)
+                    # Check if we should run immediately (first iteration, within a scheduled time window)
                     if not initial_run_done:
                         initial_run_done = True
-                        # Check if current hour is one of the scheduled hours
-                        if current_hour in app_state.market_hours:
+                        # Check if current time has passed any scheduled time that hasn't run yet
+                        current_time_mins = current_hour * 60 + current_minute
+                        matching_time = None
+
+                        for sched_hour, sched_minute in app_state.market_hours:
+                            sched_time_mins = sched_hour * 60 + sched_minute
+                            # If we're past the scheduled time (within the same hour), run it
+                            if current_time_mins >= sched_time_mins and current_hour == sched_hour:
+                                matching_time = (sched_hour, sched_minute)
+                                break
+
+                        if matching_time:
                             # Check if market is open
                             is_open, reason = is_market_open()
                             if is_open:
-                                print(f"[MARKET_HOUR] Currently within scheduled hour {current_hour}:00 - running immediately!")
-                                last_run_hour = (current_date, current_hour)
-                                # Skip to analysis (below the wait loop)
-                                next_hour = current_hour
+                                h, m = matching_time
+                                print(f"[MARKET_HOUR] Currently past scheduled time {h}:{m:02d} - running immediately!")
+                                last_run_time = (current_date, h, m)
+                                next_time = matching_time
 
                                 # Reset states for new analysis
                                 app_state.reset_for_loop()
@@ -656,40 +663,40 @@ def register_control_callbacks(app):
                                 # Jump to analysis execution
                                 goto_analysis = True
                             else:
-                                print(f"[MARKET_HOUR] Within scheduled hour but market closed: {reason}")
+                                print(f"[MARKET_HOUR] Within scheduled time but market closed: {reason}")
                                 goto_analysis = False
                         else:
-                            print(f"[MARKET_HOUR] Current hour ({current_hour}) not in schedule {app_state.market_hours}")
+                            print(f"[MARKET_HOUR] Current time ({current_hour}:{current_minute:02d}) not matching any schedule")
                             goto_analysis = False
                     else:
                         goto_analysis = False
 
                     if not goto_analysis:
                         # Find next execution time
-                        now = datetime.datetime.now()
                         next_execution_times = []
 
-                        for hour in app_state.market_hours:
-                            next_dt = get_next_market_datetime(hour, now)
-                            # Skip if we already ran this hour today
-                            if last_run_hour == (next_dt.date(), hour):
+                        for sched_time in app_state.market_hours:
+                            next_dt = get_next_market_datetime(sched_time)
+                            # Skip if we already ran this time today
+                            if last_run_time == (next_dt.date(), sched_time[0], sched_time[1]):
                                 continue
-                            next_execution_times.append((hour, next_dt))
+                            next_execution_times.append((sched_time, next_dt))
 
                         if not next_execution_times:
-                            # All hours for today have been executed, recalculate for tomorrow
+                            # All times for today have been executed, recalculate for tomorrow
                             time.sleep(60)
                             continue
 
                         # Sort by next execution time
                         next_execution_times.sort(key=lambda x: x[1])
-                        next_hour, next_dt = next_execution_times[0]
+                        next_time, next_dt = next_execution_times[0]
 
-                        print(f"[MARKET_HOUR] Next execution: {next_dt.strftime('%A, %B %d at %I:%M %p %Z')} (Hour {next_hour})")
+                        h, m = next_time
+                        print(f"[MARKET_HOUR] Next execution: {next_dt.strftime('%A, %B %d at %I:%M %p %Z')} ({h}:{m:02d})")
 
                         # Wait until next execution time
                         while datetime.datetime.now() < next_dt.replace(tzinfo=None) and not app_state.stop_market_hour:
-                            time.sleep(60)  # Check every minute
+                            time.sleep(30)  # Check every 30 seconds for more precision
 
                         if app_state.stop_market_hour:
                             break
@@ -701,7 +708,7 @@ def register_control_callbacks(app):
                             continue
 
                         # Track this run to avoid duplicates
-                        last_run_hour = (next_dt.date(), next_hour)
+                        last_run_time = (next_dt.date(), next_time[0], next_time[1])
 
                         # Reset states for new analysis
                         app_state.reset_for_loop()
@@ -710,7 +717,8 @@ def register_control_callbacks(app):
                         for symbol in symbols:
                             app_state.init_symbol_state(symbol)
 
-                    print(f"[MARKET_HOUR] Market is open, starting analysis at {next_hour}:00")
+                    h, m = next_time
+                    print(f"[MARKET_HOUR] Market is open, starting analysis at {h}:{m:02d}")
                     
                     # Reset states for new analysis
                     app_state.reset_for_loop()
@@ -719,11 +727,12 @@ def register_control_callbacks(app):
                     for symbol in symbols:
                         app_state.init_symbol_state(symbol)
                     
-                    def analyze_single_ticker_market_hour(symbol, hour):
+                    def analyze_single_ticker_market_hour(symbol, sched_time):
                         """Analyze a single ticker in market hour mode (for parallel execution)."""
                         try:
                             app_state.start_analyzing_symbol(symbol)
-                            print(f"[MARKET_HOUR-PARALLEL] Starting analysis for {symbol} at {hour}:00")
+                            sh, sm = sched_time
+                            print(f"[MARKET_HOUR-PARALLEL] Starting analysis for {symbol} at {sh}:{sm:02d}")
                             start_analysis(
                                 symbol,
                                 analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
@@ -738,10 +747,10 @@ def register_control_callbacks(app):
                             app_state.stop_analyzing_symbol(symbol)
 
                     # Run analysis for all symbols in parallel
-                    print(f"[MARKET_HOUR] Starting parallel analysis at {next_hour}:00")
+                    print(f"[MARKET_HOUR] Starting parallel analysis at {h}:{m:02d}")
                     max_workers = min(MAX_PARALLEL_TICKERS, len(symbols))
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        futures = {executor.submit(analyze_single_ticker_market_hour, symbol, next_hour): symbol for symbol in symbols}
+                        futures = {executor.submit(analyze_single_ticker_market_hour, symbol, next_time): symbol for symbol in symbols}
 
                         for future in as_completed(futures):
                             if app_state.stop_market_hour:
@@ -755,17 +764,17 @@ def register_control_callbacks(app):
                                     print(f"[MARKET_HOUR] {sym} analysis failed: {error}")
                             except Exception as e:
                                 print(f"[MARKET_HOUR] {symbol} raised exception: {e}")
-                    
+
                     if not app_state.stop_market_hour:
                         # Auto-save analysis after market hour analysis completes
                         try:
                             run_id = save_analysis_run(app_state, symbols)
                             if run_id:
-                                print(f"[AUTO-SAVE] Market hour {next_hour}:00 analysis saved: {run_id}")
+                                print(f"[AUTO-SAVE] Market hour {h}:{m:02d} analysis saved: {run_id}")
                         except Exception as e:
                             print(f"[AUTO-SAVE] Error saving market hour analysis: {e}")
 
-                        print(f"[MARKET_HOUR] Analysis completed for {next_hour}:00. Waiting for next execution time.")
+                        print(f"[MARKET_HOUR] Analysis completed for {h}:{m:02d}. Waiting for next execution time.")
             
             elif loop_enabled:
                 # Start loop mode
@@ -910,14 +919,10 @@ def register_control_callbacks(app):
         
         if market_hour_enabled:
             mode_text = "market hour mode"
-            # Format hours for display
-            formatted_hours = []
-            for hour in market_hours_list:
-                if hour < 12:
-                    formatted_hours.append(f"{hour}:00 AM")
-                else:
-                    formatted_hours.append(f"{hour-12}:00 PM" if hour > 12 else "12:00 PM")
-            interval_text = f" (at {' and '.join(formatted_hours)} EST/EDT)"
+            # Format times for display
+            from webui.utils.market_hours import format_time
+            formatted_times = [format_time(h, m) for h, m in market_hours_list]
+            interval_text = f" (at {' and '.join(formatted_times)} EST)"
         elif loop_enabled:
             mode_text = "loop mode"
             interval_text = f" (every {app_state.loop_interval_minutes} minutes)"

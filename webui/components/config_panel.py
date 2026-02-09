@@ -176,7 +176,7 @@ def create_trading_control_panel():
                             dbc.Input(
                                 id="market-hours-input",
                                 type="text",
-                                placeholder="e.g. 10,14 (EST)",
+                                placeholder="e.g. 10:30,14:15 (EST)",
                                 value="",
                                 size="sm"
                             ),
