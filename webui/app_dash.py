@@ -13,10 +13,11 @@ RECENT FIX: Multiple Symbol Page Refresh Issue
 
 import dash
 import dash_bootstrap_components as dbc
-from flask import Flask
+from flask import Flask, jsonify, request
 import logging
 
 from webui.config.constants import APP_CONFIG, COLORS
+from webui.utils import local_storage
 from webui.layout import create_main_layout
 from webui.callbacks import register_all_callbacks
 from webui.utils.log_handler import setup_log_capture
@@ -84,6 +85,46 @@ def create_app():
     
     # Initialize Flask server
     server = Flask(__name__)
+
+    # =========================================================================
+    # LOCAL STORAGE API ROUTES
+    # =========================================================================
+
+    @server.route('/api/settings', methods=['GET'])
+    def get_settings():
+        """Get all settings from local storage"""
+        return jsonify(local_storage.get_settings())
+
+    @server.route('/api/settings', methods=['POST'])
+    def save_settings():
+        """Save settings to local storage"""
+        data = request.get_json()
+        local_storage.save_settings(data)
+        return jsonify({"status": "ok"})
+
+    @server.route('/api/watchlist', methods=['GET'])
+    def get_watchlist():
+        """Get watchlist from local storage"""
+        return jsonify(local_storage.get_watchlist())
+
+    @server.route('/api/watchlist', methods=['POST'])
+    def save_watchlist():
+        """Save watchlist to local storage"""
+        data = request.get_json()
+        local_storage.save_watchlist(data)
+        return jsonify({"status": "ok"})
+
+    @server.route('/api/run-queue', methods=['GET'])
+    def get_run_queue():
+        """Get run queue from local storage"""
+        return jsonify(local_storage.get_run_queue())
+
+    @server.route('/api/run-queue', methods=['POST'])
+    def save_run_queue():
+        """Save run queue to local storage"""
+        data = request.get_json()
+        local_storage.save_run_queue(data)
+        return jsonify({"status": "ok"})
 
     # Initialize Dash app with Bootstrap
     app = dash.Dash(

@@ -2,7 +2,7 @@
 Control and configuration callbacks for TradingAgents WebUI
 """
 
-from dash import Input, Output, State, ctx, html
+from dash import Input, Output, State, ctx, html, callback_context
 import dash_bootstrap_components as dbc
 import dash
 import threading
@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from webui.utils.state import app_state
 from webui.components.analysis import start_analysis
 from webui.utils.history import save_analysis_run
+from webui.utils import local_storage
 
 # Configuration for parallel ticker analysis
 MAX_PARALLEL_TICKERS = 3  # Maximum number of tickers to analyze in parallel
@@ -21,10 +22,10 @@ def register_control_callbacks(app):
     """Register all control and configuration callbacks"""
 
     # =========================================================================
-    # SETTINGS PERSISTENCE CALLBACKS
+    # SETTINGS PERSISTENCE CALLBACKS (SQLite Database)
     # =========================================================================
 
-    # Save settings to store whenever any setting changes
+    # Save settings to database whenever any setting changes
     @app.callback(
         Output("settings-store", "data"),
         [Input("analyst-checklist", "value"),
@@ -42,11 +43,11 @@ def register_control_callbacks(app):
         State("settings-store", "data"),
         prevent_initial_call=True
     )
-    def save_settings_to_store(analyst1, analyst2, depth, shorts, loop, interval,
-                                market_hour, market_hours_input, trade_after, trade_amount,
-                                quick_llm, deep_llm, current_data):
-        """Save all settings to localStorage whenever they change"""
-        return {
+    def save_settings_to_db(analyst1, analyst2, depth, shorts, loop, interval,
+                            market_hour, market_hours_input, trade_after, trade_amount,
+                            quick_llm, deep_llm, current_data):
+        """Save all settings to SQLite database whenever they change"""
+        settings = {
             "analyst_checklist": analyst1 or [],
             "analyst_checklist_2": analyst2 or [],
             "research_depth": depth or "Shallow",
@@ -60,8 +61,11 @@ def register_control_callbacks(app):
             "quick_llm": quick_llm or "gpt-5-nano",
             "deep_llm": deep_llm or "gpt-5-nano",
         }
+        # Save to SQLite database
+        local_storage.save_settings(settings)
+        return settings
 
-    # Restore settings from store on page load
+    # Restore settings from database on page load
     @app.callback(
         [Output("analyst-checklist", "value"),
          Output("analyst-checklist-2", "value"),
@@ -79,38 +83,24 @@ def register_control_callbacks(app):
         State("settings-store", "data"),
         prevent_initial_call=False
     )
-    def restore_settings_from_store(ts, data):
-        """Restore settings from localStorage on page load"""
-        if not data:
-            # Return defaults if no stored data
-            return (
-                ["market", "options", "social"],
-                ["news", "fundamentals", "macro"],
-                "Shallow",
-                False,
-                False,
-                60,
-                False,
-                "",
-                False,
-                4500,
-                "gpt-5-nano",
-                "gpt-5-nano",
-            )
+    def restore_settings_from_db(ts, data):
+        """Restore settings from SQLite database on page load"""
+        # Load from database (not from dcc.Store)
+        settings = local_storage.get_settings()
 
         return (
-            data.get("analyst_checklist", ["market", "options", "social"]),
-            data.get("analyst_checklist_2", ["news", "fundamentals", "macro"]),
-            data.get("research_depth", "Shallow"),
-            data.get("allow_shorts", False),
-            data.get("loop_enabled", False),
-            data.get("loop_interval", 60),
-            data.get("market_hour_enabled", False),
-            data.get("market_hours_input", ""),
-            data.get("trade_after_analyze", False),
-            data.get("trade_dollar_amount", 4500),
-            data.get("quick_llm", "gpt-5-nano"),
-            data.get("deep_llm", "gpt-5-nano"),
+            settings.get("analyst_checklist", ["market", "options", "social"]),
+            settings.get("analyst_checklist_2", ["news", "fundamentals", "macro"]),
+            settings.get("research_depth", "Shallow"),
+            settings.get("allow_shorts", False),
+            settings.get("loop_enabled", False),
+            settings.get("loop_interval", 60),
+            settings.get("market_hour_enabled", False),
+            settings.get("market_hours_input", ""),
+            settings.get("trade_after_analyze", False),
+            settings.get("trade_dollar_amount", 4500),
+            settings.get("quick_llm", "gpt-5-nano"),
+            settings.get("deep_llm", "gpt-5-nano"),
         )
 
     # =========================================================================

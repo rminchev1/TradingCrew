@@ -7,6 +7,7 @@ import dash_bootstrap_components as dbc
 import dash
 from webui.components.watchlist_panel import create_watchlist_item
 from webui.components.run_watchlist import create_run_watchlist_item
+from webui.utils import local_storage
 
 
 def get_stock_quote(symbol):
@@ -487,3 +488,65 @@ def register_watchlist_callbacks(app):
 
         count = str(len(symbols))
         return items, count, count, count
+
+    # =========================================================================
+    # DATABASE SYNC CALLBACKS
+    # =========================================================================
+
+    # Load watchlist from database on page load
+    @app.callback(
+        Output("watchlist-store", "data"),
+        Input("watchlist-refresh-interval", "n_intervals"),
+        State("watchlist-store", "data"),
+        prevent_initial_call=False
+    )
+    def load_watchlist_from_db(n_intervals, current_data):
+        """Load watchlist from database on initial page load"""
+        # Only load from DB on first interval (page load)
+        if n_intervals == 0 or n_intervals is None:
+            db_data = local_storage.get_watchlist()
+            if db_data and db_data.get("symbols"):
+                return db_data
+        return dash.no_update
+
+    # Save watchlist to database whenever it changes
+    @app.callback(
+        Output("watchlist-store", "data", allow_duplicate=True),
+        Input("watchlist-store", "modified_timestamp"),
+        State("watchlist-store", "data"),
+        prevent_initial_call=True
+    )
+    def save_watchlist_to_db(ts, data):
+        """Save watchlist to database whenever it changes"""
+        if data:
+            local_storage.save_watchlist(data)
+        return dash.no_update
+
+    # Load run queue from database on page load
+    @app.callback(
+        Output("run-watchlist-store", "data"),
+        Input("watchlist-refresh-interval", "n_intervals"),
+        State("run-watchlist-store", "data"),
+        prevent_initial_call=False
+    )
+    def load_run_queue_from_db(n_intervals, current_data):
+        """Load run queue from database on initial page load"""
+        # Only load from DB on first interval (page load)
+        if n_intervals == 0 or n_intervals is None:
+            db_data = local_storage.get_run_queue()
+            if db_data and db_data.get("symbols"):
+                return db_data
+        return dash.no_update
+
+    # Save run queue to database whenever it changes
+    @app.callback(
+        Output("run-watchlist-store", "data", allow_duplicate=True),
+        Input("run-watchlist-store", "modified_timestamp"),
+        State("run-watchlist-store", "data"),
+        prevent_initial_call=True
+    )
+    def save_run_queue_to_db(ts, data):
+        """Save run queue to database whenever it changes"""
+        if data:
+            local_storage.save_run_queue(data)
+        return dash.no_update
