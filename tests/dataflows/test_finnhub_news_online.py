@@ -71,7 +71,7 @@ class TestGetFinnhubNewsOnline:
 
         assert "No recent news found for AAPL" in result
 
-    @patch("tradingagents.dataflows.interface.log_api_error")
+    @patch("tradingagents.dataflows.external_data_logger.log_api_error")
     @patch("tradingagents.dataflows.interface.get_finnhub_client")
     def test_api_error_handling(self, mock_get_client, mock_log_error):
         """Test error handling when API call fails"""
@@ -273,7 +273,7 @@ class TestGetFinnhubNewsOnline:
             "NVDA", _from="2024-02-01", to="2024-02-08"
         )
 
-    @patch("tradingagents.dataflows.interface.log_api_error")
+    @patch("tradingagents.dataflows.external_data_logger.log_api_error")
     @patch("tradingagents.dataflows.interface.get_finnhub_client")
     def test_invalid_date_format(self, mock_get_client, mock_log_error):
         """Test handling of invalid date format"""
