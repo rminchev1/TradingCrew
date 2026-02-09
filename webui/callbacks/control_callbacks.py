@@ -672,6 +672,18 @@ def register_control_callbacks(app):
                         goto_analysis = False
 
                     if not goto_analysis:
+                        # Check if market is currently open before calculating next time
+                        is_open_now, close_reason = is_market_open()
+                        if not is_open_now:
+                            # Market is closed - wait until next market day
+                            if "closed at 4:00 PM" in close_reason or "Weekend" in close_reason:
+                                # After hours or weekend - sleep longer, no spam
+                                if not hasattr(app_state, '_last_closed_log') or time.time() - app_state._last_closed_log > 3600:
+                                    print(f"[MARKET_HOUR] {close_reason}. Waiting for market to open...")
+                                    app_state._last_closed_log = time.time()
+                                time.sleep(300)  # Check every 5 minutes when market closed
+                                continue
+
                         # Find next execution time
                         next_execution_times = []
 
@@ -683,8 +695,8 @@ def register_control_callbacks(app):
                             next_execution_times.append((sched_time, next_dt))
 
                         if not next_execution_times:
-                            # All times for today have been executed, recalculate for tomorrow
-                            time.sleep(60)
+                            # All times for today have been executed, wait quietly
+                            time.sleep(300)
                             continue
 
                         # Sort by next execution time
@@ -692,22 +704,29 @@ def register_control_callbacks(app):
                         next_time, next_dt = next_execution_times[0]
 
                         h, m = next_time
-                        print(f"[MARKET_HOUR] Next execution: {next_dt.strftime('%A, %B %d at %I:%M %p %Z')} ({h}:{m:02d})")
+                        # Only log if this is a new target time
+                        log_key = f"{next_dt.date()}_{h}_{m}"
+                        if not hasattr(app_state, '_last_next_log') or app_state._last_next_log != log_key:
+                            print(f"[MARKET_HOUR] Next execution: {next_dt.strftime('%A, %B %d at %I:%M %p %Z')}")
+                            app_state._last_next_log = log_key
 
-                        # Wait until next execution time
-                        while datetime.datetime.now() < next_dt.replace(tzinfo=None) and not app_state.stop_market_hour:
-                            time.sleep(30)  # Check every 30 seconds for more precision
+                        # Wait until next execution time (compare in Eastern time)
+                        now_eastern = datetime.datetime.now(eastern)
+                        while now_eastern < next_dt and not app_state.stop_market_hour:
+                            time.sleep(30)
+                            now_eastern = datetime.datetime.now(eastern)
 
                         if app_state.stop_market_hour:
                             break
 
-                        # Check if market is actually open
+                        # Check if market is actually open at execution time
                         is_open, reason = is_market_open()
                         if not is_open:
-                            print(f"[MARKET_HOUR] Market is closed: {reason}. Waiting for next execution time.")
+                            # Mark as processed to avoid retrying
+                            last_run_time = (next_dt.date(), next_time[0], next_time[1])
                             continue
 
-                        # Track this run to avoid duplicates
+                        # Track this run
                         last_run_time = (next_dt.date(), next_time[0], next_time[1])
 
                         # Reset states for new analysis
