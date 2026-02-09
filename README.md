@@ -1,6 +1,6 @@
-# AlpacaTradingAgent: Multi-Agent LLM Trading Framework
+# TradingCrew: Multi-Agent LLM Trading Framework
 
-> **AlpacaTradingAgent** - A sophisticated multi-agent AI trading framework built on LangGraph, designed for Alpaca users who want to leverage AI agents for automated market analysis and trading.
+> **TradingCrew** - A sophisticated multi-agent AI trading framework built on LangGraph, designed for traders who want to leverage AI agents for automated market analysis and trading.
 >
 > This project extends the original [TradingAgents](https://github.com/TauricResearch/TradingAgents) framework with real-time Alpaca integration, crypto support, options analysis, and a production-ready web interface.
 >
@@ -8,7 +8,7 @@
 
 <div align="center">
 
-[![CI](https://github.com/rminchev1/AlpacaTradingAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/rminchev1/AlpacaTradingAgent/actions/workflows/ci.yml)
+[![CI](https://github.com/rminchev1/TradingCrew/actions/workflows/ci.yml/badge.svg)](https://github.com/rminchev1/TradingCrew/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
@@ -64,8 +64,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/rminchev1/AlpacaTradingAgent.git
-cd AlpacaTradingAgent
+git clone https://github.com/rminchev1/TradingCrew.git
+cd TradingCrew
 
 # Create virtual environment
 python -m venv venv
@@ -81,12 +81,12 @@ pip install -e .[dev]
 ### Option 2: Install from Requirements
 
 ```bash
-git clone https://github.com/rminchev1/AlpacaTradingAgent.git
-cd AlpacaTradingAgent
+git clone https://github.com/rminchev1/TradingCrew.git
+cd TradingCrew
 
 # Create virtual environment
-conda create -n tradingagents python=3.11
-conda activate tradingagents
+conda create -n tradingcrew python=3.11
+conda activate tradingcrew
 
 # Install dependencies
 pip install -r requirements.txt
@@ -124,7 +124,7 @@ pip install -r requirements.txt
 
 ```bash
 # If installed as package
-tradingagents-web
+tradingcrew-web
 
 # Or run directly
 python run_webui_dash.py --port 7860
@@ -136,7 +136,7 @@ Open http://localhost:7860 in your browser.
 
 ```bash
 # If installed as package
-tradingagents
+tradingcrew
 
 # Or run directly
 python -m cli.main
@@ -220,19 +220,19 @@ The CLI supports interactive and batch modes:
 
 ```bash
 # Interactive mode - select options via prompts
-tradingagents
+tradingcrew
 
 # Single symbol
-tradingagents NVDA
+tradingcrew NVDA
 
 # Multiple symbols
-tradingagents "NVDA,AAPL,TSLA"
+tradingcrew "NVDA,AAPL,TSLA"
 
 # Crypto
-tradingagents "BTC/USD"
+tradingcrew "BTC/USD"
 
 # Mixed assets
-tradingagents "NVDA,ETH/USD,AAPL"
+tradingcrew "NVDA,ETH/USD,AAPL"
 ```
 
 ---
@@ -320,7 +320,7 @@ for symbol in symbols:
 ## Project Structure
 
 ```
-AlpacaTradingAgent/
+TradingCrew/
 ├── tradingagents/           # Core trading framework
 │   ├── agents/              # AI agents (analysts, researchers, trader)
 │   ├── dataflows/           # Data interfaces (Alpaca, Finnhub, FRED, etc.)
@@ -417,6 +417,6 @@ This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENS
 
 <div align="center">
 
-**[⬆ Back to Top](#alpacatradingagent-multi-agent-llm-trading-framework)**
+**[⬆ Back to Top](#tradingcrew-multi-agent-llm-trading-framework)**
 
 </div>

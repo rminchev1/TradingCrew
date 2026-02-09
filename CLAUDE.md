@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AlpacaTradingAgent is a multi-agent LLM-powered trading framework built on LangGraph that integrates with Alpaca API for real-time stock and crypto trading. It uses 5 specialized analyst agents (Market, Social Sentiment, News, Fundamentals, Macro) that work collaboratively through structured debates to make trading decisions.
+TradingCrew is a multi-agent LLM-powered trading framework built on LangGraph that integrates with Alpaca API for real-time stock and crypto trading. It uses 6 specialized analyst agents (Market, Options, Social Sentiment, News, Fundamentals, Macro) that work collaboratively through structured debates to make trading decisions.
 
 ## Commands
 

@@ -8,14 +8,14 @@ The primary configuration is in pyproject.toml.
 from setuptools import setup, find_packages
 
 setup(
-    name="alpaca-trading-agent",
+    name="tradingcrew",
     version="0.1.0",
-    description="Multi-Agent LLM Financial Trading Framework with Alpaca Integration",
+    description="TradingCrew - Multi-Agent LLM Financial Trading Framework",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    author="TradingAgents Team",
+    author="TradingCrew Team",
     author_email="yijia.xiao@cs.ucla.edu",
-    url="https://github.com/rminchev1/AlpacaTradingAgent",
+    url="https://github.com/rminchev1/TradingCrew",
     packages=find_packages(exclude=["tests*", "analysis_history*"]),
     include_package_data=True,
     package_data={
@@ -68,8 +68,8 @@ setup(
     python_requires=">=3.10",
     entry_points={
         "console_scripts": [
-            "tradingagents=cli.main:main",
-            "tradingagents-web=webui:main",
+            "tradingcrew=cli.main:main",
+            "tradingcrew-web=webui:main",
         ],
     },
     classifiers=[

@@ -5,8 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: alpaca-trading-agent:web
-    container_name: alpaca-trading-agent-web
+    image: tradingcrew:web
+    container_name: tradingcrew-web
     env_file:
       - .env
     environment:

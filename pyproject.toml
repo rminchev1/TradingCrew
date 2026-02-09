@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "alpaca-trading-agent"
+name = "tradingcrew"
 version = "0.1.0"
-description = "Multi-Agent LLM Financial Trading Framework with Alpaca Integration"
+description = "TradingCrew - Multi-Agent LLM Financial Trading Framework"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.10"
@@ -82,18 +82,18 @@ extras = [
     "gradio>=4.0.0",
 ]
 all = [
-    "alpaca-trading-agent[dev,extras]",
+    "tradingcrew[dev,extras]",
 ]
 
 [project.scripts]
-tradingagents = "cli.main:main"
-tradingagents-web = "webui:main"
+tradingcrew = "cli.main:main"
+tradingcrew-web = "webui:main"
 
 [project.urls]
-Homepage = "https://github.com/rminchev1/AlpacaTradingAgent"
-Repository = "https://github.com/rminchev1/AlpacaTradingAgent"
-Documentation = "https://github.com/rminchev1/AlpacaTradingAgent#readme"
-Issues = "https://github.com/rminchev1/AlpacaTradingAgent/issues"
+Homepage = "https://github.com/rminchev1/TradingCrew"
+Repository = "https://github.com/rminchev1/TradingCrew"
+Documentation = "https://github.com/rminchev1/TradingCrew#readme"
+Issues = "https://github.com/rminchev1/TradingCrew/issues"
 
 [tool.setuptools]
 include-package-data = true
