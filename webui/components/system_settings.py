@@ -131,11 +131,13 @@ def create_llm_section():
                     id="setting-deep-think-llm",
                     options=[
                         {"label": "o3-mini (Recommended)", "value": "o3-mini"},
+                        {"label": "o3", "value": "o3"},
                         {"label": "o1-mini", "value": "o1-mini"},
+                        {"label": "o1", "value": "o1"},
+                        {"label": "gpt-4.1", "value": "gpt-4.1"},
+                        {"label": "gpt-4.1-mini", "value": "gpt-4.1-mini"},
                         {"label": "gpt-4o", "value": "gpt-4o"},
                         {"label": "gpt-4o-mini", "value": "gpt-4o-mini"},
-                        {"label": "gpt-5-mini", "value": "gpt-5-mini"},
-                        {"label": "gpt-5-nano", "value": "gpt-5-nano"},
                     ],
                     value="o3-mini",
                     size="sm"
@@ -155,9 +157,10 @@ def create_llm_section():
                     id="setting-quick-think-llm",
                     options=[
                         {"label": "gpt-4o-mini (Recommended)", "value": "gpt-4o-mini"},
+                        {"label": "gpt-4.1-mini", "value": "gpt-4.1-mini"},
+                        {"label": "gpt-4.1-nano", "value": "gpt-4.1-nano"},
                         {"label": "gpt-4o", "value": "gpt-4o"},
-                        {"label": "gpt-5-mini", "value": "gpt-5-mini"},
-                        {"label": "gpt-5-nano", "value": "gpt-5-nano"},
+                        {"label": "gpt-3.5-turbo", "value": "gpt-3.5-turbo"},
                     ],
                     value="gpt-4o-mini",
                     size="sm"

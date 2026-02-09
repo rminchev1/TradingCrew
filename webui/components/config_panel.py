@@ -226,12 +226,12 @@ def create_trading_control_panel():
                             dbc.Select(
                                 id="quick-llm",
                                 options=[
-                                    {"label": "gpt-5-nano", "value": "gpt-5-nano"},
-                                    {"label": "gpt-5-mini", "value": "gpt-5-mini"},
                                     {"label": "gpt-4o-mini", "value": "gpt-4o-mini"},
+                                    {"label": "gpt-4.1-mini", "value": "gpt-4.1-mini"},
                                     {"label": "gpt-4.1-nano", "value": "gpt-4.1-nano"},
+                                    {"label": "gpt-3.5-turbo", "value": "gpt-3.5-turbo"},
                                 ],
-                                value="gpt-5-nano",
+                                value="gpt-4o-mini",
                                 size="sm"
                             ),
                         ], md=6),
@@ -240,12 +240,12 @@ def create_trading_control_panel():
                             dbc.Select(
                                 id="deep-llm",
                                 options=[
-                                    {"label": "gpt-5-nano", "value": "gpt-5-nano"},
-                                    {"label": "gpt-5-mini", "value": "gpt-5-mini"},
                                     {"label": "o3-mini", "value": "o3-mini"},
+                                    {"label": "o1-mini", "value": "o1-mini"},
+                                    {"label": "gpt-4.1", "value": "gpt-4.1"},
                                     {"label": "gpt-4o", "value": "gpt-4o"},
                                 ],
-                                value="gpt-5-nano",
+                                value="o3-mini",
                                 size="sm"
                             ),
                         ], md=6),
@@ -274,8 +274,8 @@ def create_trading_control_panel():
                 "market_hours_input": "",
                 "trade_after_analyze": False,
                 "trade_dollar_amount": 4500,
-                "quick_llm": "gpt-5-nano",
-                "deep_llm": "gpt-5-nano",
+                "quick_llm": "gpt-4o-mini",
+                "deep_llm": "o3-mini",
             }
         ),
     ], className="trading-control-panel")

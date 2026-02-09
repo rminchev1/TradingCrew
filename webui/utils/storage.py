@@ -22,8 +22,8 @@ DEFAULT_SETTINGS = {
     "market_hours_input": "",
     "trade_after_analyze": False,
     "trade_dollar_amount": 4500,
-    "quick_llm": "gpt-5-nano",
-    "deep_llm": "gpt-5-nano"
+    "quick_llm": "gpt-4o-mini",
+    "deep_llm": "o3-mini"
 }
 
 # Default system settings structure
