@@ -92,22 +92,23 @@ def validate_market_hours(hours_str: str) -> Tuple[bool, List[Tuple[int, int]], 
 def is_market_open(target_datetime: datetime.datetime = None) -> Tuple[bool, str]:
     """
     Check if the US stock market is open at the given datetime.
-    
+
     Args:
         target_datetime: Datetime to check (defaults to current time)
-        
+
     Returns:
         Tuple of (is_open, reason_if_closed)
     """
-    if target_datetime is None:
-        target_datetime = datetime.datetime.now()
-    
-    # Convert to Eastern Time
     eastern = pytz.timezone('US/Eastern')
-    if target_datetime.tzinfo is None:
-        # Assume local time and convert to Eastern
-        target_datetime = pytz.timezone('US/Eastern').localize(target_datetime)
+
+    if target_datetime is None:
+        # Get current time directly in Eastern timezone
+        target_datetime = datetime.datetime.now(eastern)
+    elif target_datetime.tzinfo is None:
+        # Naive datetime - assume it's already in Eastern time
+        target_datetime = eastern.localize(target_datetime)
     else:
+        # Has timezone - convert to Eastern
         target_datetime = target_datetime.astimezone(eastern)
     
     # Check if it's a weekend
