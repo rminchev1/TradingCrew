@@ -40,10 +40,10 @@ def create_run_watchlist_panel():
             className="mt-3 w-100"
         ),
 
-        # Store for run queue (loaded from database via callback on page load)
+        # Store for run queue (persisted to localStorage)
         dcc.Store(
             id="run-watchlist-store",
-            storage_type="memory",
+            storage_type="local",
             data={"symbols": []}
         )
     ], className="run-watchlist-panel")
