@@ -2,9 +2,39 @@
 Scanner Panel - UI component for market scanner
 """
 
+import os
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 import plotly.graph_objects as go
+
+
+def _is_alpaca_configured():
+    """Check if Alpaca API credentials are configured."""
+    api_key = os.getenv("ALPACA_API_KEY")
+    secret_key = os.getenv("ALPACA_SECRET_KEY")
+    return bool(api_key and secret_key)
+
+
+def _create_config_warning():
+    """Create a warning alert for missing API configuration."""
+    return dbc.Alert(
+        [
+            html.I(className="bi bi-exclamation-triangle-fill me-2"),
+            html.Strong("API Configuration Required: "),
+            "The scanner needs Alpaca API credentials to fetch real market data. ",
+            "Without configuration, results shown are based on fallback data with neutral scores. ",
+            html.A(
+                "Configure your .env file",
+                href="https://github.com/rminchev1/TradingCrew#configuration",
+                target="_blank",
+                className="alert-link"
+            ),
+            " to enable full scanner functionality."
+        ],
+        color="warning",
+        className="mb-3",
+        style={"fontSize": "0.85rem"}
+    )
 
 
 def create_scanner_panel():
@@ -31,6 +61,9 @@ def create_scanner_panel():
 
             # Timestamp display (shows when last scan was performed)
             html.Div(id="scanner-timestamp-display", className="text-muted small text-end mb-2"),
+
+            # Configuration warning (shown when Alpaca not configured)
+            _create_config_warning() if not _is_alpaca_configured() else None,
 
             html.Hr(),
 
