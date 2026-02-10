@@ -7,10 +7,40 @@ from dash import html, dcc
 import pandas as pd
 from datetime import datetime
 import pytz
+import os
 from tradingagents.dataflows.alpaca_utils import AlpacaUtils
+
+
+def _is_alpaca_configured():
+    """Check if Alpaca API credentials are configured."""
+    api_key = os.getenv("ALPACA_API_KEY")
+    secret_key = os.getenv("ALPACA_SECRET_KEY")
+    return bool(api_key and secret_key)
+
+
+def _render_not_configured_message(section_name="Alpaca"):
+    """Render a message when Alpaca is not configured."""
+    return html.Div([
+        html.Div([
+            html.I(className="fas fa-key fa-2x mb-3 text-muted"),
+            html.H5(f"{section_name} Not Configured", className="text-muted"),
+            html.P([
+                "Set your Alpaca API keys in ",
+                html.Strong("System Settings"),
+                " or in your ",
+                html.Code(".env"),
+                " file to view this data."
+            ], className="text-muted small mb-0")
+        ], className="text-center p-4")
+    ], className="enhanced-table-container")
+
 
 def render_positions_table():
     """Render the enhanced positions table with liquidate buttons"""
+    # Check if Alpaca is configured
+    if not _is_alpaca_configured():
+        return _render_not_configured_message("Positions")
+
     try:
         positions_data = AlpacaUtils.get_positions_data()
         
@@ -125,6 +155,10 @@ def render_positions_table():
 
 def render_orders_table(page=1, page_size=7):
     """Render the enhanced recent orders table"""
+    # Check if Alpaca is configured
+    if not _is_alpaca_configured():
+        return _render_not_configured_message("Orders")
+
     try:
         orders_data, total_count = AlpacaUtils.get_recent_orders(page=page, page_size=page_size, return_total=True)
         total_pages = max(1, (total_count + page_size - 1) // page_size)  # Ceiling division
@@ -270,6 +304,10 @@ def render_orders_table(page=1, page_size=7):
 
 def render_account_summary():
     """Render account summary information"""
+    # Check if Alpaca is configured
+    if not _is_alpaca_configured():
+        return _render_not_configured_message("Account")
+
     try:
         account_info = AlpacaUtils.get_account_info()
         
@@ -392,6 +430,47 @@ def get_market_time_info():
 
 def render_compact_account_bar():
     """Render a compact horizontal account summary bar for the top of the page."""
+    # Get market time info (always show this)
+    time_str, tz_abbr, market_status, status_color, is_open = get_market_time_info()
+    market_icon = "fa-clock" if is_open else "fa-moon"
+
+    # Check if Alpaca is configured
+    if not _is_alpaca_configured():
+        return html.Div([
+            dbc.Row([
+                # Market Time (EST/EDT)
+                dbc.Col([
+                    html.Div([
+                        html.I(className=f"fas {market_icon} me-2 {status_color}"),
+                        html.Span(id="market-time-display", children=f"{time_str} {tz_abbr}", className="fw-bold text-white"),
+                        html.Span(" · ", className="text-muted mx-1"),
+                        html.Span(id="market-status-display", children=market_status, className=f"small {status_color}")
+                    ], className="d-flex align-items-center")
+                ], width="auto"),
+                # Divider
+                dbc.Col([
+                    html.Span("|", className="text-muted mx-2")
+                ], width="auto", className="px-0"),
+                # Not configured message
+                dbc.Col([
+                    html.Div([
+                        html.I(className="fas fa-key me-2 text-warning"),
+                        html.Span("Alpaca API not configured", className="text-muted small")
+                    ], className="d-flex align-items-center")
+                ], width="auto"),
+                # Refresh button on right
+                dbc.Col([
+                    html.Button([
+                        html.I(className="fas fa-sync-alt")
+                    ],
+                    id="refresh-alpaca-btn",
+                    className="btn btn-sm btn-outline-secondary",
+                    title="Refresh account data"
+                    )
+                ], width="auto", className="ms-auto")
+            ], className="align-items-center g-0", justify="start")
+        ], className="compact-account-bar", id="compact-account-bar")
+
     try:
         account_info = AlpacaUtils.get_account_info()
 
