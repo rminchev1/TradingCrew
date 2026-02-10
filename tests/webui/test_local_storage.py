@@ -463,6 +463,573 @@ class TestConcurrency:
         assert len(errors) == 0
 
 
+class TestAnalystReports:
+    """Tests for analyst reports storage functions"""
+
+    def test_save_and_get_single_report(self, tmp_storage):
+        """Test saving and retrieving a single analyst report"""
+        from webui.utils import local_storage
+
+        local_storage.save_analyst_report(
+            symbol="NVDA",
+            report_type="market_report",
+            report_content="This is a market analysis report for NVDA",
+            session_id="test-session-1"
+        )
+
+        report = local_storage.get_analyst_report("NVDA", "market_report", "test-session-1")
+
+        assert report is not None
+        assert report["content"] == "This is a market analysis report for NVDA"
+        assert report["updated_at"] is not None
+
+    def test_save_report_with_prompt(self, tmp_storage):
+        """Test saving a report with its prompt content"""
+        from webui.utils import local_storage
+
+        local_storage.save_analyst_report(
+            symbol="AAPL",
+            report_type="news_report",
+            report_content="News analysis for Apple",
+            prompt_content="You are a news analyst. Analyze the following...",
+            session_id="test-session-2"
+        )
+
+        report = local_storage.get_analyst_report("AAPL", "news_report", "test-session-2")
+
+        assert report is not None
+        assert report["content"] == "News analysis for Apple"
+        assert report["prompt"] == "You are a news analyst. Analyze the following..."
+
+    def test_save_empty_report_does_nothing(self, tmp_storage):
+        """Test that saving an empty report does not create a record"""
+        from webui.utils import local_storage
+
+        local_storage.save_analyst_report(
+            symbol="TSLA",
+            report_type="market_report",
+            report_content="",
+            session_id="test-session-3"
+        )
+
+        report = local_storage.get_analyst_report("TSLA", "market_report", "test-session-3")
+        assert report is None
+
+        # Also test with whitespace only
+        local_storage.save_analyst_report(
+            symbol="TSLA",
+            report_type="market_report",
+            report_content="   ",
+            session_id="test-session-3"
+        )
+
+        report = local_storage.get_analyst_report("TSLA", "market_report", "test-session-3")
+        assert report is None
+
+    def test_update_existing_report(self, tmp_storage):
+        """Test that updating an existing report overwrites the content"""
+        from webui.utils import local_storage
+
+        local_storage.save_analyst_report(
+            symbol="MSFT",
+            report_type="fundamentals_report",
+            report_content="Initial fundamentals report",
+            session_id="test-session-4"
+        )
+
+        local_storage.save_analyst_report(
+            symbol="MSFT",
+            report_type="fundamentals_report",
+            report_content="Updated fundamentals report with more data",
+            session_id="test-session-4"
+        )
+
+        report = local_storage.get_analyst_report("MSFT", "fundamentals_report", "test-session-4")
+
+        assert report["content"] == "Updated fundamentals report with more data"
+
+    def test_get_all_reports_for_symbol(self, tmp_storage):
+        """Test retrieving all reports for a symbol"""
+        from webui.utils import local_storage
+
+        session_id = "test-session-5"
+
+        # Save multiple reports
+        local_storage.save_analyst_report("GOOGL", "market_report", "Market analysis", session_id=session_id)
+        local_storage.save_analyst_report("GOOGL", "news_report", "News analysis", session_id=session_id)
+        local_storage.save_analyst_report("GOOGL", "fundamentals_report", "Fundamentals analysis", session_id=session_id)
+
+        reports = local_storage.get_analyst_reports("GOOGL", session_id)
+
+        assert len(reports) == 3
+        assert "market_report" in reports
+        assert "news_report" in reports
+        assert "fundamentals_report" in reports
+        assert reports["market_report"]["content"] == "Market analysis"
+
+    def test_get_reports_without_session_returns_latest(self, tmp_storage):
+        """Test that getting reports without session_id returns the most recent"""
+        from webui.utils import local_storage
+
+        # Save reports in different sessions
+        local_storage.save_analyst_report("META", "market_report", "Old market report", session_id="old-session")
+        local_storage.save_analyst_report("META", "market_report", "New market report", session_id="new-session")
+
+        # Get without specifying session
+        reports = local_storage.get_analyst_reports("META")
+
+        assert len(reports) >= 1
+        assert reports["market_report"]["content"] == "New market report"
+
+    def test_get_nonexistent_report_returns_none(self, tmp_storage):
+        """Test that getting a nonexistent report returns None"""
+        from webui.utils import local_storage
+
+        report = local_storage.get_analyst_report("NONEXISTENT", "market_report")
+        assert report is None
+
+    def test_crypto_symbol_format(self, tmp_storage):
+        """Test storing reports for crypto symbols with slash"""
+        from webui.utils import local_storage
+
+        local_storage.save_analyst_report(
+            symbol="BTC/USD",
+            report_type="market_report",
+            report_content="Bitcoin market analysis",
+            session_id="crypto-session-1"
+        )
+
+        report = local_storage.get_analyst_report("BTC/USD", "market_report", "crypto-session-1")
+
+        assert report is not None
+        assert report["content"] == "Bitcoin market analysis"
+
+    def test_all_report_types(self, tmp_storage):
+        """Test saving all supported report types"""
+        from webui.utils import local_storage
+
+        report_types = [
+            "market_report",
+            "options_report",
+            "sentiment_report",
+            "news_report",
+            "fundamentals_report",
+            "macro_report",
+            "bull_report",
+            "bear_report",
+            "research_manager_report",
+            "trader_investment_plan",
+            "risky_report",
+            "safe_report",
+            "neutral_report",
+            "final_trade_decision",
+        ]
+
+        session_id = "all-types-session"
+
+        for report_type in report_types:
+            local_storage.save_analyst_report(
+                symbol="TEST",
+                report_type=report_type,
+                report_content=f"Content for {report_type}",
+                session_id=session_id
+            )
+
+        reports = local_storage.get_analyst_reports("TEST", session_id)
+
+        assert len(reports) == len(report_types)
+        for report_type in report_types:
+            assert report_type in reports
+            assert reports[report_type]["content"] == f"Content for {report_type}"
+
+
+class TestReportSessions:
+    """Tests for report session management"""
+
+    def test_list_report_sessions(self, tmp_storage):
+        """Test listing report sessions"""
+        from webui.utils import local_storage
+
+        # Create reports in multiple sessions
+        local_storage.save_analyst_report("AAPL", "market_report", "Report 1", session_id="session-a")
+        local_storage.save_analyst_report("AAPL", "news_report", "Report 2", session_id="session-a")
+        local_storage.save_analyst_report("NVDA", "market_report", "Report 3", session_id="session-b")
+
+        sessions = local_storage.list_report_sessions()
+
+        assert len(sessions) >= 2
+
+        # Find our sessions
+        session_ids = [s["session_id"] for s in sessions]
+        assert "session-a" in session_ids
+        assert "session-b" in session_ids
+
+    def test_list_report_sessions_for_symbol(self, tmp_storage):
+        """Test listing sessions filtered by symbol"""
+        from webui.utils import local_storage
+
+        local_storage.save_analyst_report("AAPL", "market_report", "Report 1", session_id="session-x")
+        local_storage.save_analyst_report("AAPL", "market_report", "Report 2", session_id="session-y")
+        local_storage.save_analyst_report("NVDA", "market_report", "Report 3", session_id="session-z")
+
+        sessions = local_storage.list_report_sessions(symbol="AAPL")
+
+        session_ids = [s["session_id"] for s in sessions]
+        assert "session-x" in session_ids
+        assert "session-y" in session_ids
+        assert "session-z" not in session_ids
+
+    def test_list_sessions_includes_report_count(self, tmp_storage):
+        """Test that session listing includes report count"""
+        from webui.utils import local_storage
+
+        session_id = "count-test-session"
+        local_storage.save_analyst_report("TEST", "market_report", "Report 1", session_id=session_id)
+        local_storage.save_analyst_report("TEST", "news_report", "Report 2", session_id=session_id)
+        local_storage.save_analyst_report("TEST", "fundamentals_report", "Report 3", session_id=session_id)
+
+        sessions = local_storage.list_report_sessions()
+
+        # Find our session
+        our_session = next((s for s in sessions if s["session_id"] == session_id), None)
+
+        assert our_session is not None
+        assert our_session["report_count"] == 3
+
+    def test_list_sessions_respects_limit(self, tmp_storage):
+        """Test that session listing respects the limit parameter"""
+        from webui.utils import local_storage
+
+        # Create many sessions
+        for i in range(10):
+            local_storage.save_analyst_report("TEST", "market_report", f"Report {i}", session_id=f"limit-session-{i}")
+
+        sessions = local_storage.list_report_sessions(limit=5)
+
+        assert len(sessions) <= 5
+
+    def test_delete_report_session(self, tmp_storage):
+        """Test deleting all reports for a session"""
+        from webui.utils import local_storage
+
+        session_id = "delete-test-session"
+        local_storage.save_analyst_report("TEST", "market_report", "Report 1", session_id=session_id)
+        local_storage.save_analyst_report("TEST", "news_report", "Report 2", session_id=session_id)
+
+        # Verify reports exist
+        reports = local_storage.get_analyst_reports("TEST", session_id)
+        assert len(reports) == 2
+
+        # Delete session
+        result = local_storage.delete_report_session(session_id)
+        assert result is True
+
+        # Verify reports are deleted
+        reports = local_storage.get_analyst_reports("TEST", session_id)
+        assert len(reports) == 0
+
+    def test_delete_nonexistent_session(self, tmp_storage):
+        """Test deleting a session that doesn't exist"""
+        from webui.utils import local_storage
+
+        result = local_storage.delete_report_session("nonexistent-session")
+        assert result is False
+
+
+class TestRecentSymbols:
+    """Tests for recent symbols tracking"""
+
+    def test_get_recent_symbols(self, tmp_storage):
+        """Test getting recently analyzed symbols"""
+        from webui.utils import local_storage
+
+        local_storage.save_analyst_report("AAPL", "market_report", "Report 1", session_id="session-1")
+        local_storage.save_analyst_report("NVDA", "market_report", "Report 2", session_id="session-2")
+        local_storage.save_analyst_report("TSLA", "market_report", "Report 3", session_id="session-3")
+
+        recent = local_storage.get_recent_symbols()
+
+        assert "AAPL" in recent
+        assert "NVDA" in recent
+        assert "TSLA" in recent
+
+    def test_get_recent_symbols_respects_limit(self, tmp_storage):
+        """Test that recent symbols respects limit"""
+        from webui.utils import local_storage
+
+        for i in range(10):
+            local_storage.save_analyst_report(f"SYM{i}", "market_report", f"Report {i}", session_id=f"session-{i}")
+
+        recent = local_storage.get_recent_symbols(limit=3)
+
+        assert len(recent) == 3
+
+    def test_get_recent_symbols_no_duplicates(self, tmp_storage):
+        """Test that recent symbols doesn't include duplicates"""
+        from webui.utils import local_storage
+
+        # Same symbol, multiple reports
+        local_storage.save_analyst_report("AAPL", "market_report", "Report 1", session_id="session-1")
+        local_storage.save_analyst_report("AAPL", "news_report", "Report 2", session_id="session-1")
+        local_storage.save_analyst_report("AAPL", "fundamentals_report", "Report 3", session_id="session-2")
+
+        recent = local_storage.get_recent_symbols()
+
+        # AAPL should only appear once
+        aapl_count = sum(1 for s in recent if s == "AAPL")
+        assert aapl_count == 1
+
+
+class TestAnalystReportsPersistence:
+    """Tests for analyst reports persistence across operations"""
+
+    def test_reports_persist_across_connections(self, tmp_storage):
+        """Test that reports persist across database connections"""
+        from webui.utils import local_storage
+
+        session_id = "persist-test"
+        local_storage.save_analyst_report("PERSIST", "market_report", "Persistent content", session_id=session_id)
+
+        # Force a new query
+        report = local_storage.get_analyst_report("PERSIST", "market_report", session_id)
+
+        assert report is not None
+        assert report["content"] == "Persistent content"
+
+    def test_unicode_in_reports(self, tmp_storage):
+        """Test storing unicode content in reports"""
+        from webui.utils import local_storage
+
+        unicode_content = "Market analysis with émojis 📈📉 and 中文 characters"
+        local_storage.save_analyst_report("UNICODE", "market_report", unicode_content, session_id="unicode-test")
+
+        report = local_storage.get_analyst_report("UNICODE", "market_report", "unicode-test")
+
+        assert report["content"] == unicode_content
+
+    def test_large_report_content(self, tmp_storage):
+        """Test storing large report content"""
+        from webui.utils import local_storage
+
+        # Create a large report (50KB)
+        large_content = "A" * 50000
+        local_storage.save_analyst_report("LARGE", "market_report", large_content, session_id="large-test")
+
+        report = local_storage.get_analyst_report("LARGE", "market_report", "large-test")
+
+        assert report["content"] == large_content
+        assert len(report["content"]) == 50000
+
+
+class TestAnalystReportsConcurrency:
+    """Tests for thread safety of analyst reports"""
+
+    def test_concurrent_report_writes(self, tmp_storage):
+        """Test concurrent write operations for reports"""
+        from webui.utils import local_storage
+        import threading
+
+        errors = []
+
+        def write_report(symbol, session_id):
+            try:
+                for i in range(5):
+                    local_storage.save_analyst_report(
+                        symbol=symbol,
+                        report_type="market_report",
+                        report_content=f"Report iteration {i}",
+                        session_id=session_id
+                    )
+            except Exception as e:
+                errors.append(e)
+
+        threads = []
+        for i in range(5):
+            t = threading.Thread(target=write_report, args=(f"SYM{i}", f"concurrent-session-{i}"))
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        # Should have no errors
+        assert len(errors) == 0
+
+        # Verify all writes succeeded
+        for i in range(5):
+            report = local_storage.get_analyst_report(f"SYM{i}", "market_report", f"concurrent-session-{i}")
+            assert report is not None
+
+    def test_concurrent_reads_and_writes(self, tmp_storage):
+        """Test concurrent read and write operations for reports"""
+        from webui.utils import local_storage
+        import threading
+
+        session_id = "rw-concurrent-session"
+        local_storage.save_analyst_report("RW_TEST", "market_report", "Initial", session_id=session_id)
+        errors = []
+
+        def read_write(thread_id):
+            try:
+                for _ in range(10):
+                    local_storage.save_analyst_report(
+                        "RW_TEST",
+                        "market_report",
+                        f"Updated by thread {thread_id}",
+                        session_id=session_id
+                    )
+                    local_storage.get_analyst_report("RW_TEST", "market_report", session_id)
+            except Exception as e:
+                errors.append(e)
+
+        threads = []
+        for i in range(5):
+            t = threading.Thread(target=read_write, args=(i,))
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        # Should have no errors
+        assert len(errors) == 0
+
+
+class TestAnalysisRuns:
+    """Tests for analysis runs storage functions"""
+
+    def test_save_and_list_analysis_run(self, tmp_storage):
+        """Test saving and listing analysis runs"""
+        from webui.utils import local_storage
+
+        local_storage.save_analysis_run(
+            run_id="test-run-1",
+            symbols=["AAPL", "NVDA"],
+            tool_calls_count=10,
+            llm_calls_count=5,
+            generated_reports_count=3
+        )
+
+        runs = local_storage.list_analysis_runs()
+
+        assert len(runs) >= 1
+        run = next((r for r in runs if r["run_id"] == "test-run-1"), None)
+        assert run is not None
+        assert run["symbols"] == ["AAPL", "NVDA"]
+        assert run["tool_calls_count"] == 10
+        assert run["llm_calls_count"] == 5
+        assert run["generated_reports_count"] == 3
+
+    def test_get_analysis_run_with_reports(self, tmp_storage):
+        """Test getting an analysis run with its reports"""
+        from webui.utils import local_storage
+
+        run_id = "test-run-with-reports"
+
+        # Save run
+        local_storage.save_analysis_run(
+            run_id=run_id,
+            symbols=["TSLA"],
+            tool_calls_count=5,
+            llm_calls_count=3,
+            generated_reports_count=2
+        )
+
+        # Save associated reports
+        local_storage.save_analyst_report("TSLA", "market_report", "Market analysis", session_id=run_id)
+        local_storage.save_analyst_report("TSLA", "news_report", "News analysis", session_id=run_id)
+
+        # Get run with reports
+        run = local_storage.get_analysis_run(run_id)
+
+        assert run is not None
+        assert run["run_id"] == run_id
+        assert "TSLA" in run["symbol_states"]
+        assert run["symbol_states"]["TSLA"]["reports"]["market_report"] == "Market analysis"
+        assert run["symbol_states"]["TSLA"]["reports"]["news_report"] == "News analysis"
+
+    def test_get_nonexistent_run(self, tmp_storage):
+        """Test getting a run that doesn't exist"""
+        from webui.utils import local_storage
+
+        run = local_storage.get_analysis_run("nonexistent-run")
+        assert run is None
+
+    def test_delete_analysis_run(self, tmp_storage):
+        """Test deleting an analysis run and its reports"""
+        from webui.utils import local_storage
+
+        run_id = "test-run-to-delete"
+
+        # Save run and reports
+        local_storage.save_analysis_run(run_id=run_id, symbols=["META"])
+        local_storage.save_analyst_report("META", "market_report", "Content", session_id=run_id)
+
+        # Verify exists
+        run = local_storage.get_analysis_run(run_id)
+        assert run is not None
+
+        # Delete
+        result = local_storage.delete_analysis_run(run_id)
+        assert result is True
+
+        # Verify deleted
+        run = local_storage.get_analysis_run(run_id)
+        assert run is None
+
+        # Verify reports also deleted
+        report = local_storage.get_analyst_report("META", "market_report", run_id)
+        assert report is None
+
+    def test_list_runs_sorted_by_date(self, tmp_storage):
+        """Test that runs are sorted by date (newest first)"""
+        from webui.utils import local_storage
+        import time
+
+        # Create runs with 1+ second delay to ensure different timestamps
+        local_storage.save_analysis_run(run_id="run-1", symbols=["A"])
+        time.sleep(1.1)
+        local_storage.save_analysis_run(run_id="run-2", symbols=["B"])
+        time.sleep(1.1)
+        local_storage.save_analysis_run(run_id="run-3", symbols=["C"])
+
+        runs = local_storage.list_analysis_runs()
+
+        # Most recent should be first
+        run_ids = [r["run_id"] for r in runs]
+        assert run_ids.index("run-3") < run_ids.index("run-2")
+        assert run_ids.index("run-2") < run_ids.index("run-1")
+
+    def test_list_runs_respects_limit(self, tmp_storage):
+        """Test that list_analysis_runs respects limit parameter"""
+        from webui.utils import local_storage
+
+        # Create many runs
+        for i in range(10):
+            local_storage.save_analysis_run(run_id=f"limit-test-run-{i}", symbols=[f"SYM{i}"])
+
+        runs = local_storage.list_analysis_runs(limit=3)
+
+        assert len(runs) == 3
+
+    def test_update_existing_run(self, tmp_storage):
+        """Test updating an existing analysis run"""
+        from webui.utils import local_storage
+
+        run_id = "update-test-run"
+
+        # Initial save
+        local_storage.save_analysis_run(run_id=run_id, symbols=["AAPL"], tool_calls_count=5)
+
+        # Update
+        local_storage.save_analysis_run(run_id=run_id, symbols=["AAPL", "NVDA"], tool_calls_count=15)
+
+        run = local_storage.get_analysis_run(run_id)
+
+        assert run["symbols"] == ["AAPL", "NVDA"]
+        assert run["tool_calls_count"] == 15
+
+
 # Pytest fixture for temporary storage
 @pytest.fixture
 def tmp_storage(tmp_path, monkeypatch):

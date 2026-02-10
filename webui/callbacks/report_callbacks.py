@@ -3,7 +3,7 @@ Report-related callbacks for TradingAgents WebUI
 Enhanced with symbol-based pagination
 """
 
-from dash import Input, Output, State, ctx, html, ALL, dash, dcc, callback_context
+from dash import Input, Output, State, ctx, html, ALL, dash, dcc, callback_context, no_update
 import dash_bootstrap_components as dbc
 from webui.utils.state import app_state
 from webui.components.ui import render_researcher_debate, render_risk_debate
@@ -612,6 +612,10 @@ def register_report_callbacks(app):
     )
     def update_tabs_content(active_page, n_intervals):
         """Update the content of all tabs with validation to ensure complete reports"""
+        # Skip updates when viewing historical data - let history callbacks handle it
+        if app_state.viewing_history:
+            return (no_update,) * 9
+
         # Debug every 10th call to reduce spam
         if n_intervals and n_intervals % 10 == 0:
             print(f"[REPORTS] active_page={active_page}, symbols={list(app_state.symbol_states.keys()) if app_state.symbol_states else 'None'}")

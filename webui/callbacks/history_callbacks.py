@@ -133,7 +133,11 @@ def register_history_callbacks(app):
          Output("social-sentiment-tab-content", "children", allow_duplicate=True),
          Output("news-analysis-tab-content", "children", allow_duplicate=True),
          Output("fundamentals-analysis-tab-content", "children", allow_duplicate=True),
-         Output("macro-analysis-tab-content", "children", allow_duplicate=True)],
+         Output("macro-analysis-tab-content", "children", allow_duplicate=True),
+         Output("options-analysis-tab-content", "children", allow_duplicate=True),
+         Output("research-manager-tab-content", "children", allow_duplicate=True),
+         Output("trader-plan-tab-content", "children", allow_duplicate=True),
+         Output("final-decision-tab-content", "children", allow_duplicate=True)],
         [Input("history-selector", "value"),
          Input("report-pagination", "active_page")],
         prevent_initial_call=True
@@ -144,16 +148,16 @@ def register_history_callbacks(app):
 
         if not run_id or run_id == "current":
             # Let the normal callbacks handle it
-            return (no_update,) * 5
+            return (no_update,) * 9
 
         # Load historical data
         run_data = load_analysis_run(run_id)
         if not run_data:
-            return (no_update,) * 5
+            return (no_update,) * 9
 
         symbols = run_data.get("symbols", [])
         if not symbols:
-            return (no_update,) * 5
+            return (no_update,) * 9
 
         # Get current symbol based on pagination
         page_idx = (active_page or 1) - 1
@@ -175,11 +179,15 @@ def register_history_callbacks(app):
             ], className="text-center py-4")
 
         return (
-            get_report_content("market", "Market Analysis", "fa-chart-line"),
-            get_report_content("social", "Social Sentiment", "fa-users"),
-            get_report_content("news", "News Analysis", "fa-newspaper"),
-            get_report_content("fundamentals", "Fundamentals", "fa-chart-bar"),
-            get_report_content("macro", "Macro Analysis", "fa-globe"),
+            get_report_content("market_report", "Market Analysis", "fa-chart-line"),
+            get_report_content("sentiment_report", "Social Sentiment", "fa-users"),
+            get_report_content("news_report", "News Analysis", "fa-newspaper"),
+            get_report_content("fundamentals_report", "Fundamentals", "fa-chart-bar"),
+            get_report_content("macro_report", "Macro Analysis", "fa-globe"),
+            get_report_content("options_report", "Options Analysis", "fa-chart-area"),
+            get_report_content("research_manager_report", "Research Manager", "fa-user-tie"),
+            get_report_content("trader_investment_plan", "Trader Plan", "fa-briefcase"),
+            get_report_content("final_trade_decision", "Final Decision", "fa-gavel"),
         )
 
     # Reset save button text after delay

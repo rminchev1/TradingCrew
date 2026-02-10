@@ -3,6 +3,7 @@ Trading Agents Framework - State Management
 """
 
 import threading
+from webui.utils.local_storage import save_analyst_report, get_analyst_reports
 
 # Global variables for tracking state
 class AppState:
@@ -288,11 +289,78 @@ class AppState:
         """Get the prompt used by an agent for a specific report type."""
         if symbol is None:
             symbol = self.current_symbol
-            
+
         state = self.get_state(symbol)
         if state and "agent_prompts" in state:
             return state["agent_prompts"].get(report_type)
         return None
+
+    def load_reports_from_storage(self, symbol, session_id=None):
+        """
+        Load reports from persistent SQLite storage into the symbol state.
+
+        Args:
+            symbol: The trading symbol to load reports for
+            session_id: Optional session ID to load specific session
+
+        Returns:
+            True if reports were loaded, False otherwise
+        """
+        try:
+            reports = get_analyst_reports(symbol, session_id)
+            if not reports:
+                print(f"[STATE] No stored reports found for {symbol}")
+                return False
+
+            # Initialize symbol state if needed
+            if symbol not in self.symbol_states:
+                self._init_symbol_state_unlocked(symbol)
+
+            state = self.symbol_states[symbol]
+
+            # Load reports into state
+            reports_loaded = 0
+            for report_type, report_data in reports.items():
+                content = report_data.get("content")
+                if content:
+                    state["current_reports"][report_type] = content
+                    reports_loaded += 1
+
+                    # Also load prompt if available
+                    prompt = report_data.get("prompt")
+                    if prompt:
+                        state["agent_prompts"][report_type] = prompt
+
+                    # Mark agent as completed
+                    report_to_agent = {
+                        "market_report": "Market Analyst",
+                        "sentiment_report": "Social Analyst",
+                        "news_report": "News Analyst",
+                        "fundamentals_report": "Fundamentals Analyst",
+                        "macro_report": "Macro Analyst",
+                        "options_report": "Options Analyst",
+                        "bull_report": "Bull Researcher",
+                        "bear_report": "Bear Researcher",
+                        "research_manager_report": "Research Manager",
+                        "trader_investment_plan": "Trader",
+                        "risky_report": "Risky Analyst",
+                        "safe_report": "Safe Analyst",
+                        "neutral_report": "Neutral Analyst",
+                        "final_trade_decision": "Portfolio Manager",
+                    }
+                    if report_type in report_to_agent:
+                        state["agent_statuses"][report_to_agent[report_type]] = "completed"
+
+            print(f"[STATE] Loaded {reports_loaded} reports from storage for {symbol}")
+            self.update_reports_count()
+            self.needs_ui_update = True
+            return reports_loaded > 0
+
+        except Exception as e:
+            print(f"[STATE] Error loading reports from storage for {symbol}: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def reset(self):
         """Reset the application state for all symbols."""
@@ -685,19 +753,33 @@ class AppState:
                     state["current_reports"][report_type] = new_report
                     state.setdefault("report_timestamps", {})[report_type] = current_time
                     state[update_count_key] = current_count + 1
-                    
+
                     # Count unique non-empty reports across all symbols
                     if new_report:
                         self.update_reports_count()
-                        
+
                         # Add debug logging for all analyst reports
                         print(f"[STATE - {analyzing_symbol}] ✅ Updated {report_type} with content length: {len(new_report)} (update #{current_count + 1})")
                         print(f"[STATE - {analyzing_symbol}] 📊 Total Generated Reports: {self.generated_reports_count}")
-                        
+
                         # Special debugging for macro report (simplified)
                         if report_type == "macro_report":
                             print(f"[STATE - {analyzing_symbol}] 📊 MACRO REPORT RECEIVED: {len(new_report)} chars")
-                            
+
+                        # Persist report to SQLite storage
+                        try:
+                            session_id = state.get("session_id")
+                            prompt_content = state.get("agent_prompts", {}).get(report_type)
+                            save_analyst_report(
+                                symbol=analyzing_symbol,
+                                report_type=report_type,
+                                report_content=new_report,
+                                prompt_content=prompt_content,
+                                session_id=session_id
+                            )
+                        except Exception as e:
+                            print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist {report_type}: {e}")
+
                     ui_update_needed = True
 
                 # Special debugging for macro analyst (only when transitioning to in_progress)
@@ -758,8 +840,18 @@ class AppState:
                 else:
                     state["current_reports"]["bull_report"] = debate_state["bull_history"]
                 self.update_reports_count()
+                # Persist bull report
+                try:
+                    save_analyst_report(
+                        symbol=analyzing_symbol,
+                        report_type="bull_report",
+                        report_content=state["current_reports"]["bull_report"],
+                        session_id=state.get("session_id")
+                    )
+                except Exception as e:
+                    print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist bull_report: {e}")
                 ui_update_needed = True
-            
+
             # Bear researcher
             if "bear_history" in debate_state and debate_state["bear_history"]:
                 # Only set to in_progress if currently pending (don't override completed status)
@@ -773,8 +865,18 @@ class AppState:
                 else:
                     state["current_reports"]["bear_report"] = debate_state["bear_history"]
                 self.update_reports_count()
+                # Persist bear report
+                try:
+                    save_analyst_report(
+                        symbol=analyzing_symbol,
+                        report_type="bear_report",
+                        report_content=state["current_reports"]["bear_report"],
+                        session_id=state.get("session_id")
+                    )
+                except Exception as e:
+                    print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist bear_report: {e}")
                 ui_update_needed = True
-            
+
             # Research manager
             if "judge_decision" in debate_state and debate_state["judge_decision"]:
                 self.update_agent_status("Bull Researcher", "completed", analyzing_symbol)
@@ -783,6 +885,16 @@ class AppState:
                 state["current_reports"]["research_manager_report"] = debate_state["judge_decision"]
                 state["current_reports"]["investment_plan"] = debate_state["judge_decision"]
                 self.update_agent_status("Trader", "in_progress", analyzing_symbol)
+                # Persist research manager report
+                try:
+                    save_analyst_report(
+                        symbol=analyzing_symbol,
+                        report_type="research_manager_report",
+                        report_content=debate_state["judge_decision"],
+                        session_id=state.get("session_id")
+                    )
+                except Exception as e:
+                    print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist research_manager_report: {e}")
                 ui_update_needed = True
         
         # Trader plan
@@ -791,6 +903,16 @@ class AppState:
             self.update_reports_count()
             self.update_agent_status("Trader", "completed", analyzing_symbol)
             self.update_agent_status("Risky Analyst", "in_progress", analyzing_symbol)
+            # Persist trader investment plan
+            try:
+                save_analyst_report(
+                    symbol=analyzing_symbol,
+                    report_type="trader_investment_plan",
+                    report_content=chunk["trader_investment_plan"],
+                    session_id=state.get("session_id")
+                )
+            except Exception as e:
+                print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist trader_investment_plan: {e}")
             ui_update_needed = True
         
         # Risk debate state
@@ -812,9 +934,18 @@ class AppState:
                     risky_content = risky_content[15:]  # Remove "Risky Analyst: " prefix
                 state["current_reports"]["risky_report"] = risky_content
                 self.update_reports_count()
-                # print(f"[STATE - {self.current_symbol}] Updated risky_report with content length: {len(risky_content)}")
+                # Persist risky report
+                try:
+                    save_analyst_report(
+                        symbol=analyzing_symbol,
+                        report_type="risky_report",
+                        report_content=risky_content,
+                        session_id=state.get("session_id")
+                    )
+                except Exception as e:
+                    print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist risky_report: {e}")
                 ui_update_needed = True
-            
+
             # Safe analyst
             if "current_safe_response" in risk_state and risk_state["current_safe_response"]:
                 # Only set to in_progress if currently pending (don't override completed status)
@@ -827,9 +958,18 @@ class AppState:
                     safe_content = safe_content[14:]  # Remove "Safe Analyst: " prefix
                 state["current_reports"]["safe_report"] = safe_content
                 self.update_reports_count()
-                # print(f"[STATE - {self.current_symbol}] Updated safe_report with content length: {len(safe_content)}")
+                # Persist safe report
+                try:
+                    save_analyst_report(
+                        symbol=analyzing_symbol,
+                        report_type="safe_report",
+                        report_content=safe_content,
+                        session_id=state.get("session_id")
+                    )
+                except Exception as e:
+                    print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist safe_report: {e}")
                 ui_update_needed = True
-            
+
             # Neutral analyst
             if "current_neutral_response" in risk_state and risk_state["current_neutral_response"]:
                 # Only set to in_progress if currently pending (don't override completed status)
@@ -842,7 +982,16 @@ class AppState:
                     neutral_content = neutral_content[17:]  # Remove "Neutral Analyst: " prefix
                 state["current_reports"]["neutral_report"] = neutral_content
                 self.update_reports_count()
-                # print(f"[STATE - {self.current_symbol}] Updated neutral_report with content length: {len(neutral_content)}")
+                # Persist neutral report
+                try:
+                    save_analyst_report(
+                        symbol=analyzing_symbol,
+                        report_type="neutral_report",
+                        report_content=neutral_content,
+                        session_id=state.get("session_id")
+                    )
+                except Exception as e:
+                    print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist neutral_report: {e}")
                 ui_update_needed = True
             
             # Portfolio manager - preserve individual reports when final decision is made
@@ -852,40 +1001,51 @@ class AppState:
                     risky_history = risk_state["risky_history"]
                     if risky_history:
                         state["current_reports"]["risky_report"] = risky_history.replace("Risky Analyst: ", "").strip()
-                
+
                 if not state["current_reports"]["safe_report"] and "safe_history" in risk_state:
                     safe_history = risk_state["safe_history"]
                     if safe_history:
                         state["current_reports"]["safe_report"] = safe_history.replace("Safe Analyst: ", "").strip()
-                
+
                 if not state["current_reports"]["neutral_report"] and "neutral_history" in risk_state:
                     neutral_history = risk_state["neutral_history"]
                     if neutral_history:
                         state["current_reports"]["neutral_report"] = neutral_history.replace("Neutral Analyst: ", "").strip()
-                
+
                 # Mark all as completed
                 self.update_agent_status("Risky Analyst", "completed", analyzing_symbol)
                 self.update_agent_status("Safe Analyst", "completed", analyzing_symbol)
                 self.update_agent_status("Neutral Analyst", "completed", analyzing_symbol)
                 self.update_agent_status("Portfolio Manager", "completed", analyzing_symbol)
-                
+
                 # Set final decisions
                 state["current_reports"]["portfolio_decision"] = risk_state["judge_decision"]
                 state["current_reports"]["final_trade_decision"] = risk_state["judge_decision"]
-                
+
+                # Persist final trade decision
+                try:
+                    save_analyst_report(
+                        symbol=analyzing_symbol,
+                        report_type="final_trade_decision",
+                        report_content=risk_state["judge_decision"],
+                        session_id=state.get("session_id")
+                    )
+                except Exception as e:
+                    print(f"[STATE - {analyzing_symbol}] ⚠️ Failed to persist final_trade_decision: {e}")
+
                 # Store extracted recommendation if available
                 if "recommended_action" in chunk:
                     state["recommended_action"] = chunk["recommended_action"]
-                
+
                 # Mark the overall analysis as complete once the Portfolio Manager has delivered the final decision
                 state["analysis_complete"] = True
-                
+
                 print(f"[STATE - {analyzing_symbol}] Final decision set. Reports status:")
                 print(f"  risky_report: {len(state['current_reports']['risky_report'] or '') > 0}")
                 print(f"  safe_report: {len(state['current_reports']['safe_report'] or '') > 0}")
                 print(f"  neutral_report: {len(state['current_reports']['neutral_report'] or '') > 0}")
                 print(f"  final_trade_decision: {len(state['current_reports']['final_trade_decision'] or '') > 0}")
-                
+
                 ui_update_needed = True
         
         # Proper tracking of LLM calls and tool calls (similar to CLI implementation)
