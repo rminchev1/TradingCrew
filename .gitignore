@@ -10,6 +10,11 @@ eval_data/
 data/
 analysis_history/
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
 # Build artifacts
 build/
 dist/

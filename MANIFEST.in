@@ -27,6 +27,12 @@ global-exclude .env.*
 # Exclude data caches and analysis history
 prune tradingagents/dataflows/data_cache
 prune analysis_history
+prune data
 prune .pytest_cache
 prune .mypy_cache
 prune .ruff_cache
+
+# Exclude database files
+global-exclude *.db
+global-exclude *.sqlite
+global-exclude *.sqlite3

@@ -101,7 +101,7 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["tradingagents*", "webui*", "cli*"]
-exclude = ["analysis_history*"]
+exclude = ["analysis_history*", "data*", "*.db"]
 
 [tool.setuptools.package-data]
 webui = ["assets/*", "assets/**/*"]
