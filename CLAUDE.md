@@ -18,6 +18,7 @@ This file provides guidance to Claude Code when working with this repository. Fo
 **Every release MUST have a meaningful, descriptive message.**
 
 When creating a release tag, the message must include:
+- Update `docs/CHANGELOG.md` with the new version and changes
 - Clear summary of what's new
 - List of features added
 - List of bugs fixed
@@ -39,6 +40,36 @@ Release vX.Y.Z - Short Description
 - Updated default LLM model to o4-mini
 - Improved error handling in scanner
 ```
+
+### 3. Documentation Maintenance
+**Documentation must be kept up-to-date with code changes.**
+
+Documentation lives in the `docs/` folder:
+```
+docs/
+  README.md              # Documentation index
+  getting-started.md     # Quick start guide
+  user-guide.md          # Complete user guide
+  CHANGELOG.md           # Version history (UPDATE ON EVERY RELEASE)
+  troubleshooting.md     # Common issues and solutions
+  features/              # Feature-specific docs
+    web-ui.md
+    cli.md
+    market-scanner.md
+    loop-mode.md
+    trading.md
+  configuration/         # Configuration docs
+    api-keys.md
+    settings.md
+```
+
+When to update docs:
+- **New feature**: Add to relevant feature doc or create new one
+- **UI change**: Update `features/web-ui.md`
+- **New setting**: Update `configuration/settings.md`
+- **New API key**: Update `configuration/api-keys.md`
+- **Bug fix affecting users**: Update `troubleshooting.md` if relevant
+- **Every release**: Update `CHANGELOG.md` with version, date, and changes
 
 ---
 
@@ -565,10 +596,11 @@ app_state.next_loop_run_time    # datetime - next loop iteration (EST/EDT)
 
 1. **TESTS ARE MANDATORY** - Every feature/fix must have tests. Run `pytest` before committing.
 2. **DESCRIPTIVE RELEASE MESSAGES** - Never use vague release messages. List features, fixes, changes.
-3. **Always read files before editing** - Use Read tool first
-4. **Preserve crypto symbol format** - Keep `/USD` suffix
-5. **Use thread-safe state access** - AppState has `_lock`
-6. **Update pyproject.toml version** before tagging releases
-7. **Settings require multiple file updates** - Follow the pattern above
-8. **Callbacks need `prevent_initial_call=True`** to avoid load-time execution
-9. **Test API connections** before assuming they work
+3. **UPDATE DOCUMENTATION** - Keep docs/ in sync with code changes. Always update CHANGELOG.md on release.
+4. **Always read files before editing** - Use Read tool first
+5. **Preserve crypto symbol format** - Keep `/USD` suffix
+6. **Use thread-safe state access** - AppState has `_lock`
+7. **Update pyproject.toml version** before tagging releases
+8. **Settings require multiple file updates** - Follow the pattern above
+9. **Callbacks need `prevent_initial_call=True`** to avoid load-time execution
+10. **Test API connections** before assuming they work
