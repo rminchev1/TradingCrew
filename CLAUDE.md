@@ -2,6 +2,46 @@
 
 This file provides guidance to Claude Code when working with this repository. Follow these patterns to work efficiently without rediscovering conventions.
 
+---
+
+## MANDATORY REQUIREMENTS
+
+### 1. Tests Are Required
+**Every new feature, bug fix, or code change MUST include corresponding tests.**
+
+- Create tests in the appropriate `tests/` subdirectory
+- Tests must verify the new/changed functionality works correctly
+- Run `pytest` to ensure all tests pass before committing
+- Do NOT skip this step - untested code should not be merged
+
+### 2. Descriptive Release Messages
+**Every release MUST have a meaningful, descriptive message.**
+
+When creating a release tag, the message must include:
+- Clear summary of what's new
+- List of features added
+- List of bugs fixed
+- Any breaking changes
+
+Example format:
+```
+Release vX.Y.Z - Short Description
+
+## What's New
+- Feature: Added user-configurable parallel ticker setting
+- Feature: Loop mode now shows next run time in EST/EDT
+
+## Bug Fixes
+- Fixed account bar not refreshing after trades
+- Fixed market hours validation error
+
+## Changes
+- Updated default LLM model to o4-mini
+- Improved error handling in scanner
+```
+
+---
+
 ## Project Overview
 
 TradingCrew is a multi-agent LLM-powered trading framework built on LangGraph that integrates with Alpaca API for real-time stock and crypto trading. It uses 6 specialized analyst agents that work collaboratively through structured debates to make trading decisions.
@@ -323,29 +363,54 @@ REFRESH_INTERVALS = {
 
 ## Release Process
 
+**Releases are triggered by pushing tags to main. GitHub Actions automatically runs tests, builds, and publishes to PyPI.**
+
 ### Version Files
-- **Primary**: `pyproject.toml` → `version = "X.Y.Z"`
+- **Primary**: `pyproject.toml` → `version = "X.Y.Z"` (MUST update before tagging)
 - **Secondary**: `setup.py` (keep in sync)
 
 ### Release Steps
-1. Make feature commits
-2. Update version in `pyproject.toml`
-3. Commit: `git commit -m "Bump version to X.Y.Z"`
-4. Create release commit: `git commit --allow-empty -m "Release vX.Y.Z - Description"`
+1. Ensure all tests pass: `pytest`
+2. Make feature commits with tests
+3. Update version in `pyproject.toml`
+4. Commit: `git commit -m "Bump version to X.Y.Z"`
 5. Push commits: `git push`
-6. Create annotated tag:
+6. Create annotated tag with **DESCRIPTIVE MESSAGE** (REQUIRED):
+
 ```bash
-git tag -a vX.Y.Z -m "Release vX.Y.Z - Description
+git tag -a vX.Y.Z -m "Release vX.Y.Z - Short Summary
 
 ## What's New
-- Feature 1
-- Feature 2
+- Feature: Description of new feature
+- Feature: Another new feature
+
+## Bug Fixes
+- Fixed: Description of bug that was fixed
+- Fixed: Another bug fix
 
 ## Changes
-- Change details"
+- Changed: Description of change
+- Updated: What was updated
+
+## Breaking Changes (if any)
+- Breaking: What breaks and how to migrate"
 ```
+
 7. Push tag: `git push origin vX.Y.Z`
-8. GitHub Actions workflow triggers automatically (runs tests, builds, publishes to PyPI)
+8. GitHub Actions triggers automatically:
+   - Runs test suite
+   - Builds package
+   - Creates GitHub Release with your tag message
+   - Publishes to PyPI
+
+### Release Message Requirements
+The tag message MUST include:
+- **Summary line**: `Release vX.Y.Z - Brief description`
+- **What's New**: List of new features
+- **Bug Fixes**: List of bugs fixed (if any)
+- **Changes**: Other notable changes
+
+**Do NOT create releases with vague messages like "bug fixes" or "updates".**
 
 ### Commit Message Format
 ```
@@ -354,21 +419,35 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ---
 
-## Testing
+## Testing (MANDATORY)
+
+**Every feature, bug fix, or change requires tests. No exceptions.**
 
 ### Test Structure
 ```
 tests/
-  scanner/           # Scanner component tests
-  webui/             # UI and state tests
-  dataflows/         # Data flow tests
+  scanner/           # Scanner component tests (market_scanner, screeners)
+  webui/             # UI and state tests (callbacks, state management)
+  dataflows/         # Data flow tests (API integrations)
 ```
+
+### Where to Put Tests
+| Change Type | Test Location |
+|-------------|---------------|
+| Scanner feature | `tests/scanner/test_<feature>.py` |
+| WebUI component | `tests/webui/test_<component>.py` |
+| WebUI callback | `tests/webui/test_<callback_module>.py` |
+| State management | `tests/webui/test_state.py` |
+| Data flow/API | `tests/dataflows/test_<module>.py` |
+| Settings | `tests/webui/test_settings.py` |
 
 ### Running Tests
 ```bash
-pytest                              # All tests
+pytest                              # All tests (run before committing!)
 pytest tests/scanner/ -v            # Verbose scanner tests
+pytest tests/webui/ -v              # WebUI tests
 pytest -k "test_scan" --tb=short    # Pattern matching
+pytest --tb=long                    # Full tracebacks for debugging
 ```
 
 ### Test Pattern
@@ -377,16 +456,36 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 class TestMyFeature:
+    """Tests for MyFeature - describe what you're testing."""
+
     def setup_method(self):
-        """Called before each test"""
+        """Called before each test - reset state here."""
         pass
 
+    def test_feature_does_expected_thing(self):
+        """Test that feature works in normal case."""
+        result = my_function("input")
+        assert result == "expected_output"
+
+    def test_feature_handles_edge_case(self):
+        """Test edge case - empty input."""
+        result = my_function("")
+        assert result is None
+
     @patch("module.external_api")
-    def test_something(self, mock_api):
+    def test_feature_with_mocked_api(self, mock_api):
+        """Test with mocked external dependency."""
         mock_api.return_value = {"data": "value"}
-        # Test logic
+        result = function_that_calls_api()
         assert result == expected
+        mock_api.assert_called_once_with("expected_arg")
 ```
+
+### Test Checklist Before Committing
+- [ ] New tests written for new functionality
+- [ ] All existing tests still pass (`pytest`)
+- [ ] Edge cases covered (empty input, None, errors)
+- [ ] Mocked external APIs/services where appropriate
 
 ---
 
@@ -464,10 +563,12 @@ app_state.next_loop_run_time    # datetime - next loop iteration (EST/EDT)
 
 ## Important Notes
 
-1. **Always read files before editing** - Use Read tool first
-2. **Preserve crypto symbol format** - Keep `/USD` suffix
-3. **Use thread-safe state access** - AppState has `_lock`
-4. **Update pyproject.toml version** before tagging releases
-5. **Settings require multiple file updates** - Follow the pattern above
-6. **Callbacks need `prevent_initial_call=True`** to avoid load-time execution
-7. **Test API connections** before assuming they work
+1. **TESTS ARE MANDATORY** - Every feature/fix must have tests. Run `pytest` before committing.
+2. **DESCRIPTIVE RELEASE MESSAGES** - Never use vague release messages. List features, fixes, changes.
+3. **Always read files before editing** - Use Read tool first
+4. **Preserve crypto symbol format** - Keep `/USD` suffix
+5. **Use thread-safe state access** - AppState has `_lock`
+6. **Update pyproject.toml version** before tagging releases
+7. **Settings require multiple file updates** - Follow the pattern above
+8. **Callbacks need `prevent_initial_call=True`** to avoid load-time execution
+9. **Test API connections** before assuming they work
