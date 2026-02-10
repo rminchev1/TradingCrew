@@ -15,30 +15,88 @@ def _is_alpaca_configured():
     return bool(api_key and secret_key)
 
 
-def _create_config_warning():
-    """Create a warning alert for missing API configuration."""
-    return dbc.Alert(
-        [
-            html.I(className="bi bi-exclamation-triangle-fill me-2"),
-            html.Strong("API Configuration Required: "),
-            "The scanner needs Alpaca API credentials to fetch real market data. ",
-            "Without configuration, results shown are based on fallback data with neutral scores. ",
-            html.A(
-                "Configure your .env file",
-                href="https://github.com/rminchev1/TradingCrew#configuration",
-                target="_blank",
-                className="alert-link"
-            ),
-            " to enable full scanner functionality."
-        ],
-        color="warning",
-        className="mb-3",
-        style={"fontSize": "0.85rem"}
+def _create_not_configured_panel():
+    """Create a panel shown when Alpaca API is not configured."""
+    return dbc.Card(
+        dbc.CardBody([
+            # Required stores for callbacks (even when disabled)
+            dcc.Store(id="scanner-results-store", storage_type="local"),
+
+            dbc.Row([
+                dbc.Col([
+                    html.H4("Market Scanner", className="mb-0"),
+                    html.Small("Find trading opportunities in real-time", className="text-muted"),
+                ], width=8),
+                dbc.Col([
+                    dbc.Button(
+                        [html.I(className="bi bi-search me-2"), "Scan Market"],
+                        id="scanner-btn",
+                        color="secondary",
+                        className="w-100",
+                        disabled=True
+                    ),
+                ], width=4, className="d-flex align-items-center"),
+            ], className="mb-3"),
+
+            # Hidden elements required by callbacks
+            html.Div(id="scanner-timestamp-display", style={"display": "none"}),
+            html.Div(id="scanner-progress-container", style={"display": "none"}, children=[
+                dbc.Progress(id="scanner-progress-bar", value=0),
+                html.Div(id="scanner-progress-text"),
+            ]),
+            dbc.Alert(id="scanner-error-alert", is_open=False),
+            html.Div(id="scanner-results-container", style={"display": "none"}),
+
+            html.Hr(),
+
+            # Not configured message
+            html.Div([
+                html.Div([
+                    html.I(className="bi bi-exclamation-circle text-warning", style={"fontSize": "3rem"}),
+                ], className="text-center mb-3"),
+                html.H5("API Configuration Required", className="text-center mb-3"),
+                html.P([
+                    "The Market Scanner requires Alpaca API credentials to fetch real-time market data. ",
+                    "Please configure your API keys to enable this feature."
+                ], className="text-center text-muted mb-4"),
+                html.Div([
+                    html.P([
+                        html.Strong("To configure:"),
+                    ], className="mb-2"),
+                    html.Ol([
+                        html.Li("Create a free account at alpaca.markets"),
+                        html.Li("Generate API keys (paper trading recommended)"),
+                        html.Li([
+                            "Add to your ",
+                            html.Code(".env"),
+                            " file:",
+                        ]),
+                    ], className="text-muted"),
+                    html.Pre(
+                        "ALPACA_API_KEY=your_api_key\nALPACA_SECRET_KEY=your_secret_key",
+                        className="bg-dark p-2 rounded small"
+                    ),
+                ], className="text-start px-4"),
+                html.Div([
+                    html.A(
+                        [html.I(className="bi bi-box-arrow-up-right me-2"), "View Documentation"],
+                        href="https://github.com/rminchev1/TradingCrew#configuration",
+                        target="_blank",
+                        className="btn btn-outline-primary btn-sm"
+                    ),
+                ], className="text-center mt-3"),
+            ], className="py-3"),
+        ]),
+        className="mb-4"
     )
 
 
 def create_scanner_panel():
     """Create the market scanner panel."""
+    # Return disabled panel if Alpaca is not configured
+    if not _is_alpaca_configured():
+        return _create_not_configured_panel()
+
     return dbc.Card(
         dbc.CardBody([
             # Persistent storage for scanner results (survives page refresh)
@@ -61,9 +119,6 @@ def create_scanner_panel():
 
             # Timestamp display (shows when last scan was performed)
             html.Div(id="scanner-timestamp-display", className="text-muted small text-end mb-2"),
-
-            # Configuration warning (shown when Alpaca not configured)
-            _create_config_warning() if not _is_alpaca_configured() else None,
 
             html.Hr(),
 
