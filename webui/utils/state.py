@@ -110,6 +110,7 @@ class AppState:
             "parallel_analysts": True,
             "online_tools": True,
             "max_recur_limit": 200,
+            "max_parallel_tickers": 3,
             "scanner_num_results": 20,
             "scanner_use_llm_sentiment": False,
             "scanner_use_options_flow": True,

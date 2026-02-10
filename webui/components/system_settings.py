@@ -273,6 +273,25 @@ def create_analysis_section():
                 width=5
             )
         ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Parallel Tickers", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-max-parallel-tickers",
+                    type="number",
+                    min=1,
+                    max=10,
+                    value=3,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Concurrent ticker analyses (1-10)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
     ])
 
 

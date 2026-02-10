@@ -45,6 +45,7 @@ DEFAULT_SYSTEM_SETTINGS = {
     "parallel_analysts": True,
     "online_tools": True,
     "max_recur_limit": 200,
+    "max_parallel_tickers": 3,
     # Scanner Settings
     "scanner_num_results": 20,
     "scanner_use_llm_sentiment": False,
@@ -75,6 +76,7 @@ def export_settings(settings: dict) -> str:
         "parallel_analysts",
         "online_tools",
         "max_recur_limit",
+        "max_parallel_tickers",
         "scanner_num_results",
         "scanner_use_llm_sentiment",
         "scanner_use_options_flow",

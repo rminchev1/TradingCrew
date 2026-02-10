@@ -14,8 +14,10 @@ from webui.components.analysis import start_analysis
 from webui.utils.history import save_analysis_run
 from webui.utils import local_storage
 
-# Configuration for parallel ticker analysis
-MAX_PARALLEL_TICKERS = 3  # Maximum number of tickers to analyze in parallel
+
+def get_max_parallel_tickers():
+    """Get the max parallel tickers setting from system settings."""
+    return app_state.system_settings.get("max_parallel_tickers", 3)
 
 
 def register_control_callbacks(app):
@@ -767,7 +769,7 @@ def register_control_callbacks(app):
 
                     # Run analysis for all symbols in parallel
                     print(f"[MARKET_HOUR] Starting parallel analysis at {h}:{m:02d}")
-                    max_workers = min(MAX_PARALLEL_TICKERS, len(symbols))
+                    max_workers = min(get_max_parallel_tickers(), len(symbols))
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
                         futures = {executor.submit(analyze_single_ticker_market_hour, symbol, next_time): symbol for symbol in symbols}
 
@@ -836,7 +838,7 @@ def register_control_callbacks(app):
                     print(f"[LOOP] Starting iteration {loop_iteration} with parallel execution")
 
                     # Run analysis for all symbols in parallel
-                    max_workers = min(MAX_PARALLEL_TICKERS, len(symbols))
+                    max_workers = min(get_max_parallel_tickers(), len(symbols))
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
                         futures = {executor.submit(analyze_single_ticker_loop, symbol): symbol for symbol in symbols}
 
@@ -889,7 +891,7 @@ def register_control_callbacks(app):
                 print("[LOOP] Loop stopped")
             else:
                 # Single run mode - parallel ticker execution
-                print(f"[PARALLEL] Starting parallel analysis for {len(symbols)} symbols (max {MAX_PARALLEL_TICKERS} concurrent)")
+                print(f"[PARALLEL] Starting parallel analysis for {len(symbols)} symbols (max {get_max_parallel_tickers()} concurrent)")
 
                 def analyze_single_ticker(symbol):
                     """Analyze a single ticker (for parallel execution)."""
@@ -912,7 +914,7 @@ def register_control_callbacks(app):
                         app_state.stop_analyzing_symbol(symbol)
 
                 # Execute all tickers in parallel with limited concurrency
-                max_workers = min(MAX_PARALLEL_TICKERS, len(symbols))
+                max_workers = min(get_max_parallel_tickers(), len(symbols))
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     futures = {executor.submit(analyze_single_ticker, symbol): symbol for symbol in symbols}
 
