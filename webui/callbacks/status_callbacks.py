@@ -145,7 +145,12 @@ def register_status_callbacks(app):
                 status_msg = "🔄 Loop mode active - Analysis in progress"
                 status_class = "text-warning mt-2"
             else:
-                status_msg = f"⏳ Loop mode - Waiting for next iteration ({app_state.loop_interval_minutes} min intervals)"
+                # Show next run time if available
+                if app_state.next_loop_run_time:
+                    next_time_str = app_state.next_loop_run_time.strftime("%I:%M %p %Z")
+                    status_msg = f"⏳ Loop mode - Next run: {next_time_str} ({app_state.loop_interval_minutes} min intervals)"
+                else:
+                    status_msg = f"⏳ Loop mode - Waiting for next iteration ({app_state.loop_interval_minutes} min intervals)"
                 status_class = "text-info mt-2"
         else:
             status_msg = (

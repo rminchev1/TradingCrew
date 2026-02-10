@@ -36,6 +36,7 @@ class AppState:
         self.loop_interval_minutes = 60  # Default 1 hour
         self.loop_thread = None
         self.stop_loop = False
+        self.next_loop_run_time = None  # datetime when next loop iteration will run (EST/EDT)
         
         # Market hour configuration  
         self.market_hour_enabled = False
@@ -382,6 +383,8 @@ class AppState:
             # Reset session tracking
             self.current_session_id = None
             self.session_start_time = None
+            # Reset loop tracking
+            self.next_loop_run_time = None
 
     def get_tool_calls_for_display(self, agent_filter=None, symbol_filter=None):
         """Get tool calls in a consistent format for UI display, optionally filtered by agent type and symbol"""
@@ -477,6 +480,7 @@ class AppState:
         import uuid
         print("[STATE] Resetting state for next loop iteration")
         self.analysis_queue = []
+        self.next_loop_run_time = None  # Clear next run time when starting new iteration
         
         # Reset analysis data for each symbol but KEEP the symbol states for pagination
         for symbol in self.symbol_states:
@@ -574,6 +578,7 @@ class AppState:
         self.stop_loop = True
         self.loop_enabled = False
         self.analysis_running = False
+        self.next_loop_run_time = None  # Clear next run time
         print("[STATE] Stopping loop mode")
 
     def start_market_hour_mode(self, symbols, config, hours):

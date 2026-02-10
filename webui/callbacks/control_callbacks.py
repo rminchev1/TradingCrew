@@ -865,7 +865,15 @@ def register_control_callbacks(app):
                         print(f"[AUTO-SAVE] Error saving loop iteration: {e}")
 
                     print(f"[LOOP] Iteration {loop_iteration} completed. Waiting {app_state.loop_interval_minutes} minutes...")
-                    
+
+                    # Calculate and store next run time in Eastern timezone
+                    import datetime
+                    import pytz
+                    eastern = pytz.timezone('US/Eastern')
+                    next_run = datetime.datetime.now(eastern) + datetime.timedelta(minutes=app_state.loop_interval_minutes)
+                    app_state.next_loop_run_time = next_run
+                    print(f"[LOOP] Next iteration scheduled at {next_run.strftime('%I:%M %p %Z')}")
+
                     # Wait for the specified interval (checking for stop every 30 seconds)
                     wait_time = app_state.loop_interval_minutes * 60  # Convert to seconds
                     elapsed = 0
