@@ -10,68 +10,87 @@ from dash import html, dcc
 def create_log_panel():
     """Create the live log panel component."""
 
-    return dbc.Card([
-        dbc.CardHeader([
-            html.Div([
-                html.Div([
-                    html.I(className="fas fa-terminal me-2"),
-                    html.Span("Application Logs", className="fw-bold"),
-                    dbc.Badge(
-                        "0",
-                        id="log-count-badge",
-                        color="secondary",
-                        className="ms-2",
-                        pill=True
-                    ),
-                ], className="d-flex align-items-center"),
-                html.Div([
-                    # Auto-scroll toggle
-                    dbc.Checklist(
-                        options=[{"label": "Auto-scroll", "value": True}],
-                        value=[True],
-                        id="log-auto-scroll",
-                        switch=True,
-                        inline=True,
-                        className="me-3"
-                    ),
-                    # Log level filter
-                    dbc.Select(
-                        id="log-level-filter",
-                        options=[
-                            {"label": "All Levels", "value": "ALL"},
-                            {"label": "Debug+", "value": "DEBUG"},
-                            {"label": "Info+", "value": "INFO"},
-                            {"label": "Warning+", "value": "WARNING"},
-                            {"label": "Error+", "value": "ERROR"},
-                        ],
-                        value="ALL",
-                        size="sm",
-                        className="me-2",
-                        style={"width": "120px"}
-                    ),
-                    # Clear logs button
-                    dbc.Button(
-                        [html.I(className="fas fa-trash-alt")],
-                        id="clear-logs-btn",
-                        color="outline-danger",
-                        size="sm",
-                        title="Clear logs"
-                    ),
-                    # Collapse toggle
-                    dbc.Button(
-                        html.I(className="fas fa-chevron-right", id="log-panel-chevron"),
-                        id="log-panel-toggle",
-                        color="link",
-                        size="sm",
-                        className="ms-2 text-muted",
-                        title="Expand/Collapse logs"
-                    ),
-                ], className="d-flex align-items-center")
-            ], className="d-flex justify-content-between align-items-center w-100")
-        ], className="py-2"),
+    # Build header content (clickable for collapse)
+    header_content = dbc.Row([
+        dbc.Col([
+            html.I(
+                id="log-panel-chevron",
+                className="bi bi-chevron-right me-2 chevron-icon"
+            ),
+            html.Span("📋", className="me-2 panel-icon"),
+            html.Span("Application Logs", className="fw-semibold panel-title"),
+        ], width="auto", className="d-flex align-items-center"),
+        dbc.Col([
+            dbc.Badge(
+                "0",
+                id="log-count-badge",
+                color="secondary",
+                className="badge-pill",
+                pill=True
+            ),
+        ], width="auto", className="ms-auto d-flex align-items-center"),
+    ], className="align-items-center g-0", justify="between")
 
-        dbc.Collapse([
+    # Controls row (inside card body, not header)
+    controls_row = html.Div([
+        # Streaming toggle
+        dbc.Checklist(
+            options=[{"label": "Streaming", "value": True}],
+            value=[True],
+            id="log-streaming-toggle",
+            switch=True,
+            inline=True,
+            className="me-3"
+        ),
+        # Auto-scroll toggle
+        dbc.Checklist(
+            options=[{"label": "Auto-scroll", "value": True}],
+            value=[True],
+            id="log-auto-scroll",
+            switch=True,
+            inline=True,
+            className="me-3"
+        ),
+        # Log level filter
+        dbc.Select(
+            id="log-level-filter",
+            options=[
+                {"label": "All Levels", "value": "ALL"},
+                {"label": "Debug+", "value": "DEBUG"},
+                {"label": "Info+", "value": "INFO"},
+                {"label": "Warning+", "value": "WARNING"},
+                {"label": "Error+", "value": "ERROR"},
+            ],
+            value="ALL",
+            size="sm",
+            className="me-2",
+            style={"width": "120px"}
+        ),
+        # Clear logs button
+        dbc.Button(
+            [html.I(className="bi bi-trash")],
+            id="clear-logs-btn",
+            color="outline-danger",
+            size="sm",
+            title="Clear logs"
+        ),
+    ], className="d-flex align-items-center mb-2")
+
+    return dbc.Card([
+        # Clickable header
+        html.Div(
+            header_content,
+            id="log-panel-header",
+            n_clicks=0,
+            style={"cursor": "pointer"},
+            className="collapsible-header card-header"
+        ),
+        # Collapsible body
+        dbc.Collapse(
             dbc.CardBody([
+                # Controls row
+                controls_row,
+
                 # Log container with monospace font and scrollable
                 html.Div(
                     id="log-container",
@@ -97,15 +116,18 @@ def create_log_panel():
                 # Hidden store for log state
                 dcc.Store(id="log-last-index", data=0),
 
-                # Interval for log updates (1 second)
+                # Interval for log updates (1 second) - disabled by default until streaming is on
                 dcc.Interval(
                     id="log-update-interval",
-                    interval=1000,  # 1 second for balanced performance
-                    n_intervals=0
+                    interval=1000,
+                    n_intervals=0,
+                    disabled=False
                 )
-            ], className="p-2")
-        ], id="log-panel-collapse", is_open=False)
-    ], className="log-panel-card mb-3")
+            ], className="p-2 collapsible-body"),
+            id="log-panel-collapse",
+            is_open=False
+        ),
+    ], className="mb-3 collapsible-card", id="log-panel")
 
 
 def format_log_entry(log: dict) -> html.Div:

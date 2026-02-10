@@ -24,22 +24,18 @@ def register_log_callbacks(app):
     """Register all log-related callbacks."""
 
     # =========================================================================
-    # Toggle Log Panel Collapse
+    # Toggle Log Streaming (enable/disable interval)
     # =========================================================================
     @app.callback(
-        [Output("log-panel-collapse", "is_open"),
-         Output("log-panel-chevron", "className")],
-        [Input("log-panel-toggle", "n_clicks")],
-        [State("log-panel-collapse", "is_open")],
+        Output("log-update-interval", "disabled"),
+        [Input("log-streaming-toggle", "value")],
         prevent_initial_call=True
     )
-    def toggle_log_panel(n_clicks, is_open):
-        """Toggle the log panel collapse state."""
-        if n_clicks:
-            new_state = not is_open
-            chevron_class = "fas fa-chevron-down" if new_state else "fas fa-chevron-right"
-            return new_state, chevron_class
-        return no_update, no_update
+    def toggle_log_streaming(streaming_value):
+        """Toggle log streaming on/off."""
+        # If streaming is checked (value contains True), interval is NOT disabled
+        is_streaming = bool(streaming_value and True in streaming_value)
+        return not is_streaming
 
     # =========================================================================
     # Clear Logs
