@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="tradingcrew",
-    version="0.2.4",
+    version="0.2.5",
     description="TradingCrew - Multi-Agent LLM Financial Trading Framework",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
