@@ -3015,3 +3015,315 @@ body.theme-bw .watchlist-tabs .nav-tabs .nav-link.active {
     background: #F1F5F9;
     border-bottom-color: #3B82F6;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRADINGVIEW LIGHTWEIGHT CHARTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Main chart container */
+.tradingview-chart {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#tv-chart-container {
+    min-height: 460px;
+    width: 100%;
+    background-color: #1E293B;
+}
+
+/* Light theme chart container */
+body.theme-bw #tv-chart-container {
+    background-color: #FFFFFF;
+}
+
+body.theme-bw .tradingview-chart {
+    border-color: #CBD5E1;
+}
+
+/* Chart loading state */
+.tradingview-chart::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(59, 130, 246, 0.1),
+        transparent
+    );
+    animation: chartShimmer 1.5s infinite;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tradingview-chart.loading::before {
+    opacity: 1;
+}
+
+@keyframes chartShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Chart hover effects */
+.tradingview-chart:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+body.theme-bw .tradingview-chart:hover {
+    border-color: #3B82F6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+/* Responsive chart sizing */
+@media (max-width: 768px) {
+    #tv-chart-container {
+        min-height: 345px;
+        height: 400px;
+    }
+
+    .tradingview-chart {
+        border-radius: 6px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+    #tv-chart-container {
+        height: 520px;
+    }
+}
+
+@media (min-width: 1201px) {
+    #tv-chart-container {
+        height: 575px;
+    }
+}
+
+/* Chart legend styling override */
+.tv-lightweight-charts .tv-lightweight-charts--legend {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Ensure chart takes full width of parent */
+.tv-lightweight-charts {
+    width: 100% !important;
+}
+
+/* Indicator pane styling */
+.tradingview-indicator-pane {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0 0 6px 6px;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    background-color: var(--bg-secondary);
+    margin-top: -1px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#tv-rsi-container,
+#tv-macd-container,
+#tv-obv-container {
+    width: 100%;
+    background-color: #1E293B;
+}
+
+/* First indicator pane gets special border treatment */
+.tradingview-chart + .tradingview-indicator-pane {
+    border-radius: 0;
+}
+
+/* Last visible indicator pane gets bottom border radius */
+.tradingview-indicator-pane:last-of-type {
+    border-radius: 0 0 8px 8px;
+}
+
+/* Light theme indicator panes */
+body.theme-bw .tradingview-indicator-pane {
+    border-color: #CBD5E1;
+}
+
+body.theme-bw #tv-rsi-container,
+body.theme-bw #tv-macd-container,
+body.theme-bw #tv-obv-container {
+    background-color: #FFFFFF;
+}
+
+/* Indicator pane labels */
+.tradingview-indicator-pane::after {
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    pointer-events: none;
+    z-index: 10;
+}
+
+#tv-rsi-container::after {
+    content: 'RSI (14)';
+    color: #7c4dff;
+}
+
+#tv-macd-container::after {
+    content: 'MACD (12/26/9)';
+    color: #2196f3;
+}
+
+#tv-obv-container::after {
+    content: 'OBV';
+    color: #06b6d4;
+}
+
+/* Responsive indicator pane sizing */
+@media (max-width: 768px) {
+    #tv-rsi-container,
+    #tv-macd-container,
+    #tv-obv-container {
+        height: 100px;
+    }
+}
+
+@media (min-width: 769px) {
+    #tv-rsi-container,
+    #tv-macd-container,
+    #tv-obv-container {
+        height: 120px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHART FULLSCREEN MODE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Fullscreen wrapper */
+.chart-fullscreen-wrapper {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+/* Fullscreen header (hidden by default) */
+.fullscreen-header {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    border-bottom: 1px solid #334155;
+}
+
+.fullscreen-symbol {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #F1F5F9;
+}
+
+.exit-fullscreen-btn {
+    font-size: 1.2rem;
+    padding: 4px 12px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.exit-fullscreen-btn:hover {
+    opacity: 1;
+}
+
+/* Fullscreen button styling */
+#chart-fullscreen-btn {
+    font-size: 1.1rem;
+    padding: 4px 10px;
+    transition: all 0.2s ease;
+}
+
+#chart-fullscreen-btn:hover {
+    transform: scale(1.1);
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+/* Active fullscreen state */
+.chart-fullscreen-wrapper.is-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    background-color: #0F172A;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0 !important;
+}
+
+.chart-fullscreen-wrapper.is-fullscreen .fullscreen-header {
+    display: flex;
+}
+
+/* Main chart takes remaining space in fullscreen */
+.chart-fullscreen-wrapper.is-fullscreen #tv-chart-container {
+    flex: 1;
+    height: auto !important;
+    min-height: 0 !important;
+    border-radius: 0;
+}
+
+/* Indicator panes in fullscreen */
+.chart-fullscreen-wrapper.is-fullscreen .tradingview-indicator-pane {
+    height: 150px !important;
+    border-radius: 0;
+    flex-shrink: 0;
+}
+
+.chart-fullscreen-wrapper.is-fullscreen .tradingview-chart {
+    border-radius: 0;
+    border: none;
+}
+
+/* Hide body scroll when fullscreen is active */
+body.chart-fullscreen-active {
+    overflow: hidden !important;
+}
+
+/* Light theme fullscreen */
+body.theme-bw .chart-fullscreen-wrapper.is-fullscreen {
+    background-color: #F8FAFC;
+}
+
+body.theme-bw .fullscreen-header {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%);
+    border-bottom-color: #CBD5E1;
+}
+
+body.theme-bw .fullscreen-symbol {
+    color: #1E293B;
+}
+
+/* Fullscreen mode responsive adjustments */
+@media (max-width: 768px) {
+    .chart-fullscreen-wrapper.is-fullscreen .tradingview-indicator-pane {
+        height: 120px !important;
+    }
+
+    .fullscreen-symbol {
+        font-size: 1.2rem;
+    }
+
+    .fullscreen-header {
+        padding: 8px 12px;
+    }
+}

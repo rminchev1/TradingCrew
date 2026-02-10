@@ -134,6 +134,7 @@ def create_app():
             dbc.themes.DARKLY,
             *APP_CONFIG["external_stylesheets"]
         ],
+        external_scripts=APP_CONFIG.get("external_scripts", []),
         suppress_callback_exceptions=APP_CONFIG["suppress_callback_exceptions"],
         update_title=APP_CONFIG["update_title"],
     )

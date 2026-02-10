@@ -32,6 +32,9 @@ APP_CONFIG = {
     "external_stylesheets": [
         "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     ],
+    "external_scripts": [
+        "https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"
+    ],
     "suppress_callback_exceptions": True,
     "update_title": None,
 } 

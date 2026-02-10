@@ -1,10 +1,11 @@
 """
 webui/components/chart_panel.py - Chart panel with symbol-based pagination and technical indicators
+
+Uses TradingView lightweight-charts for professional charting experience.
 """
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from webui.utils.charts import create_welcome_chart
 
 
 def create_symbol_pagination(pagination_id, max_symbols=1):
@@ -46,6 +47,7 @@ def create_indicator_checklist():
                         {"label": " Bollinger Bands", "value": "bb"},
                         {"label": " RSI (14)", "value": "rsi"},
                         {"label": " MACD (12/26/9)", "value": "macd"},
+                        {"label": " OBV", "value": "obv"},
                     ],
                     value=["sma", "bb", "rsi", "macd"],  # Default selected indicators
                     id="indicator-checklist",
@@ -72,7 +74,8 @@ def create_chart_panel():
                     create_symbol_pagination("chart-pagination")
                 ], width=8),
                 dbc.Col([
-                    dbc.Button("🔄 Refresh Chart", id="manual-chart-refresh", color="outline-secondary", size="sm", className="float-end"),
+                    dbc.Button("⛶", id="chart-fullscreen-btn", color="outline-secondary", size="sm", className="float-end ms-2", title="Toggle Fullscreen"),
+                    dbc.Button("🔄", id="manual-chart-refresh", color="outline-secondary", size="sm", className="float-end", title="Refresh Chart"),
                 ], width=4)
             ], className="mb-2"),
             # Current symbol display and last updated
@@ -87,35 +90,65 @@ def create_chart_panel():
                     create_indicator_checklist()
                 ], width="auto")
             ], className="mb-3 align-items-center"),
-            # Chart container with dynamic height
+            # Chart wrapper for fullscreen support
             html.Div(
-                dcc.Graph(
-                    id="chart-container",
-                    figure=create_welcome_chart(),
-                    config={
-                        'displayModeBar': True,
-                        'responsive': True,
-                        'scrollZoom': True,
-                        'modeBarButtonsToAdd': ['drawline', 'drawopenpath', 'eraseshape'],
-                        'modeBarButtonsToRemove': ['lasso2d', 'select2d']
-                    },
-                    style={"height": "100%", "width": "100%", "minHeight": "400px"}
-                ),
-                id="chart-wrapper",
-                style={"height": "auto", "minHeight": "400px", "width": "100%", "overflow": "hidden"}
+                id="chart-fullscreen-wrapper",
+                className="chart-fullscreen-wrapper",
+                children=[
+                    # Fullscreen header (only visible in fullscreen mode)
+                    html.Div(
+                        id="fullscreen-header",
+                        className="fullscreen-header",
+                        children=[
+                            html.Span(id="fullscreen-symbol-display", className="fullscreen-symbol"),
+                            dbc.Button("✕", id="exit-fullscreen-btn", color="light", size="sm", className="exit-fullscreen-btn"),
+                        ]
+                    ),
+                    # TradingView chart container (main price chart)
+                    html.Div(
+                        id="tv-chart-container",
+                        className="tradingview-chart",
+                        style={"height": "450px", "width": "100%", "minHeight": "350px"}
+                    ),
+                    # RSI indicator pane
+                    html.Div(
+                        id="tv-rsi-container",
+                        className="tradingview-indicator-pane",
+                        style={"height": "120px", "width": "100%", "display": "none"}
+                    ),
+                    # MACD indicator pane
+                    html.Div(
+                        id="tv-macd-container",
+                        className="tradingview-indicator-pane",
+                        style={"height": "120px", "width": "100%", "display": "none"}
+                    ),
+                    # OBV indicator pane
+                    html.Div(
+                        id="tv-obv-container",
+                        className="tradingview-indicator-pane",
+                        style={"height": "120px", "width": "100%", "display": "none"}
+                    ),
+                ]
             ),
-            # Hidden original pagination component for control callback compatibility
+            # Data stores for chart
+            dcc.Store(id="tv-chart-data-store", data=None),
+            dcc.Store(id="tv-chart-config-store", data={"showRsi": True, "showMacd": True, "showObv": False}),
+            # Hidden div for clientside callback output
+            html.Div(id="tv-chart-update-trigger", style={"display": "none"}),
+            # Hidden pagination component for control callback compatibility
             html.Div([
                 dbc.Pagination(
                     id="chart-pagination",
                     max_value=1,
-                    active_page=1,  # Explicitly set to 1 to avoid None default
+                    active_page=1,
                     fully_expanded=True,
                     first_last=True,
                     previous_next=True,
-                    className="d-none"  # Bootstrap class to hide the element
-                )
-            ], style={"display": "none"})  # Additional CSS hiding
+                    className="d-none"
+                ),
+                # Hidden chart-container div for backward compatibility
+                html.Div(id="chart-container", style={"display": "none"})
+            ], style={"display": "none"})
         ]),
         className="mb-4"
     )

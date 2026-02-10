@@ -32,11 +32,11 @@ def get_yahoo_data(symbol: str, period: str = "1d") -> pd.DataFrame:
         "5m": {"period": "1d", "interval": "1m"},
         "15m": {"period": "5d", "interval": "5m"},
         "30m": {"period": "5d", "interval": "15m"},
-        "1h": {"period": "1mo", "interval": "30m"},
-        "4h": {"period": "3mo", "interval": "1h"},
-        "1d": {"period": "3mo", "interval": "1d"},
-        "1w": {"period": "6mo", "interval": "1d"},
-        "1mo": {"period": "1y", "interval": "1d"},
+        "1h": {"period": "1y", "interval": "30m"},
+        "4h": {"period": "2y", "interval": "1h"},
+        "1d": {"period": "2y", "interval": "1d"},
+        "1w": {"period": "2y", "interval": "1d"},
+        "1mo": {"period": "2y", "interval": "1d"},
         "1y": {"period": "2y", "interval": "1d"},
     }
 
@@ -127,6 +127,17 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df['MACD'] = df['EMA_12'] - df['EMA_26']
     df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
     df['MACD_hist'] = df['MACD'] - df['MACD_signal']
+
+    # OBV (On-Balance Volume)
+    obv = [0]
+    for i in range(1, len(df)):
+        if df['close'].iloc[i] > df['close'].iloc[i - 1]:
+            obv.append(obv[-1] + df['volume'].iloc[i])
+        elif df['close'].iloc[i] < df['close'].iloc[i - 1]:
+            obv.append(obv[-1] - df['volume'].iloc[i])
+        else:
+            obv.append(obv[-1])
+    df['OBV'] = obv
 
     return df
 

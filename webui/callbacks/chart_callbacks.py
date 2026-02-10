@@ -1,16 +1,18 @@
 """
 Chart-related callbacks for TradingAgents WebUI
-Enhanced with symbol-based pagination and technical indicators
+Enhanced with symbol-based pagination and technical indicators.
+
+Uses TradingView lightweight-charts for professional charting.
 """
 
-from dash import Input, Output, State, ctx, html, ALL, dash
+from dash import Input, Output, State, ctx, html, ALL, dash, ClientsideFunction
 import dash_bootstrap_components as dbc
 import pandas as pd
-import plotly.graph_objects as go
 from datetime import datetime
 
 from webui.utils.state import app_state
-from webui.utils.charts import create_chart, create_welcome_chart
+from webui.utils.charts import get_yahoo_data, add_indicators
+from webui.utils.chart_data import prepare_chart_data
 
 
 def create_symbol_button(symbol, index, is_active=False):
@@ -118,7 +120,7 @@ def register_chart_callbacks(app):
         return dash.no_update, dash.no_update, dash.no_update
 
     @app.callback(
-        [Output("chart-container", "figure"),
+        [Output("tv-chart-data-store", "data"),
          Output("current-symbol-display", "children"),
          Output("chart-store", "data", allow_duplicate=True)],
         [Input("period-5m", "n_clicks"),
@@ -139,7 +141,7 @@ def register_chart_callbacks(app):
     )
     def update_chart(n_5m, n_15m, n_30m, n_1h, n_4h, n_1d, n_1w, n_1mo, n_1y,
                      active_page, manual_refresh, indicators, chart_store_data, run_watchlist_data):
-        """Update the chart based on period selection, ticker change, or indicator toggle"""
+        """Update the TradingView chart based on period selection, ticker change, or indicator toggle"""
 
         # Determine which input triggered the callback
         triggered_prop = ctx.triggered[0]["prop_id"] if ctx.triggered else None
@@ -156,7 +158,7 @@ def register_chart_callbacks(app):
             # Use pagination-based symbol selection
             symbols_list = list(app_state.symbol_states.keys())
             if active_page > len(symbols_list):
-                return create_welcome_chart(), "Page index out of range", chart_store_data
+                return None, "Page index out of range", chart_store_data
             symbol = symbols_list[active_page - 1]
         elif chart_store_data and chart_store_data.get("last_symbol"):
             # Fallback to last symbol in store
@@ -165,7 +167,7 @@ def register_chart_callbacks(app):
             # Use first symbol from Run Queue
             symbol = run_watchlist_data["symbols"][0]
         else:
-            return create_welcome_chart(), "", chart_store_data
+            return None, "", chart_store_data
 
         # Period mapping for all timeframe buttons
         period_map = {
@@ -194,12 +196,23 @@ def register_chart_callbacks(app):
             if chart_store_data and "indicators" in chart_store_data:
                 indicators = chart_store_data["indicators"]
             else:
-                indicators = ["sma", "bb", "rsi", "macd"]
+                indicators = ["sma", "bb"]
 
-        # Create chart
+        # Fetch data and prepare for TradingView chart
         try:
-            chart_figure = create_chart(symbol, selected_period, indicators=indicators)
-            symbol_display = f"📈 {symbol.upper()}"
+            # Get OHLCV data from Yahoo Finance
+            df = get_yahoo_data(symbol, selected_period)
+
+            if df.empty:
+                return None, f"No data for {symbol.upper()}", chart_store_data
+
+            # Add technical indicators
+            df = add_indicators(df)
+
+            # Transform to TradingView format
+            chart_data = prepare_chart_data(df, indicators, symbol, selected_period)
+
+            symbol_display = f"{symbol.upper()}"
 
             # Update store data
             updated_store_data = chart_store_data or {}
@@ -208,10 +221,11 @@ def register_chart_callbacks(app):
             updated_store_data["last_updated"] = datetime.now().isoformat()
             updated_store_data["indicators"] = indicators
 
-            return chart_figure, symbol_display, updated_store_data
+            return chart_data, symbol_display, updated_store_data
 
         except Exception as e:
-            return create_welcome_chart(), f"❌ Error loading {symbol.upper()}", chart_store_data
+            print(f"[CHART] Error loading {symbol}: {e}")
+            return None, f"Error loading {symbol.upper()}", chart_store_data
 
     @app.callback(
         Output("chart-last-updated", "children"),
@@ -263,3 +277,36 @@ def register_chart_callbacks(app):
             button_id == "period-1mo",
             button_id == "period-1y"
         )
+
+    # Clientside callback to render TradingView chart
+    app.clientside_callback(
+        """
+        function(chartData, chartConfig, themeStore) {
+            if (!chartData || !chartData.candlestick || chartData.candlestick.length === 0) {
+                return window.dash_clientside.no_update;
+            }
+
+            // Wait for TradingViewChartManager to be available
+            if (typeof window.TradingViewChartManager === 'undefined') {
+                console.warn('[TradingView] Chart manager not loaded yet');
+                setTimeout(function() {
+                    if (window.TradingViewChartManager) {
+                        window.TradingViewChartManager.init('tv-chart-container');
+                        window.TradingViewChartManager.update('tv-chart-container', chartData, chartConfig);
+                    }
+                }, 500);
+                return window.dash_clientside.no_update;
+            }
+
+            // Initialize and update chart
+            window.TradingViewChartManager.init('tv-chart-container');
+            window.TradingViewChartManager.update('tv-chart-container', chartData, chartConfig);
+
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output("tv-chart-update-trigger", "children"),
+        Input("tv-chart-data-store", "data"),
+        Input("tv-chart-config-store", "data"),
+        State("theme-store", "data"),
+    )
