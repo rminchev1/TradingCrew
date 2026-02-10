@@ -124,7 +124,21 @@ def create_trading_content():
                 # Chart content (remove outer card wrapper)
                 chart_content.children if hasattr(chart_content, 'children') else chart_content
             ], className="p-2")
-        ], className="chart-card h-100")
+        ], className="chart-card"),
+
+        # Agent Progress (below chart)
+        dbc.Card([
+            dbc.CardBody([
+                html.H6([
+                    html.I(className="fas fa-tasks me-2"),
+                    "Agent Progress"
+                ], className="mb-2 text-muted"),
+                html.Div(
+                    create_ticker_progress_panel(),
+                    className="agent-progress-compact"
+                )
+            ], className="p-2")
+        ], className="mt-2")
     ], className="chart-section")
 
     # Right side: Trading Control Panel (40% width on large screens)
@@ -148,20 +162,6 @@ def create_trading_content():
                         "Trading Signal"
                     ], className="mb-2 text-muted"),
                     create_compact_decision_panel(),
-                ]),
-
-                html.Hr(className="my-3"),
-
-                # Agent Progress (compact)
-                html.Div([
-                    html.H6([
-                        html.I(className="fas fa-tasks me-2"),
-                        "Agent Progress"
-                    ], className="mb-2 text-muted"),
-                    html.Div(
-                        create_ticker_progress_panel(),
-                        className="agent-progress-compact"
-                    )
                 ]),
             ], className="p-3")
         ], className="trading-panel-card h-100")
