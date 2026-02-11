@@ -138,6 +138,16 @@ class AppState:
             "scanner_use_options_flow": True,
             "scanner_cache_ttl": 300,
             "scanner_dynamic_universe": True,
+            # Options Trading Settings
+            "enable_options_trading": False,
+            "options_trading_level": 2,
+            "options_max_contracts": 10,
+            "options_max_position_value": 5000,
+            "options_min_dte": 7,
+            "options_max_dte": 45,
+            "options_min_delta": 0.20,
+            "options_max_delta": 0.70,
+            "options_min_open_interest": 100,
         }
 
     def add_symbols_to_queue(self, symbols):

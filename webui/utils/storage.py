@@ -56,6 +56,16 @@ DEFAULT_SYSTEM_SETTINGS = {
     "scanner_use_options_flow": True,
     "scanner_cache_ttl": 300,
     "scanner_dynamic_universe": True,
+    # Options Trading Settings
+    "enable_options_trading": False,
+    "options_trading_level": 2,
+    "options_max_contracts": 10,
+    "options_max_position_value": 5000,
+    "options_min_dte": 7,
+    "options_max_dte": 45,
+    "options_min_delta": 0.20,
+    "options_max_delta": 0.70,
+    "options_min_open_interest": 100,
 }
 
 
@@ -87,6 +97,16 @@ def export_settings(settings: dict) -> str:
         "scanner_cache_ttl",
         "scanner_dynamic_universe",
         "alpaca_use_paper",  # Include paper mode (not sensitive)
+        # Options trading settings (not sensitive)
+        "enable_options_trading",
+        "options_trading_level",
+        "options_max_contracts",
+        "options_max_position_value",
+        "options_min_dte",
+        "options_max_dte",
+        "options_min_delta",
+        "options_max_delta",
+        "options_min_open_interest",
     ]
     safe_settings = {k: v for k, v in settings.items() if k in safe_keys}
     return json.dumps(safe_settings, indent=2)

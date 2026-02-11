@@ -13,6 +13,7 @@ from langgraph.prebuilt import ToolNode
 from tradingagents.agents import *
 from tradingagents.agents.analysts.macro_analyst import create_macro_analyst
 from tradingagents.agents.analysts.options_analyst import create_options_analyst
+from tradingagents.agents.trader.options_trader import create_options_trader
 from tradingagents.agents.utils.agent_states import AgentState
 from tradingagents.agents.utils.agent_utils import Toolkit
 
@@ -33,6 +34,7 @@ class GraphSetup:
         trader_memory,
         invest_judge_memory,
         risk_manager_memory,
+        options_trader_memory,
         conditional_logic: ConditionalLogic,
         config: Dict[str, Any] = None,
     ):
@@ -46,6 +48,7 @@ class GraphSetup:
         self.trader_memory = trader_memory
         self.invest_judge_memory = invest_judge_memory
         self.risk_manager_memory = risk_manager_memory
+        self.options_trader_memory = options_trader_memory
         self.conditional_logic = conditional_logic
         self.config = config
 
@@ -287,7 +290,7 @@ class GraphSetup:
 
         if "options" in selected_analysts:
             analyst_nodes["options"] = create_options_analyst(
-                self.quick_thinking_llm, self.toolkit
+                self.quick_thinking_llm, self.toolkit, config=self.config
             )
             delete_nodes["options"] = create_msg_delete()
             tool_nodes["options"] = self.tool_nodes["options"]
@@ -303,6 +306,15 @@ class GraphSetup:
             self.deep_thinking_llm, self.invest_judge_memory
         )
         trader_node = create_trader(self.deep_thinking_llm, self.trader_memory, self.config)
+
+        # Create options trader node if options trading is enabled
+        options_trader_node = None
+        enable_options_trading = self.config.get("enable_options_trading", False)
+        if enable_options_trading:
+            options_trader_node = create_options_trader(
+                self.deep_thinking_llm, self.options_trader_memory, self.config
+            )
+            print("[SETUP] Options trading enabled - Options Trader node created")
 
         # Create risk analysis nodes
         risky_analyst = create_risky_debator(self.quick_thinking_llm, self.config)
@@ -370,6 +382,11 @@ class GraphSetup:
         workflow.add_node("Bear Researcher", bear_researcher_node)
         workflow.add_node("Research Manager", research_manager_node)
         workflow.add_node("Trader", trader_node)
+
+        # Add Options Trader node if enabled
+        if enable_options_trading and options_trader_node:
+            workflow.add_node("Options Trader", options_trader_node)
+
         workflow.add_node("Risky Analyst", risky_analyst)
         workflow.add_node("Neutral Analyst", neutral_analyst)
         workflow.add_node("Safe Analyst", safe_analyst)
@@ -393,7 +410,13 @@ class GraphSetup:
             },
         )
         workflow.add_edge("Research Manager", "Trader")
-        workflow.add_edge("Trader", "Risky Analyst")
+
+        # Route from Trader to Options Trader (if enabled) or directly to Risky Analyst
+        if enable_options_trading and options_trader_node:
+            workflow.add_edge("Trader", "Options Trader")
+            workflow.add_edge("Options Trader", "Risky Analyst")
+        else:
+            workflow.add_edge("Trader", "Risky Analyst")
         workflow.add_conditional_edges(
             "Risky Analyst",
             self.conditional_logic.should_continue_risk_analysis,
