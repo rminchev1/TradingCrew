@@ -162,7 +162,6 @@ class TradingAgentsGraph:
             "news": ToolNode(
                 [
                     self.toolkit.get_finnhub_news_online,
-                    self.toolkit.get_google_news,
                     self.toolkit.get_finnhub_news,
                     self.toolkit.get_reddit_news,
                     # crypto

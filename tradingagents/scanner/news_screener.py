@@ -17,10 +17,6 @@ try:
 except ImportError:
     FinnhubDataFetcher = None
 
-try:
-    from tradingagents.dataflows.googlenews_utils import getNewsData
-except ImportError:
-    getNewsData = None
 
 try:
     from openai import OpenAI
@@ -191,34 +187,6 @@ def get_news_for_symbol(
                     })
         except Exception as e:
             print(f"[NEWS] Finnhub error for {symbol}: {e}")
-
-    # Try Google News as fallback/supplement
-    if getNewsData and len(news_items) < 5:
-        try:
-            google_news = getNewsData(
-                symbol,
-                start_date.strftime("%Y-%m-%d"),
-                end_date.strftime("%Y-%m-%d"),
-                max_pages=1
-            )
-            if google_news:
-                for item in google_news[:5]:
-                    title = item.get("title", "")
-                    if title and not any(n["title"] == title for n in news_items):
-                        if use_llm:
-                            sentiment_result = analyze_sentiment_llm(title, symbol)
-                            sentiment = sentiment_result["sentiment"]
-                        else:
-                            sentiment = analyze_sentiment(title)
-
-                        news_items.append({
-                            "title": title,
-                            "source": item.get("source", "Google News"),
-                            "sentiment": sentiment,
-                            "datetime": item.get("date", ""),
-                        })
-        except Exception as e:
-            print(f"[NEWS] Google News error for {symbol}: {e}")
 
     return news_items
 

@@ -1,7 +1,6 @@
 from typing import Annotated, Dict
 from .reddit_utils import fetch_top_from_category
 from .stockstats_utils import *
-from .googlenews_utils import *
 from .finnhub_utils import get_data_in_range, get_finnhub_client
 from .alpaca_utils import AlpacaUtils
 from .coindesk_utils import get_news as get_coindesk_news_util
@@ -403,33 +402,6 @@ def get_simfin_income_statements(
         + str(latest_income)
         + "\n\nThis includes metadata like reporting dates and currency, share details, and a comprehensive breakdown of the company's financial performance. Starting with Revenue, it shows Cost of Revenue and resulting Gross Profit. Operating Expenses are detailed, including SG&A, R&D, and Depreciation. The statement then shows Operating Income, followed by non-operating items and Interest Expense, leading to Pretax Income. After accounting for Income Tax and any Extraordinary items, it concludes with Net Income, representing the company's bottom-line profit or loss for the period."
     )
-
-
-def get_google_news(
-    query: Annotated[str, "Query to search with"],
-    curr_date: Annotated[str, "Curr date in yyyy-mm-dd format"],
-    look_back_days: Annotated[int, "how many days to look back"],
-) -> str:
-    query = query.replace(" ", "+")
-
-    start_date = datetime.strptime(curr_date, "%Y-%m-%d")
-    before = start_date - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
-
-    # Limit to 2 pages for better performance (about 20 articles max)
-    news_results = getNewsData(query, before, curr_date, max_pages=2)
-
-    news_str = ""
-
-    for news in news_results:
-        news_str += (
-            f"### {news['title']} (source: {news['source']}) \n\n{news['snippet']}\n\n"
-        )
-
-    if len(news_results) == 0:
-        return ""
-
-    return f"## {query} Google News, from {before} to {curr_date}:\n\n{news_str}"
 
 
 def get_reddit_global_news(

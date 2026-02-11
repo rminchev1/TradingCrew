@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Renamed Run Queue to Portfolio**: The "Run Queue" section is now called "Portfolio" throughout the UI and documentation, better reflecting its purpose as a portfolio of stocks the analysts are working with
+- **Replaced Google News with Finnhub**: News Analyst now uses Finnhub API exclusively instead of Google News web scraping, providing more reliable and consistent news data
 
 ---
 

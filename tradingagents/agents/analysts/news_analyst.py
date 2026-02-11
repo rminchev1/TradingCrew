@@ -23,14 +23,13 @@ def create_news_analyst(llm, toolkit):
             tools = [
                 toolkit.get_coindesk_news,
                 toolkit.get_reddit_news,
-                toolkit.get_google_news,
+                toolkit.get_finnhub_news_online,
             ]
         else:
             # For stocks: use live Finnhub API as primary source
             tools = [
                 toolkit.get_finnhub_news_online,
                 toolkit.get_reddit_news,
-                toolkit.get_google_news,
             ]
 
         system_message = (

@@ -49,7 +49,7 @@ Portfolio Manager (final BUY/HOLD/SELL decision)
 | Market Analyst | Technical indicators (RSI, MACD, Bollinger Bands) |
 | Options Analyst | Options chain, put/call ratios, max pain |
 | Social Sentiment | Reddit and Twitter sentiment analysis |
-| News Analyst | Financial news via Finnhub and Google News |
+| News Analyst | Financial news via Finnhub API |
 | Fundamentals Analyst | Earnings, balance sheets, SEC filings |
 | Macro Analyst | FRED API economic indicators |
 

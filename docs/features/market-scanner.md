@@ -47,7 +47,7 @@ Stocks with unusually high trading volume.
 Stocks moving on news catalysts.
 
 - **Criteria**: Significant price move + recent news
-- **Data Sources**: Finnhub, Google News
+- **Data Sources**: Finnhub API
 - **Returns**: Stocks with news correlation
 
 ## Scanner Settings
