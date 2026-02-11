@@ -336,6 +336,40 @@ class AppState:
             # Safe to modify state
 ```
 
+### Thread-Local Storage for Parallel Ticker Analysis
+```python
+# CRITICAL: Global variables cause race conditions in parallel execution!
+# BAD - race condition when analyzing AAPL and NVDA in parallel:
+app_state.analyzing_symbol = symbol  # Gets overwritten by other threads!
+
+# GOOD - use thread-local storage (webui/utils/state.py):
+from webui.utils.state import get_thread_symbol, set_thread_symbol, clear_thread_symbol
+
+# In analysis thread:
+set_thread_symbol(symbol)      # Set at start
+current = get_thread_symbol()  # Get current thread's symbol
+clear_thread_symbol()          # Clear at end
+
+# Tool tracking uses this pattern (tradingagents/agents/utils/agent_utils.py):
+def _get_current_symbol():
+    symbol = get_thread_symbol()  # Prefer thread-local
+    if symbol:
+        return symbol
+    return app_state.analyzing_symbol  # Fallback for CLI/single-ticker
+```
+
+### Analyst Tool Separation (IMPORTANT)
+Each analyst has specific data sources - do NOT mix them:
+
+| Analyst | Data Source | Tools |
+|---------|-------------|-------|
+| News Analyst | Finnhub API (CoinDesk for crypto) | `get_finnhub_news_online`, `get_coindesk_news` |
+| Social Media Analyst | Reddit API only | `get_reddit_stock_info` |
+| Market Analyst | Alpaca API | `get_alpaca_data`, `get_YFin_data` |
+| Macro Analyst | FRED API | `get_macro_data` |
+
+**Do NOT give News Analyst Reddit tools or Social Media Analyst news tools.**
+
 ### Callback Patterns
 ```python
 # Use prevent_initial_call to avoid running on page load:
@@ -369,6 +403,11 @@ ALPACA_USE_PAPER=True
 FINNHUB_API_KEY=...
 FRED_API_KEY=...
 COINDESK_API_KEY=...
+
+# Reddit API (for live social sentiment)
+REDDIT_CLIENT_ID=...
+REDDIT_CLIENT_SECRET=...
+REDDIT_USER_AGENT=TradingCrew/1.0
 ```
 
 ### Default Config (`tradingagents/default_config.py`)
@@ -540,16 +579,67 @@ class TestMyFeature:
 
 ---
 
+## Live API with Fallback Pattern
+
+When adding new external API integrations, follow this pattern (see `tradingagents/dataflows/reddit_live.py`):
+
+```python
+# 1. Try live API first
+try:
+    if is_api_available():
+        result = fetch_live_data(params)
+        if result:
+            return format_result(result)
+except Exception as e:
+    print(f"[API] Live API error, falling back: {e}")
+
+# 2. Fallback to cached/alternative data
+return get_cached_data(params)
+```
+
+**Key principles:**
+- Live API should be optional (graceful degradation)
+- Credentials configurable via both `.env` AND Settings UI
+- Use singleton pattern for API clients (`RedditLiveClient`)
+- Always provide informative fallback message if no data
+
+---
+
+## Tool Output Tracking
+
+Tool calls are tracked for UI display in `tradingagents/agents/utils/agent_utils.py`:
+
+```python
+# Each tool call records:
+tool_call_info = {
+    "timestamp": "HH:MM:SS",
+    "tool_name": "get_finnhub_news",
+    "inputs": {"ticker": "AAPL"},
+    "output": "...",  # Result or error
+    "execution_time": "1.23s",
+    "status": "success",  # or "error", "timeout"
+    "agent_type": "NEWS",  # For filtering by analyst
+    "symbol": "AAPL"  # For filtering by ticker (thread-safe!)
+}
+app_state.tool_calls_log.append(tool_call_info)
+```
+
+**UI Display**: Modal shows filtered tool outputs via `app_state.get_tool_calls_for_display(agent_filter, symbol_filter)`
+
+---
+
 ## Key File Reference
 
 | File | Purpose | Key Functions/Classes |
 |------|---------|----------------------|
 | `tradingagents/graph/trading_graph.py` | Main orchestration | `TradingAgentsGraph.propagate()` |
 | `tradingagents/dataflows/interface.py` | Unified data API (~1500 lines) | `@tool` decorated functions |
+| `tradingagents/dataflows/reddit_live.py` | Live Reddit API | `RedditLiveClient`, `fetch_live_company_news()` |
+| `tradingagents/agents/utils/agent_utils.py` | Tool tracking & timing | `timing_wrapper()`, `_get_current_symbol()` |
 | `tradingagents/default_config.py` | Config defaults | `DEFAULT_CONFIG` dict |
 | `webui/app_dash.py` | App factory | `create_app()`, `run_app()` |
 | `webui/layout.py` | Layout assembly | `create_main_layout()` |
-| `webui/utils/state.py` | Global state | `AppState` class, `app_state` instance |
+| `webui/utils/state.py` | Global state + thread-local | `AppState`, `get_thread_symbol()` |
 | `webui/utils/local_storage.py` | SQLite persistence | `save_settings()`, `get_settings()` |
 | `webui/utils/storage.py` | Settings defaults | `DEFAULT_SYSTEM_SETTINGS` |
 | `webui/callbacks/control_callbacks.py` | Analysis control | Settings persistence, start/stop |
@@ -620,7 +710,9 @@ app_state.next_loop_run_time    # datetime - next loop iteration (EST/EDT)
 4. **Always read files before editing** - Use Read tool first
 5. **Preserve crypto symbol format** - Keep `/USD` suffix
 6. **Use thread-safe state access** - AppState has `_lock`
-7. **Update pyproject.toml version** before tagging releases
-8. **Settings require multiple file updates** - Follow the pattern above
-9. **Callbacks need `prevent_initial_call=True`** to avoid load-time execution
-10. **Test API connections** before assuming they work
+7. **Use thread-local for parallel ticker data** - Use `get_thread_symbol()` not `app_state.analyzing_symbol` in tool tracking
+8. **Keep analyst tools separate** - News→Finnhub, Social→Reddit, don't mix
+9. **Update pyproject.toml version** before tagging releases
+10. **Settings require multiple file updates** - Follow the pattern above
+11. **Callbacks need `prevent_initial_call=True`** to avoid load-time execution
+12. **Test API connections** before assuming they work
