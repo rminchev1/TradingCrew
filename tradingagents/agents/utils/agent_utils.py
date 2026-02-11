@@ -17,6 +17,24 @@ import time
 from functools import wraps
 
 
+def _get_current_symbol():
+    """Get the current symbol from thread-local storage (preferred) or global state (fallback)."""
+    try:
+        from webui.utils.state import get_thread_symbol, app_state
+        # Prefer thread-local symbol for parallel execution safety
+        symbol = get_thread_symbol()
+        if symbol:
+            return symbol
+        # Fallback to global state - this path should only be hit in CLI mode
+        # or single-ticker analysis. Log if this happens during parallel execution.
+        fallback = getattr(app_state, 'analyzing_symbol', None) or getattr(app_state, 'current_symbol', None)
+        if fallback and len(getattr(app_state, 'analyzing_symbols', set())) > 1:
+            print(f"[WARNING] Thread-local symbol not set during parallel execution, using fallback: {fallback}")
+        return fallback
+    except Exception:
+        return None
+
+
 def timing_wrapper(analyst_type, timeout_seconds=120):
     """
     Decorator to time function calls and track them for UI display with timeout protection
@@ -100,7 +118,7 @@ def timing_wrapper(analyst_type, timeout_seconds=120):
                             "execution_time": f"{elapsed:.2f}s",
                             "status": "timeout",
                             "agent_type": analyst_type,
-                            "symbol": getattr(app_state, 'analyzing_symbol', None) or getattr(app_state, 'current_symbol', None),
+                            "symbol": _get_current_symbol(),  # Use thread-safe symbol lookup
                             "error_details": {
                                 "error_type": "TimeoutError",
                                 "timeout_seconds": timeout_seconds,
@@ -123,9 +141,9 @@ def timing_wrapper(analyst_type, timeout_seconds=120):
                 result_summary = result
                 
                 # Store the complete tool call information including the output
-                # Get current symbol from app_state for filtering
-                current_symbol = getattr(app_state, 'analyzing_symbol', None) or getattr(app_state, 'current_symbol', None)
-                
+                # Get current symbol from thread-local storage (thread-safe for parallel execution)
+                current_symbol = _get_current_symbol()
+
                 tool_call_info = {
                     "timestamp": timestamp,
                     "tool_name": tool_name,
@@ -134,7 +152,7 @@ def timing_wrapper(analyst_type, timeout_seconds=120):
                     "execution_time": f"{elapsed:.2f}s",
                     "status": "success",
                     "agent_type": analyst_type,  # Add agent type for filtering
-                    "symbol": current_symbol  # Add symbol for filtering
+                    "symbol": current_symbol  # Add symbol for filtering (thread-safe)
                 }
                 
                 app_state.tool_calls_log.append(tool_call_info)
@@ -182,10 +200,10 @@ def timing_wrapper(analyst_type, timeout_seconds=120):
                     from webui.utils.state import app_state
                     import datetime
                     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-                    
-                    # Get current symbol from app_state for filtering
-                    current_symbol = getattr(app_state, 'analyzing_symbol', None) or getattr(app_state, 'current_symbol', None)
-                    
+
+                    # Get current symbol from thread-local storage (thread-safe for parallel execution)
+                    current_symbol = _get_current_symbol()
+
                     tool_call_info = {
                         "timestamp": timestamp,
                         "tool_name": tool_name,
@@ -194,7 +212,7 @@ def timing_wrapper(analyst_type, timeout_seconds=120):
                         "execution_time": f"{elapsed:.2f}s",
                         "status": "error",
                         "agent_type": analyst_type,  # Add agent type for filtering
-                        "symbol": current_symbol,  # Add symbol for filtering
+                        "symbol": current_symbol,  # Add symbol for filtering (thread-safe)
                         "error_details": error_details  # Add structured error details
                     }
                     

@@ -5,6 +5,25 @@ Trading Agents Framework - State Management
 import threading
 from webui.utils.local_storage import save_analyst_report, get_analyst_reports
 
+# Thread-local storage for per-thread symbol tracking in parallel execution
+_thread_local = threading.local()
+
+
+def get_thread_symbol():
+    """Get the symbol being analyzed in the current thread."""
+    return getattr(_thread_local, 'symbol', None)
+
+
+def set_thread_symbol(symbol):
+    """Set the symbol being analyzed in the current thread."""
+    _thread_local.symbol = symbol
+
+
+def clear_thread_symbol():
+    """Clear the symbol for the current thread."""
+    _thread_local.symbol = None
+
+
 # Global variables for tracking state
 class AppState:
     def __init__(self):
@@ -131,6 +150,9 @@ class AppState:
             if self.analysis_queue:
                 next_symbol = self.analysis_queue.pop(0)
 
+                # Set thread-local symbol for this thread's tool calls
+                set_thread_symbol(next_symbol)
+
                 # Set the symbol being analyzed (backend tracking)
                 self.analyzing_symbol = next_symbol  # Keep for backward compatibility
                 self.analyzing_symbols.add(next_symbol)  # Track in set for parallel analysis
@@ -151,10 +173,13 @@ class AppState:
 
             # No more symbols to analyze
             self.analyzing_symbol = None
+            clear_thread_symbol()
             return None
 
     def start_analyzing_symbol(self, symbol):
         """Mark a symbol as being analyzed (for parallel execution)."""
+        # Set thread-local symbol for this thread's tool calls
+        set_thread_symbol(symbol)
         with self._lock:
             self.analyzing_symbols.add(symbol)
             # Keep analyzing_symbol for backward compatibility (set to most recent)
@@ -162,6 +187,8 @@ class AppState:
 
     def stop_analyzing_symbol(self, symbol):
         """Mark a symbol as no longer being analyzed."""
+        # Clear thread-local symbol
+        clear_thread_symbol()
         with self._lock:
             self.analyzing_symbols.discard(symbol)
             # Update analyzing_symbol for backward compatibility
