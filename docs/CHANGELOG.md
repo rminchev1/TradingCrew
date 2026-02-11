@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No unreleased changes yet.*
+### Added
+- **Agent Progress Timestamps**: Analysis start and completion times now displayed in EST/EDT format for each ticker in the Agent Progress panel
+
+### Changed
+- **Renamed Run Queue to Portfolio**: The "Run Queue" section is now called "Portfolio" throughout the UI and documentation, better reflecting its purpose as a portfolio of stocks the analysts are working with
 
 ---
 

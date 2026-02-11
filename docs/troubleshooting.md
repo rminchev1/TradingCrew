@@ -202,7 +202,7 @@ Common issues and their solutions.
 - No next run time shown
 
 **Solutions**:
-1. Ensure Run Queue has symbols
+1. Ensure Portfolio has symbols
 2. Check no other analysis running
 3. Verify interval is set (1-1440)
 

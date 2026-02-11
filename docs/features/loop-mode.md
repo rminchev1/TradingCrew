@@ -6,7 +6,7 @@ Loop Mode enables scheduled, recurring analysis of your symbols at regular inter
 
 When Loop Mode is enabled:
 - Analysis runs automatically at set intervals
-- Processes all symbols in your Run Queue
+- Processes all symbols in your Portfolio
 - Shows next run time in EST/EDT timezone
 - Continues until manually stopped
 
@@ -14,7 +14,7 @@ When Loop Mode is enabled:
 
 ### In the Web UI
 
-1. Add symbols to the **Run Queue**
+1. Add symbols to the **Portfolio**
 2. Set the **Loop Interval** (in minutes)
 3. Toggle **Loop Mode** on
 4. Analysis begins immediately, then repeats
@@ -69,19 +69,19 @@ Interval: 60 minutes
 
 Result: Hourly analysis during pre-market hours.
 
-## Run Queue Integration
+## Portfolio Integration
 
-Loop Mode processes the **Run Queue**, not the Watchlist.
+Loop Mode processes the **Portfolio**, not the Watchlist.
 
 ### Setting Up
 
-1. Add symbols to Run Queue:
-   - Click **+ Add to Queue** next to any symbol
+1. Add symbols to Portfolio:
+   - Click **+ Add to Portfolio** next to any symbol
    - Use comma-separated input
    - Add from Scanner results
 
-2. Symbols remain in queue between iterations
-3. Clear queue to reset
+2. Symbols remain in Portfolio between iterations
+3. Clear Portfolio to reset
 
 ### Parallel Processing
 
@@ -129,7 +129,7 @@ Click the Loop Mode toggle off in the UI.
 ### Automatic Stop
 
 Loop Mode stops if:
-- Run Queue is empty
+- Portfolio is empty
 - Critical error occurs
 - Browser/tab is closed
 
@@ -179,7 +179,7 @@ Round-the-clock crypto monitoring.
 
 ### Loop Not Starting
 
-- Verify Run Queue has symbols
+- Verify Portfolio has symbols
 - Check that Loop Mode toggle is on
 - Ensure no other analysis is running
 

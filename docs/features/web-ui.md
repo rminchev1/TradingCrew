@@ -37,7 +37,7 @@ tradingcrew-web
 - **Symbol Input** - Enter symbols for analysis
 - **Analysis Options** - Configure research depth, trading mode
 - **Watchlist** - Saved symbols for quick access
-- **Run Queue** - Symbols queued for batch analysis
+- **Portfolio** - Symbols queued for batch analysis
 
 ### Main Content Area
 

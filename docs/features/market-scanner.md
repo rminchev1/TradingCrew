@@ -99,9 +99,9 @@ Click on any result to see:
 
 Click the **+** button to add a stock to your watchlist.
 
-### Add to Run Queue
+### Add to Portfolio
 
-Click **Queue** to add for batch analysis.
+Click **Queue** to add to Portfolio for batch analysis.
 
 ### Run Analysis
 
@@ -143,8 +143,8 @@ Limit results to specific sectors:
 1. Run "Top Gainers" scan at 9:45 AM
 2. Add interesting stocks to watchlist
 3. Run "Volume Spikes" for confirmation
-4. Queue top candidates for full analysis
-5. Execute Run Queue for detailed reports
+4. Queue top candidates in Portfolio for full analysis
+5. Start analysis for detailed reports
 6. Make trading decisions based on analysis
 
 ## Troubleshooting

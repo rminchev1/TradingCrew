@@ -7,7 +7,7 @@ This guide covers all TradingCrew features in detail.
 - [Web UI Overview](#web-ui-overview)
 - [Running Analysis](#running-analysis)
 - [Managing Your Watchlist](#managing-your-watchlist)
-- [Using the Run Queue](#using-the-run-queue)
+- [Using the Portfolio](#using-the-portfolio)
 - [Understanding Reports](#understanding-reports)
 - [Portfolio Management](#portfolio-management)
 - [Scheduling Analysis](#scheduling-analysis)
@@ -18,7 +18,7 @@ The TradingCrew web interface is a full-featured trading workstation with:
 
 - **Symbol Input** - Enter symbols for analysis
 - **Watchlist Panel** - Track symbols you're interested in
-- **Run Queue** - Batch analyze multiple symbols
+- **Portfolio** - Batch analyze multiple symbols
 - **Chart Panel** - Interactive price charts with indicators
 - **Reports Panel** - View analysis results and recommendations
 - **Portfolio Panel** - Monitor positions and orders
@@ -49,10 +49,10 @@ Options:
 
 ### Multiple Symbols
 
-Use the Run Queue for batch analysis:
+Use the Portfolio for batch analysis:
 
-1. Add symbols to the queue using the **+** button
-2. Click **Run Queue** to analyze all symbols
+1. Add symbols to the Portfolio using the **+** button
+2. Click **Start Analysis** to analyze all symbols
 3. Results appear in the Reports panel as each completes
 
 ### Analysis Options
@@ -86,19 +86,19 @@ Each watchlist item has quick actions:
 
 Drag and drop symbols to reorder your watchlist.
 
-## Using the Run Queue
+## Using the Portfolio
 
-The run queue allows batch analysis of multiple symbols.
+The Portfolio allows batch analysis of multiple symbols that analysts are working with.
 
-### Adding to Queue
+### Adding to Portfolio
 
-- Click **+ Add to Queue** on any symbol
+- Click **+ Add to Portfolio** on any symbol
 - Enter multiple comma-separated symbols
 - Use scanner results
 
-### Running the Queue
+### Running Analysis
 
-Click **Run Queue** to analyze all symbols sequentially.
+Click **Start Analysis** to analyze all symbols in the Portfolio.
 
 The **Max Parallel Tickers** setting (in Settings) controls how many run concurrently.
 
@@ -184,7 +184,7 @@ The account bar shows:
 
 Run analysis on a recurring schedule:
 
-1. Add symbols to the Run Queue
+1. Add symbols to the Portfolio
 2. Set the **Loop Interval** (1-1440 minutes)
 3. Enable **Loop Mode**
 
