@@ -454,11 +454,6 @@ The tag message MUST include:
 
 **Do NOT create releases with vague messages like "bug fixes" or "updates".**
 
-### Commit Message Format
-```
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-```
-
 ---
 
 ## Testing (MANDATORY)
