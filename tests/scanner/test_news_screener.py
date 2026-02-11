@@ -277,9 +277,8 @@ class TestGetNewsForSymbol:
         clear_cache()
 
     @patch("tradingagents.scanner.news_screener.FinnhubDataFetcher", None)
-    @patch("tradingagents.scanner.news_screener.getNewsData", None)
     def test_no_news_sources(self):
-        """Test behavior when no news sources available"""
+        """Test behavior when no news sources available (Finnhub unavailable)"""
         result = get_news_for_symbol("AAPL")
         assert result == []
 
