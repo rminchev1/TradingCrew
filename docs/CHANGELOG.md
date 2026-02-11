@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.2.9] - 2025-02-11
+
 ### Added
 - **Agent Progress Timestamps**: Analysis start and completion times now displayed in EST/EDT format for each ticker in the Agent Progress panel
 - **Live Reddit API Integration**: Social Media Analyst can now fetch real-time Reddit data using PRAW instead of relying on cached JSONL files
@@ -20,8 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Replaced Google News with Finnhub**: News Analyst now uses Finnhub API exclusively instead of Google News web scraping, providing more reliable and consistent news data
 
 ### Fixed
+- **Parallel Ticker Tool Output Race Condition**: Fixed bug where tool outputs were tagged with wrong ticker during parallel analysis. Now uses thread-local storage for proper per-ticker isolation
 - **News Analyst Tool Configuration**: News Analyst now uses Finnhub API exclusively for news data (CoinDesk added for crypto). Clear separation of responsibilities between analysts
 - **Social Media Analyst Tool Configuration**: Social Media Analyst now uses Reddit API exclusively for social sentiment analysis. Previously had overlapping tools with News Analyst
+- **Max Parallel Tickers TypeError**: Fixed error when max_parallel_tickers setting was None
 
 ---
 
