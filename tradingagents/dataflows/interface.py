@@ -410,41 +410,66 @@ def get_reddit_global_news(
     max_limit_per_day: Annotated[int, "Maximum number of news per day"],
 ) -> str:
     """
-    Retrieve the latest top reddit news
+    Retrieve the latest top reddit news.
+    Uses live Reddit API if configured, otherwise falls back to cached data.
+
     Args:
         start_date: Start date in yyyy-mm-dd format
-        end_date: End date in yyyy-mm-dd format
+        look_back_days: How many days to look back
+        max_limit_per_day: Maximum number of news per day
     Returns:
-        str: A formatted dataframe containing the latest news articles posts on reddit and meta information in these columns: "created_utc", "id", "title", "selftext", "score", "num_comments", "url"
+        str: Formatted Reddit posts with titles and content
     """
+    # Try live Reddit API first
+    try:
+        from .reddit_live import is_reddit_live_available, fetch_live_global_news
 
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    before = start_date - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
+        if is_reddit_live_available():
+            print("[REDDIT] Using live Reddit API for global news")
+            posts = fetch_live_global_news(limit=max_limit_per_day * look_back_days)
+
+            if posts:
+                news_str = ""
+                for post in posts:
+                    if post.get("content", "") == "":
+                        news_str += f"### {post['title']}\n**r/{post.get('subreddit', 'unknown')}** | {post.get('upvotes', 0)} upvotes\n\n"
+                    else:
+                        news_str += f"### {post['title']}\n**r/{post.get('subreddit', 'unknown')}** | {post.get('upvotes', 0)} upvotes\n\n{post['content']}\n\n"
+
+                return f"## Global News from Reddit (Live API):\n{news_str}"
+    except Exception as e:
+        print(f"[REDDIT] Live API error, falling back to cached data: {e}")
+
+    # Fallback to cached data
+    start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    before = start_date_dt - relativedelta(days=look_back_days)
+    before_str = before.strftime("%Y-%m-%d")
 
     posts = []
-    # iterate from start_date to end_date
-    curr_date = datetime.strptime(before, "%Y-%m-%d")
+    curr_date = datetime.strptime(before_str, "%Y-%m-%d")
 
-    total_iterations = (start_date - curr_date).days + 1
+    total_iterations = (start_date_dt - curr_date).days + 1
     pbar = tqdm(desc=f"Getting Global News on {start_date}", total=total_iterations)
 
-    while curr_date <= start_date:
+    while curr_date <= start_date_dt:
         curr_date_str = curr_date.strftime("%Y-%m-%d")
-        fetch_result = fetch_top_from_category(
-            "global_news",
-            curr_date_str,
-            max_limit_per_day,
-            data_path=os.path.join(DATA_DIR, "reddit_data"),
-        )
-        posts.extend(fetch_result)
+        try:
+            fetch_result = fetch_top_from_category(
+                "global_news",
+                curr_date_str,
+                max_limit_per_day,
+                data_path=os.path.join(DATA_DIR, "reddit_data"),
+            )
+            posts.extend(fetch_result)
+        except Exception:
+            pass  # Skip if cached data not available
         curr_date += relativedelta(days=1)
         pbar.update(1)
 
     pbar.close()
 
     if len(posts) == 0:
-        return ""
+        return "No Reddit global news data available. Configure Reddit API credentials in Settings for live data."
 
     news_str = ""
     for post in posts:
@@ -453,7 +478,7 @@ def get_reddit_global_news(
         else:
             news_str += f"### {post['title']}\n\n{post['content']}\n\n"
 
-    return f"## Global News Reddit, from {before} to {curr_date}:\n{news_str}"
+    return f"## Global News Reddit, from {before_str} to {curr_date}:\n{news_str}"
 
 
 def get_reddit_company_news(
@@ -463,47 +488,91 @@ def get_reddit_company_news(
     max_limit_per_day: Annotated[int, "Maximum number of news per day"],
 ) -> str:
     """
-    Retrieve the latest top reddit news
-    Args:
-        ticker: ticker symbol of the company
-        start_date: Start date in yyyy-mm-dd format
-        end_date: End date in yyyy-mm-dd format
-    Returns:
-        str: A formatted dataframe containing the latest news articles posts on reddit and meta information in these columns: "created_utc", "id", "title", "selftext", "score", "num_comments", "url"
-    """
+    Retrieve Reddit posts about a specific ticker/company.
+    Uses live Reddit API if configured, otherwise falls back to cached data.
 
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    before = start_date - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
+    Args:
+        ticker: Ticker symbol of the company (e.g., AAPL, BTC/USD)
+        start_date: Start date in yyyy-mm-dd format
+        look_back_days: How many days to look back
+        max_limit_per_day: Maximum number of posts per day
+    Returns:
+        str: Formatted Reddit posts with titles, content, and engagement metrics
+    """
+    # Try live Reddit API first
+    try:
+        from .reddit_live import is_reddit_live_available, fetch_live_company_news
+
+        if is_reddit_live_available():
+            print(f"[REDDIT] Using live Reddit API for {ticker}")
+
+            # Map look_back_days to time_filter
+            if look_back_days <= 1:
+                time_filter = "day"
+            elif look_back_days <= 7:
+                time_filter = "week"
+            elif look_back_days <= 30:
+                time_filter = "month"
+            else:
+                time_filter = "year"
+
+            posts = fetch_live_company_news(
+                ticker=ticker,
+                limit=max_limit_per_day * min(look_back_days, 7),
+                time_filter=time_filter,
+            )
+
+            if posts:
+                news_str = ""
+                for post in posts:
+                    subreddit = post.get('subreddit', 'unknown')
+                    upvotes = post.get('upvotes', 0)
+                    comments = post.get('num_comments', 0)
+                    date = post.get('posted_date', '')
+
+                    if post.get("content", "") == "":
+                        news_str += f"### {post['title']}\n**r/{subreddit}** | {upvotes} upvotes | {comments} comments | {date}\n\n"
+                    else:
+                        news_str += f"### {post['title']}\n**r/{subreddit}** | {upvotes} upvotes | {comments} comments | {date}\n\n{post['content']}\n\n"
+
+                return f"## {ticker} Reddit Sentiment (Live API):\n{news_str}"
+    except Exception as e:
+        print(f"[REDDIT] Live API error for {ticker}, falling back to cached data: {e}")
+
+    # Fallback to cached data
+    start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    before = start_date_dt - relativedelta(days=look_back_days)
+    before_str = before.strftime("%Y-%m-%d")
 
     posts = []
-    # iterate from start_date to end_date
-    curr_date = datetime.strptime(before, "%Y-%m-%d")
+    curr_date = datetime.strptime(before_str, "%Y-%m-%d")
 
-    total_iterations = (start_date - curr_date).days + 1
+    total_iterations = (start_date_dt - curr_date).days + 1
     pbar = tqdm(
         desc=f"Getting Company News for {ticker} on {start_date}",
         total=total_iterations,
     )
 
-    while curr_date <= start_date:
+    while curr_date <= start_date_dt:
         curr_date_str = curr_date.strftime("%Y-%m-%d")
-        fetch_result = fetch_top_from_category(
-            "company_news",
-            curr_date_str,
-            max_limit_per_day,
-            ticker,
-            data_path=os.path.join(DATA_DIR, "reddit_data"),
-        )
-        posts.extend(fetch_result)
+        try:
+            fetch_result = fetch_top_from_category(
+                "company_news",
+                curr_date_str,
+                max_limit_per_day,
+                ticker,
+                data_path=os.path.join(DATA_DIR, "reddit_data"),
+            )
+            posts.extend(fetch_result)
+        except Exception:
+            pass  # Skip if cached data not available
         curr_date += relativedelta(days=1)
-
         pbar.update(1)
 
     pbar.close()
 
     if len(posts) == 0:
-        return ""
+        return f"No Reddit data available for {ticker}. Configure Reddit API credentials in Settings for live sentiment data."
 
     news_str = ""
     for post in posts:
@@ -512,7 +581,7 @@ def get_reddit_company_news(
         else:
             news_str += f"### {post['title']}\n\n{post['content']}\n\n"
 
-    return f"##{ticker} News Reddit, from {before} to {curr_date}:\n\n{news_str}"
+    return f"## {ticker} News Reddit, from {before_str} to {curr_date}:\n\n{news_str}"
 
 
 def get_stock_stats_indicators_window(

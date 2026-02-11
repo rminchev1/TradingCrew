@@ -103,6 +103,38 @@ COINDESK_API_KEY=...
 
 **Used by**: News Analyst (crypto)
 
+### Reddit API
+
+**Purpose**: Live social sentiment from Reddit (r/wallstreetbets, r/stocks, r/cryptocurrency, etc.)
+
+**Cost**: Free
+
+**Setup**:
+1. Visit [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps)
+2. Sign in to your Reddit account
+3. Scroll down and click "create another app..."
+4. Fill in the form:
+   - **name**: TradingCrew (or any name)
+   - **type**: Select "script"
+   - **description**: Trading sentiment analysis
+   - **redirect uri**: http://localhost:8080
+5. Click "create app"
+6. Copy the client ID (shown under the app name) and client secret
+
+```bash
+REDDIT_CLIENT_ID=your_client_id
+REDDIT_CLIENT_SECRET=your_client_secret
+REDDIT_USER_AGENT=TradingCrew/1.0
+```
+
+**Used by**: Social Media Analyst
+
+**Subreddits searched**:
+- Stocks: wallstreetbets, stocks, investing, stockmarket, options
+- Crypto: cryptocurrency, bitcoin, ethereum, CryptoMarkets, altcoin
+
+**Note**: If not configured, the Social Media Analyst will fall back to cached Reddit data (if available) or indicate no data.
+
 ## Configuration Methods
 
 ### Method 1: Environment File (Recommended)
@@ -120,6 +152,11 @@ ALPACA_USE_PAPER=True
 FINNHUB_API_KEY=...
 FRED_API_KEY=...
 COINDESK_API_KEY=...
+
+# Reddit API (for live social sentiment)
+REDDIT_CLIENT_ID=...
+REDDIT_CLIENT_SECRET=...
+REDDIT_USER_AGENT=TradingCrew/1.0
 ```
 
 ### Method 2: System Environment

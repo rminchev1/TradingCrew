@@ -17,7 +17,9 @@ from webui.utils import local_storage
 
 def get_max_parallel_tickers():
     """Get the max parallel tickers setting from system settings."""
-    return app_state.system_settings.get("max_parallel_tickers", 3)
+    value = app_state.system_settings.get("max_parallel_tickers", 3)
+    # Ensure we always return a valid integer (handle None case)
+    return int(value) if value is not None else 3
 
 
 def register_control_callbacks(app):

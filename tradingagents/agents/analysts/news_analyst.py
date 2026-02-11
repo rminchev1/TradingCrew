@@ -20,16 +20,15 @@ def create_news_analyst(llm, toolkit):
         is_crypto = "/" in ticker or "USD" in ticker.upper() or "USDT" in ticker.upper()
 
         if is_crypto:
+            # For crypto: use CoinDesk and Finnhub
             tools = [
                 toolkit.get_coindesk_news,
-                toolkit.get_reddit_news,
                 toolkit.get_finnhub_news_online,
             ]
         else:
-            # For stocks: use live Finnhub API as primary source
+            # For stocks: use Finnhub API
             tools = [
                 toolkit.get_finnhub_news_online,
-                toolkit.get_reddit_news,
             ]
 
         system_message = (

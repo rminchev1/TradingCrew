@@ -118,6 +118,35 @@ def create_api_keys_section():
 
         # CoinDesk
         create_api_key_input("coindesk-api-key", "CoinDesk API Key", "COINDESK_API_KEY"),
+
+        html.Hr(className="my-2"),
+
+        # Reddit API
+        html.Div([
+            html.Small("Reddit API (for live social sentiment)", className="text-muted d-block mb-2"),
+        ]),
+        create_api_key_input("reddit-client-id", "Reddit Client ID", "REDDIT_CLIENT_ID"),
+        create_api_key_input("reddit-client-secret", "Reddit Client Secret", "REDDIT_CLIENT_SECRET", has_test=False),
+
+        # Reddit User Agent
+        dbc.Row([
+            dbc.Col(dbc.Label("Reddit User Agent", className="mb-0"), width=3),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-reddit-user-agent",
+                    type="text",
+                    placeholder="TradingCrew/1.0",
+                    value=os.getenv("REDDIT_USER_AGENT", "TradingCrew/1.0"),
+                    size="sm"
+                ),
+                width=5
+            ),
+            dbc.Col(width=2),
+            dbc.Col(
+                html.Small("App identifier", className="text-muted"),
+                width=2
+            )
+        ], className="mb-2 align-items-center"),
     ])
 
 

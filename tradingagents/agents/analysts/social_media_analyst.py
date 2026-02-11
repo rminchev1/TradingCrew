@@ -18,14 +18,10 @@ def create_social_media_analyst(llm, toolkit):
         ticker = state["company_of_interest"]
         company_name = state["company_of_interest"]
 
-        if toolkit.config["online_tools"]:
-            tools = [
-                toolkit.get_stock_news_openai,
-            ]
-        else:
-            tools = [
-                toolkit.get_reddit_stock_info,
-            ]
+        # Social Media Analyst uses Reddit for sentiment analysis (works for both stocks and crypto)
+        tools = [
+            toolkit.get_reddit_stock_info,  # Ticker-specific Reddit discussions
+        ]
 
         system_message = (
             "You are an EOD TRADING social media analyst specializing in identifying sentiment shifts and social catalysts that could drive overnight and next-day price movements. "

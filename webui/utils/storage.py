@@ -36,6 +36,10 @@ DEFAULT_SYSTEM_SETTINGS = {
     "finnhub_api_key": None,
     "fred_api_key": None,
     "coindesk_api_key": None,
+    # Reddit API
+    "reddit_client_id": None,
+    "reddit_client_secret": None,
+    "reddit_user_agent": "TradingCrew/1.0",
     # LLM Models
     "deep_think_llm": "o4-mini",
     "quick_think_llm": "gpt-4.1-nano",

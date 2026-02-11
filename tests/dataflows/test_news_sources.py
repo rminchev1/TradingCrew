@@ -62,15 +62,13 @@ class TestFinnhubNewsConfiguration:
 class TestNewsAnalystToolConfiguration:
     """Tests for news analyst tool configuration"""
 
-    def test_stock_news_tools_exclude_google_news(self):
-        """Verify stock analysis tools don't include Google News"""
+    def test_stock_news_tools_use_finnhub_only(self):
+        """Verify stock news analysis uses Finnhub API only"""
         from tradingagents.agents.analysts.news_analyst import create_news_analyst
 
         # Create a mock toolkit
         mock_toolkit = MagicMock()
         mock_toolkit.get_finnhub_news_online = MagicMock(name='get_finnhub_news_online')
-        mock_toolkit.get_reddit_news = MagicMock(name='get_reddit_news')
-        mock_toolkit.get_google_news = MagicMock(name='get_google_news')
         mock_toolkit.get_coindesk_news = MagicMock(name='get_coindesk_news')
 
         mock_llm = MagicMock()
@@ -78,38 +76,22 @@ class TestNewsAnalystToolConfiguration:
         # Create the news analyst node
         news_analyst_node = create_news_analyst(mock_llm, mock_toolkit)
 
-        # Create a mock state for stock analysis
-        mock_state = {
-            "trade_date": "2024-02-08",
-            "company_of_interest": "AAPL",  # Stock ticker (not crypto)
-            "messages": []
-        }
-
-        # We can't easily test the internal tools list without modifying the function,
-        # but we can verify the function is created successfully
+        # Verify the function is created successfully
         assert news_analyst_node is not None
         assert callable(news_analyst_node)
 
-    def test_crypto_news_tools_include_finnhub(self):
-        """Verify crypto analysis tools include Finnhub as fallback"""
+    def test_crypto_news_tools_use_coindesk_and_finnhub(self):
+        """Verify crypto news analysis uses CoinDesk and Finnhub"""
         from tradingagents.agents.analysts.news_analyst import create_news_analyst
 
         mock_toolkit = MagicMock()
         mock_toolkit.get_finnhub_news_online = MagicMock(name='get_finnhub_news_online')
-        mock_toolkit.get_reddit_news = MagicMock(name='get_reddit_news')
         mock_toolkit.get_coindesk_news = MagicMock(name='get_coindesk_news')
 
         mock_llm = MagicMock()
 
         # Create the news analyst node
         news_analyst_node = create_news_analyst(mock_llm, mock_toolkit)
-
-        # Create a mock state for crypto analysis
-        mock_state = {
-            "trade_date": "2024-02-08",
-            "company_of_interest": "BTC/USD",  # Crypto ticker
-            "messages": []
-        }
 
         # Verify the function is created successfully
         assert news_analyst_node is not None

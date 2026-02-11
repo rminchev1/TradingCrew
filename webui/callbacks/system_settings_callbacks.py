@@ -42,6 +42,9 @@ def register_system_settings_callbacks(app):
             Output("setting-finnhub-api-key", "value", allow_duplicate=True),
             Output("setting-fred-api-key", "value", allow_duplicate=True),
             Output("setting-coindesk-api-key", "value", allow_duplicate=True),
+            Output("setting-reddit-client-id", "value", allow_duplicate=True),
+            Output("setting-reddit-client-secret", "value", allow_duplicate=True),
+            Output("setting-reddit-user-agent", "value", allow_duplicate=True),
             Output("setting-deep-think-llm", "value", allow_duplicate=True),
             Output("setting-quick-think-llm", "value", allow_duplicate=True),
             Output("setting-max-debate-rounds", "value", allow_duplicate=True),
@@ -71,6 +74,17 @@ def register_system_settings_callbacks(app):
         # Sync to app_state for use by analysis engine
         sync_settings_to_app_state(settings)
 
+        # Update Reddit live client with credentials if available
+        try:
+            from tradingagents.dataflows.reddit_live import RedditLiveClient
+            RedditLiveClient.update_credentials(
+                client_id=settings.get("reddit_client_id"),
+                client_secret=settings.get("reddit_client_secret"),
+                user_agent=settings.get("reddit_user_agent"),
+            )
+        except Exception as e:
+            print(f"[SETTINGS] Could not update Reddit credentials: {e}")
+
         return (
             settings.get("openai_api_key") or "",
             settings.get("alpaca_api_key") or "",
@@ -79,6 +93,9 @@ def register_system_settings_callbacks(app):
             settings.get("finnhub_api_key") or "",
             settings.get("fred_api_key") or "",
             settings.get("coindesk_api_key") or "",
+            settings.get("reddit_client_id") or "",
+            settings.get("reddit_client_secret") or "",
+            settings.get("reddit_user_agent") or "TradingCrew/1.0",
             settings.get("deep_think_llm", "o4-mini"),
             settings.get("quick_think_llm", "gpt-4.1-nano"),
             settings.get("max_debate_rounds", 4),
@@ -114,6 +131,9 @@ def register_system_settings_callbacks(app):
             State("setting-finnhub-api-key", "value"),
             State("setting-fred-api-key", "value"),
             State("setting-coindesk-api-key", "value"),
+            State("setting-reddit-client-id", "value"),
+            State("setting-reddit-client-secret", "value"),
+            State("setting-reddit-user-agent", "value"),
             State("setting-deep-think-llm", "value"),
             State("setting-quick-think-llm", "value"),
             State("setting-max-debate-rounds", "value"),
@@ -135,6 +155,7 @@ def register_system_settings_callbacks(app):
         n_clicks,
         openai_key, alpaca_key, alpaca_secret, alpaca_paper,
         finnhub_key, fred_key, coindesk_key,
+        reddit_client_id, reddit_client_secret, reddit_user_agent,
         deep_llm, quick_llm,
         max_debate, max_risk, parallel_analysts, online_tools, max_recur, max_parallel_tickers,
         scanner_results, scanner_llm, scanner_options, scanner_cache, scanner_dynamic,
@@ -153,6 +174,9 @@ def register_system_settings_callbacks(app):
             "finnhub_api_key": finnhub_key if finnhub_key else None,
             "fred_api_key": fred_key if fred_key else None,
             "coindesk_api_key": coindesk_key if coindesk_key else None,
+            "reddit_client_id": reddit_client_id if reddit_client_id else None,
+            "reddit_client_secret": reddit_client_secret if reddit_client_secret else None,
+            "reddit_user_agent": reddit_user_agent if reddit_user_agent else "TradingCrew/1.0",
             "deep_think_llm": deep_llm,
             "quick_think_llm": quick_llm,
             "max_debate_rounds": max_debate,
@@ -170,6 +194,17 @@ def register_system_settings_callbacks(app):
 
         # Sync to app_state for use by analysis engine
         sync_settings_to_app_state(settings)
+
+        # Update Reddit live client with new credentials
+        try:
+            from tradingagents.dataflows.reddit_live import RedditLiveClient
+            RedditLiveClient.update_credentials(
+                client_id=reddit_client_id,
+                client_secret=reddit_client_secret,
+                user_agent=reddit_user_agent,
+            )
+        except Exception as e:
+            print(f"[SETTINGS] Could not update Reddit credentials: {e}")
 
         return (
             settings,
@@ -191,6 +226,9 @@ def register_system_settings_callbacks(app):
             Output("setting-finnhub-api-key", "value", allow_duplicate=True),
             Output("setting-fred-api-key", "value", allow_duplicate=True),
             Output("setting-coindesk-api-key", "value", allow_duplicate=True),
+            Output("setting-reddit-client-id", "value", allow_duplicate=True),
+            Output("setting-reddit-client-secret", "value", allow_duplicate=True),
+            Output("setting-reddit-user-agent", "value", allow_duplicate=True),
             Output("setting-deep-think-llm", "value", allow_duplicate=True),
             Output("setting-quick-think-llm", "value", allow_duplicate=True),
             Output("setting-max-debate-rounds", "value", allow_duplicate=True),
@@ -227,6 +265,9 @@ def register_system_settings_callbacks(app):
             "",
             "",
             "",
+            "",  # Reddit client ID
+            "",  # Reddit client secret
+            defaults.get("reddit_user_agent", "TradingCrew/1.0"),
             defaults.get("deep_think_llm", "o4-mini"),
             defaults.get("quick_think_llm", "gpt-4.1-nano"),
             defaults.get("max_debate_rounds", 4),
@@ -597,3 +638,88 @@ def register_system_settings_callbacks(app):
                 html.I(className="fas fa-exclamation-triangle text-danger me-1"),
                 "LIVE MODE"
             ]
+
+    # =========================================================================
+    # Reddit API reveal toggles
+    # =========================================================================
+    @app.callback(
+        Output("setting-reddit-client-id", "type"),
+        Input("reveal-reddit-client-id", "n_clicks"),
+        State("setting-reddit-client-id", "type"),
+        prevent_initial_call=True
+    )
+    def toggle_reddit_client_id_reveal(n_clicks, current_type):
+        if not n_clicks:
+            raise PreventUpdate
+        return "text" if current_type == "password" else "password"
+
+    @app.callback(
+        Output("setting-reddit-client-secret", "type"),
+        Input("reveal-reddit-client-secret", "n_clicks"),
+        State("setting-reddit-client-secret", "type"),
+        prevent_initial_call=True
+    )
+    def toggle_reddit_client_secret_reveal(n_clicks, current_type):
+        if not n_clicks:
+            raise PreventUpdate
+        return "text" if current_type == "password" else "password"
+
+    # =========================================================================
+    # Test Reddit API connection
+    # =========================================================================
+    @app.callback(
+        [
+            Output("status-reddit-client-id", "children"),
+        ],
+        Input("test-reddit-client-id", "n_clicks"),
+        [
+            State("setting-reddit-client-id", "value"),
+            State("setting-reddit-client-secret", "value"),
+            State("setting-reddit-user-agent", "value"),
+        ],
+        prevent_initial_call=True
+    )
+    def test_reddit_connection(n_clicks, client_id, client_secret, user_agent):
+        if not n_clicks:
+            raise PreventUpdate
+
+        # Use env vars if no values entered
+        id_to_test = client_id if client_id else os.getenv("REDDIT_CLIENT_ID")
+        secret_to_test = client_secret if client_secret else os.getenv("REDDIT_CLIENT_SECRET")
+        agent_to_test = user_agent if user_agent else os.getenv("REDDIT_USER_AGENT", "TradingCrew/1.0")
+
+        if not id_to_test or not secret_to_test:
+            return [[
+                html.I(className="fas fa-times-circle text-warning me-1"),
+                "Not configured"
+            ]]
+
+        try:
+            from tradingagents.dataflows.reddit_live import RedditLiveClient
+
+            # Update and test
+            RedditLiveClient.update_credentials(
+                client_id=id_to_test,
+                client_secret=secret_to_test,
+                user_agent=agent_to_test,
+            )
+
+            client = RedditLiveClient.get_instance()
+            success, message = client.test_connection()
+
+            if success:
+                return [[
+                    html.I(className="fas fa-check-circle text-success me-1"),
+                    "Connected"
+                ]]
+            else:
+                return [[
+                    html.I(className="fas fa-times-circle text-danger me-1"),
+                    "Failed"
+                ]]
+
+        except Exception as e:
+            return [[
+                html.I(className="fas fa-times-circle text-danger me-1"),
+                f"Error: {str(e)[:20]}"
+            ]]

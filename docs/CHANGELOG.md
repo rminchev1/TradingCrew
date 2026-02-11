@@ -9,10 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Agent Progress Timestamps**: Analysis start and completion times now displayed in EST/EDT format for each ticker in the Agent Progress panel
+- **Live Reddit API Integration**: Social Media Analyst can now fetch real-time Reddit data using PRAW instead of relying on cached JSONL files
+  - Configure Reddit API credentials in Settings > API Keys
+  - Searches subreddits: wallstreetbets, stocks, investing, stockmarket, options (for stocks)
+  - Searches subreddits: cryptocurrency, bitcoin, ethereum, CryptoMarkets (for crypto)
+  - Graceful fallback to cached data if API not configured or fails
 
 ### Changed
 - **Renamed Run Queue to Portfolio**: The "Run Queue" section is now called "Portfolio" throughout the UI and documentation, better reflecting its purpose as a portfolio of stocks the analysts are working with
 - **Replaced Google News with Finnhub**: News Analyst now uses Finnhub API exclusively instead of Google News web scraping, providing more reliable and consistent news data
+
+### Fixed
+- **News Analyst Tool Configuration**: News Analyst now uses Finnhub API exclusively for news data (CoinDesk added for crypto). Clear separation of responsibilities between analysts
+- **Social Media Analyst Tool Configuration**: Social Media Analyst now uses Reddit API exclusively for social sentiment analysis. Previously had overlapping tools with News Analyst
 
 ---
 
