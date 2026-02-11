@@ -1,8 +1,8 @@
 """
-webui/components/run_watchlist.py - Run Queue panel for symbols to analyze
+webui/components/run_watchlist.py - Portfolio panel for symbols to analyze
 
-The Run Queue is the active trading queue that serves as the source of symbols
-for analysis. Users add symbols from the regular watchlist to the Run Queue.
+The Portfolio is the active trading queue that serves as the source of symbols
+for analysis. Users add symbols from the regular watchlist to the Portfolio.
 """
 
 import dash_bootstrap_components as dbc
@@ -63,7 +63,7 @@ def create_run_watchlist_item(symbol, index=0):
             color="link",
             size="sm",
             className="text-danger p-0 run-watchlist-remove-btn",
-            title="Remove from Run Queue"
+            title="Remove from Portfolio"
         )
     ],
         className="run-watchlist-item d-flex align-items-center",

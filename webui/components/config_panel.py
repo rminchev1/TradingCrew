@@ -11,16 +11,16 @@ from datetime import datetime
 def create_trading_control_panel():
     """Create the compact trading control panel for the right sidebar."""
     return html.Div([
-        # Run Queue Status Section (replaces ticker input)
+        # Portfolio Status Section (replaces ticker input)
         html.Div([
             html.Div([
                 html.I(className="fas fa-list-check me-2 text-success"),
-                html.Span("Run Queue: ", className="text-muted"),
+                html.Span("Portfolio: ", className="text-muted"),
                 html.Span(id="config-run-queue-count", children="0", className="fw-bold text-success"),
                 html.Span(" symbols", className="text-muted ms-1"),
             ], className="d-flex align-items-center run-queue-status"),
             html.Small(
-                "Add symbols via Watchlist > Run Queue tab",
+                "Add symbols via Watchlist > Portfolio tab",
                 className="text-muted d-block mt-1"
             ),
         ], className="mb-3 p-2 run-queue-status-container"),
@@ -293,17 +293,17 @@ def create_config_panel():
         dbc.CardBody([
             html.H4("Analysis Configuration", className="mb-3"),
             html.Hr(),
-            # Run Queue Status (replaces ticker input)
+            # Portfolio Status (replaces ticker input)
             dbc.Row([
                 dbc.Col([
                     html.Div([
                         html.I(className="fas fa-list-check me-2 text-success"),
-                        html.Span("Run Queue: ", className="text-muted"),
+                        html.Span("Portfolio: ", className="text-muted"),
                         html.Span(id="config-run-queue-count-legacy", children="0", className="fw-bold text-success"),
                         html.Span(" symbols", className="text-muted ms-1"),
                     ], className="d-flex align-items-center mb-2"),
                     html.Small(
-                        "Add symbols via Watchlist > Run Queue tab",
+                        "Add symbols via Watchlist > Portfolio tab",
                         className="text-muted"
                     ),
                 ], width=12),

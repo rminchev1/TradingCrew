@@ -135,7 +135,7 @@ def create_watchlist_item(symbol, price=None, change=None, change_pct=None, inde
                         color="link",
                         size="sm",
                         className="watchlist-action-btn text-success",
-                        title="Add to Run Queue"
+                        title="Add to Portfolio"
                     ),
                     dbc.Button(
                         html.I(className="fas fa-times"),
@@ -173,7 +173,7 @@ def create_watchlist_section():
                     ),
                     html.Span(" / ", className="text-muted mx-1"),
                     html.Span("▶", className="me-1 text-success"),
-                    html.Span("Run", className="fw-semibold small"),
+                    html.Span("Portfolio", className="fw-semibold small"),
                     dbc.Badge(
                         id="run-watchlist-count-badge",
                         children="0",
@@ -189,7 +189,7 @@ def create_watchlist_section():
         ),
         dbc.Collapse(
             dbc.CardBody([
-                # Tabs for Watchlist and Run Queue
+                # Tabs for Watchlist and Portfolio
                 dbc.Tabs([
                     dbc.Tab(
                         label="⭐ Watchlist",
@@ -198,7 +198,7 @@ def create_watchlist_section():
                         className="pt-2"
                     ),
                     dbc.Tab(
-                        label="▶ Run Queue",
+                        label="▶ Portfolio",
                         tab_id="run-queue-tab",
                         children=create_run_watchlist_panel(),
                         className="pt-2"

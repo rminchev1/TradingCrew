@@ -561,7 +561,7 @@ def register_control_callbacks(app):
             print(f"[CONTROL] Loaded symbols from database fallback: {symbols}")
 
         if not symbols:
-            return "No symbols in Run Queue. Add symbols from the Watchlist tab.", {}, 1, 1, 1, 1
+            return "No symbols in Portfolio. Add symbols from the Watchlist tab.", {}, 1, 1, 1, 1
 
         if not app_state.analysis_running:
             app_state.reset()
