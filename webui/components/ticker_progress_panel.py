@@ -4,6 +4,8 @@ Ticker Progress Panel - Shows agent progress for all tickers being analyzed
 
 import dash_bootstrap_components as dbc
 from dash import html
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 # Agent abbreviations mapping - ordered by execution phase
@@ -38,6 +40,21 @@ AGENT_ABBREVIATIONS = {**ANALYST_AGENTS, **RESEARCH_AGENTS, **TRADING_AGENTS, **
 
 # Reverse mapping for lookup
 AGENT_TO_ABBREV = {v: k for k, v in AGENT_ABBREVIATIONS.items()}
+
+
+def format_timestamp_est(unix_timestamp):
+    """Format a Unix timestamp to EST/EDT time string."""
+    if not unix_timestamp:
+        return None
+    try:
+        # Convert Unix timestamp to datetime in EST/EDT
+        est_tz = ZoneInfo("America/New_York")
+        dt = datetime.fromtimestamp(unix_timestamp, tz=est_tz)
+        # Determine if we're in EDT (Daylight) or EST (Standard)
+        tz_abbrev = "EDT" if dt.dst() else "EST"
+        return dt.strftime(f"%m/%d %I:%M %p {tz_abbrev}")
+    except Exception:
+        return None
 
 
 def create_ticker_progress_panel():
@@ -107,8 +124,18 @@ def get_overall_status(agent_statuses):
         return "pending", "Pending", "secondary"
 
 
-def render_ticker_progress_row(symbol, agent_statuses, is_analyzing=False, active_analysts=None):
-    """Render a single ticker's progress with badges grouped by phase."""
+def render_ticker_progress_row(symbol, agent_statuses, is_analyzing=False, active_analysts=None,
+                                start_time=None, completed_time=None):
+    """Render a single ticker's progress with badges grouped by phase.
+
+    Args:
+        symbol: The ticker symbol
+        agent_statuses: Dict of agent name -> status
+        is_analyzing: Whether this ticker is currently being analyzed
+        active_analysts: List of active analyst names
+        start_time: Unix timestamp when analysis started
+        completed_time: Unix timestamp when analysis completed (None if not done)
+    """
 
     # Filter to only count active analysts + research/trading/risk agents
     active_analysts = active_analysts or list(ANALYST_AGENTS.values())
@@ -186,6 +213,21 @@ def render_ticker_progress_row(symbol, agent_statuses, is_analyzing=False, activ
         # Agent badges row - grouped by phase
         html.Div(badge_groups, className="agent-badges-row"),
 
+        # Timestamps row - Started / Completed
+        html.Div([
+            html.Small([
+                html.Span("Started: ", className="text-muted"),
+                html.Span(format_timestamp_est(start_time) or "—", className="text-info"),
+            ], className="me-4"),
+            html.Small([
+                html.Span("Completed: ", className="text-muted"),
+                html.Span(
+                    format_timestamp_est(completed_time) or ("In progress..." if is_analyzing else "—"),
+                    className="text-success" if completed_time else "text-warning" if is_analyzing else "text-muted"
+                ),
+            ]),
+        ], className="mt-1 timestamps-row"),
+
     ], className="ticker-progress-item")
 
 
@@ -215,7 +257,12 @@ def render_all_ticker_progress(symbol_states, analyzing_symbols=None, active_ana
     for symbol, state in sorted_items:
         agent_statuses = state.get("agent_statuses", {})
         is_analyzing = symbol in analyzing_symbols
-        rows.append(render_ticker_progress_row(symbol, agent_statuses, is_analyzing, active_analysts))
+        start_time = state.get("session_start_time")
+        completed_time = state.get("analysis_completed_time")
+        rows.append(render_ticker_progress_row(
+            symbol, agent_statuses, is_analyzing, active_analysts,
+            start_time=start_time, completed_time=completed_time
+        ))
 
     # Summary header
     total = len(symbol_states)

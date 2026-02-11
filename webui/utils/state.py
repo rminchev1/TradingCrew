@@ -251,6 +251,7 @@ class AppState:
             "chart_period": "1y",  # Default chart period
             "session_id": session_id,
             "session_start_time": session_start,
+            "analysis_completed_time": None,  # Track when analysis completed
             "report_timestamps": {}  # Track when each report was last updated
         }
 
@@ -553,6 +554,7 @@ class AppState:
                 # Reset session tracking
                 "session_id": new_session_id,
                 "session_start_time": new_session_start,
+                "analysis_completed_time": None,
                 "report_timestamps": {}
             })
         
@@ -1044,7 +1046,9 @@ class AppState:
                     state["recommended_action"] = chunk["recommended_action"]
 
                 # Mark the overall analysis as complete once the Portfolio Manager has delivered the final decision
+                import time as time_module
                 state["analysis_complete"] = True
+                state["analysis_completed_time"] = time_module.time()
 
                 print(f"[STATE - {analyzing_symbol}] Final decision set. Reports status:")
                 print(f"  risky_report: {len(state['current_reports']['risky_report'] or '') > 0}")
