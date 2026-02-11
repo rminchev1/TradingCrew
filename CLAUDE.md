@@ -11,8 +11,19 @@ This file provides guidance to Claude Code when working with this repository. Fo
 
 - Create tests in the appropriate `tests/` subdirectory
 - Tests must verify the new/changed functionality works correctly
-- Run `pytest` to ensure all tests pass before committing
+- **MUST run `pytest` and verify ALL tests pass BEFORE committing**
 - Do NOT skip this step - untested code should not be merged
+
+**Pre-Commit Checklist:**
+```bash
+# ALWAYS run before git commit:
+pytest                    # Run all tests
+pytest tests/webui/ -v    # If changing WebUI code
+pytest tests/scanner/ -v  # If changing scanner code
+pytest tests/dataflows/ -v # If changing dataflows code
+```
+
+**If tests fail, DO NOT commit.** Fix the issues first.
 
 ### 2. Descriptive Release Messages
 **Every release MUST have a meaningful, descriptive message.**
@@ -454,6 +465,20 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 **Every feature, bug fix, or change requires tests. No exceptions.**
 
+### Pre-Commit Workflow
+```bash
+# 1. Write your code changes
+# 2. Write corresponding tests
+# 3. Run ALL tests before committing:
+pytest
+
+# 4. Only if ALL tests pass, then commit:
+git add <files>
+git commit -m "Your message"
+```
+
+**NEVER commit code without running tests first. NEVER commit if tests fail.**
+
 ### Test Structure
 ```
 tests/
@@ -594,7 +619,7 @@ app_state.next_loop_run_time    # datetime - next loop iteration (EST/EDT)
 
 ## Important Notes
 
-1. **TESTS ARE MANDATORY** - Every feature/fix must have tests. Run `pytest` before committing.
+1. **TESTS ARE MANDATORY** - Every code change must have tests. Run `pytest` BEFORE every commit. Never commit if tests fail.
 2. **DESCRIPTIVE RELEASE MESSAGES** - Never use vague release messages. List features, fixes, changes.
 3. **UPDATE DOCUMENTATION** - Keep docs/ in sync with code changes. Always update CHANGELOG.md on release.
 4. **Always read files before editing** - Use Read tool first
