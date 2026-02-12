@@ -155,6 +155,16 @@ class AppState:
             "enable_take_profit": False,
             "take_profit_percentage": 10.0,
             "take_profit_use_ai": True,
+            # Dashboard Panel Visibility
+            "show_panel_account_bar": True,
+            "show_panel_scanner": True,
+            "show_panel_watchlist": True,
+            "show_panel_chart": True,
+            "show_panel_trading": True,
+            "show_panel_positions": True,
+            "show_panel_options": True,
+            "show_panel_reports": True,
+            "show_panel_logs": True,
         }
 
     def add_symbols_to_queue(self, symbols):

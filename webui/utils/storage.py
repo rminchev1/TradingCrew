@@ -73,6 +73,16 @@ DEFAULT_SYSTEM_SETTINGS = {
     "enable_take_profit": False,
     "take_profit_percentage": 10.0,
     "take_profit_use_ai": True,
+    # Dashboard Panel Visibility
+    "show_panel_account_bar": True,
+    "show_panel_scanner": True,
+    "show_panel_watchlist": True,
+    "show_panel_chart": True,
+    "show_panel_trading": True,
+    "show_panel_positions": True,
+    "show_panel_options": True,
+    "show_panel_reports": True,
+    "show_panel_logs": True,
 }
 
 
@@ -121,6 +131,16 @@ def export_settings(settings: dict) -> str:
         "enable_take_profit",
         "take_profit_percentage",
         "take_profit_use_ai",
+        # Dashboard Panel Visibility (not sensitive)
+        "show_panel_account_bar",
+        "show_panel_scanner",
+        "show_panel_watchlist",
+        "show_panel_chart",
+        "show_panel_trading",
+        "show_panel_positions",
+        "show_panel_options",
+        "show_panel_reports",
+        "show_panel_logs",
     ]
     safe_settings = {k: v for k, v in settings.items() if k in safe_keys}
     return json.dumps(safe_settings, indent=2)
