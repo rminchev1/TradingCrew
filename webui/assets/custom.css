@@ -3119,6 +3119,21 @@ body.theme-bw .tradingview-chart:hover {
     width: 100% !important;
 }
 
+/* Hand cursor on chart canvas (instead of default arrow/crosshair) */
+#tv-chart-container .tv-lightweight-charts,
+#tv-rsi-container .tv-lightweight-charts,
+#tv-macd-container .tv-lightweight-charts,
+#tv-obv-container .tv-lightweight-charts {
+    cursor: grab !important;
+}
+
+#tv-chart-container .tv-lightweight-charts:active,
+#tv-rsi-container .tv-lightweight-charts:active,
+#tv-macd-container .tv-lightweight-charts:active,
+#tv-obv-container .tv-lightweight-charts:active {
+    cursor: grabbing !important;
+}
+
 /* Indicator pane styling */
 .tradingview-indicator-pane {
     position: relative;
