@@ -3204,6 +3204,156 @@ body.theme-bw #tv-obv-container {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   OHLC LEGEND + INDICATOR LABELS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* OHLC data legend bar */
+.chart-ohlc-legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    color: #CBD5E1;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 6px 6px 0 0;
+    min-height: 28px;
+    flex-wrap: wrap;
+}
+
+.ohlc-label {
+    color: #64748B;
+    font-weight: 600;
+    font-size: 0.72rem;
+}
+
+.ohlc-vol-label {
+    margin-left: 8px;
+}
+
+.ohlc-value {
+    font-weight: 500;
+    color: #E2E8F0;
+    margin-right: 4px;
+}
+
+.ohlc-up {
+    color: #26a69a !important;
+}
+
+.ohlc-down {
+    color: #ef5350 !important;
+}
+
+.ohlc-change {
+    font-weight: 600;
+    font-size: 0.76rem;
+    margin-left: 6px;
+    margin-right: 4px;
+}
+
+/* Light theme OHLC legend */
+body.theme-bw .chart-ohlc-legend {
+    background: rgba(241, 245, 249, 0.8);
+    color: #334155;
+}
+
+body.theme-bw .ohlc-label {
+    color: #94A3B8;
+}
+
+body.theme-bw .ohlc-value {
+    color: #1E293B;
+}
+
+/* Overlay indicator legend */
+.chart-indicator-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 10px 4px;
+    font-size: 0.72rem;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    min-height: 18px;
+    flex-wrap: wrap;
+    background: rgba(15, 23, 42, 0.4);
+}
+
+body.theme-bw .chart-indicator-legend {
+    background: rgba(241, 245, 249, 0.5);
+}
+
+.indicator-label {
+    white-space: nowrap;
+    font-weight: 400;
+}
+
+.indicator-label b {
+    font-weight: 600;
+}
+
+/* Pane legends (RSI, MACD, OBV) */
+.pane-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 10px;
+    font-size: 0.72rem;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    min-height: 18px;
+    flex-wrap: wrap;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    border-top: none;
+    margin-top: -1px;
+}
+
+body.theme-bw .pane-legend {
+    background: rgba(241, 245, 249, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIVE BUTTON
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.chart-live-btn {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.live-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: currentColor;
+    opacity: 0.6;
+}
+
+.chart-live-btn.chart-live-active {
+    background-color: #10B981 !important;
+    border-color: #10B981 !important;
+    color: white !important;
+}
+
+.chart-live-btn.chart-live-active .live-dot {
+    background-color: white;
+    opacity: 1;
+    animation: livePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    CHART FULLSCREEN MODE
    ═══════════════════════════════════════════════════════════════════════════ */
 

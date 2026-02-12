@@ -2,6 +2,7 @@
  * TradingView Lightweight Charts Manager
  * Handles chart initialization, updates, and theme switching
  * Supports multiple panes for RSI, MACD, and OBV indicators
+ * Features: OHLC legend, indicator value labels, crosshair sync, live bar updates
  */
 (function() {
     'use strict';
@@ -9,6 +10,9 @@
     // Chart instances storage
     const charts = {};
     const series = {};
+
+    // Store last data for crosshair lookups and live updates
+    const chartData = {};
 
     // Theme configurations
     const themes = {
@@ -91,6 +95,28 @@
         macdSignal: '#ff9800',
         obv: '#06b6d4',
     };
+
+    /**
+     * Format a number with appropriate precision for price display
+     */
+    function formatPrice(value) {
+        if (value == null || isNaN(value)) return '-';
+        if (Math.abs(value) >= 1000) return value.toFixed(2);
+        if (Math.abs(value) >= 1) return value.toFixed(2);
+        return value.toFixed(4);
+    }
+
+    /**
+     * Format volume with K/M/B suffixes
+     */
+    function formatVolume(value) {
+        if (value == null || isNaN(value)) return '-';
+        const abs = Math.abs(value);
+        if (abs >= 1e9) return (value / 1e9).toFixed(2) + 'B';
+        if (abs >= 1e6) return (value / 1e6).toFixed(2) + 'M';
+        if (abs >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+        return value.toFixed(0);
+    }
 
     /**
      * Get current theme based on body class
@@ -215,6 +241,211 @@
         });
     }
 
+    // =========================================================================
+    // OHLC Legend + Indicator Labels (crosshair-driven)
+    // =========================================================================
+
+    /**
+     * Update the OHLC legend bar with values from the crosshair position or latest bar
+     */
+    function updateOhlcLegend(param, data) {
+        const elOpen = document.getElementById('ohlc-open');
+        const elHigh = document.getElementById('ohlc-high');
+        const elLow = document.getElementById('ohlc-low');
+        const elClose = document.getElementById('ohlc-close');
+        const elChange = document.getElementById('ohlc-change');
+        const elVolume = document.getElementById('ohlc-volume');
+        if (!elOpen) return; // legend not in DOM
+
+        let bar = null;
+        let vol = null;
+
+        // Try to get data from crosshair position
+        if (param && param.seriesData) {
+            const mainSeries = series['tv-chart-container'];
+            if (mainSeries && mainSeries.candlestick) {
+                const candleData = param.seriesData.get(mainSeries.candlestick);
+                if (candleData) {
+                    bar = candleData;
+                }
+            }
+            if (mainSeries && mainSeries.volume) {
+                const volData = param.seriesData.get(mainSeries.volume);
+                if (volData) {
+                    vol = volData.value;
+                }
+            }
+        }
+
+        // Fall back to latest bar if crosshair is off chart
+        if (!bar && data && data.candlestick && data.candlestick.length > 0) {
+            bar = data.candlestick[data.candlestick.length - 1];
+            if (data.volume && data.volume.length > 0) {
+                vol = data.volume[data.volume.length - 1].value;
+            }
+        }
+
+        if (!bar) return;
+
+        const o = bar.open, h = bar.high, l = bar.low, c = bar.close;
+        const isUp = c >= o;
+        const colorClass = isUp ? 'ohlc-up' : 'ohlc-down';
+
+        elOpen.textContent = formatPrice(o);
+        elOpen.className = 'ohlc-value ' + colorClass;
+        elHigh.textContent = formatPrice(h);
+        elHigh.className = 'ohlc-value ' + colorClass;
+        elLow.textContent = formatPrice(l);
+        elLow.className = 'ohlc-value ' + colorClass;
+        elClose.textContent = formatPrice(c);
+        elClose.className = 'ohlc-value ' + colorClass;
+
+        // Calculate change from previous bar's close
+        let prevClose = null;
+        if (data && data.candlestick && bar.time) {
+            const candles = data.candlestick;
+            for (let i = 1; i < candles.length; i++) {
+                if (candles[i].time === bar.time) {
+                    prevClose = candles[i - 1].close;
+                    break;
+                }
+            }
+        }
+        if (prevClose != null && prevClose !== 0) {
+            const change = c - prevClose;
+            const changePct = (change / prevClose) * 100;
+            const sign = change >= 0 ? '+' : '';
+            elChange.textContent = sign + formatPrice(change) + ' (' + sign + changePct.toFixed(2) + '%)';
+            elChange.className = 'ohlc-change ' + (change >= 0 ? 'ohlc-up' : 'ohlc-down');
+        } else {
+            elChange.textContent = '';
+        }
+
+        elVolume.textContent = vol != null ? formatVolume(vol) : '-';
+    }
+
+    /**
+     * Update indicator overlay legend (SMA, EMA, BB values at crosshair position)
+     */
+    function updateIndicatorLegend(param, data) {
+        const el = document.getElementById('chart-indicator-legend');
+        if (!el) return;
+
+        const mainSeries = series['tv-chart-container'];
+        if (!mainSeries) { el.innerHTML = ''; return; }
+
+        const labels = [];
+
+        // Map of series key -> display config
+        const overlayIndicators = [
+            { key: 'sma20', name: 'SMA 20', color: lineColors.sma20 },
+            { key: 'sma50', name: 'SMA 50', color: lineColors.sma50 },
+            { key: 'ema12', name: 'EMA 12', color: lineColors.ema12 },
+            { key: 'ema26', name: 'EMA 26', color: lineColors.ema26 },
+            { key: 'bbUpper', name: 'BB Upper', color: lineColors.bbUpper },
+            { key: 'bbLower', name: 'BB Lower', color: lineColors.bbLower },
+        ];
+
+        overlayIndicators.forEach(ind => {
+            const s = mainSeries[ind.key];
+            if (!s) return;
+
+            let value = null;
+            if (param && param.seriesData) {
+                const d = param.seriesData.get(s);
+                if (d) value = d.value;
+            }
+            // Fallback to last data point
+            if (value == null && data && data[ind.key] && data[ind.key].length > 0) {
+                value = data[ind.key][data[ind.key].length - 1].value;
+            }
+            if (value != null) {
+                labels.push(
+                    '<span class="indicator-label" style="color:' + ind.color + '">' +
+                    ind.name + ' <b>' + formatPrice(value) + '</b></span>'
+                );
+            }
+        });
+
+        el.innerHTML = labels.join('');
+    }
+
+    /**
+     * Update a specific indicator pane legend (RSI, MACD, OBV)
+     */
+    function updatePaneLegend(paneId, legendId, indicators, param) {
+        const el = document.getElementById(legendId);
+        if (!el) return;
+
+        const paneSeries = series[paneId];
+        if (!paneSeries) { el.innerHTML = ''; return; }
+
+        const labels = [];
+        indicators.forEach(ind => {
+            const s = paneSeries[ind.key];
+            if (!s) return;
+
+            let value = null;
+            if (param && param.seriesData) {
+                const d = param.seriesData.get(s);
+                if (d) value = d.value != null ? d.value : null;
+            }
+
+            if (value != null) {
+                let formatted;
+                if (ind.formatVolume) {
+                    formatted = formatVolume(value);
+                } else if (ind.precision != null) {
+                    formatted = value.toFixed(ind.precision);
+                } else {
+                    formatted = formatPrice(value);
+                }
+                labels.push(
+                    '<span class="indicator-label" style="color:' + ind.color + '">' +
+                    ind.name + ' <b>' + formatted + '</b></span>'
+                );
+            }
+        });
+
+        el.innerHTML = labels.join('');
+    }
+
+    /**
+     * Subscribe crosshair move on the main chart to update legends
+     */
+    function setupCrosshairLegend(containerId, data) {
+        const chart = charts[containerId];
+        if (!chart) return;
+
+        chart.subscribeCrosshairMove(function(param) {
+            updateOhlcLegend(param, data);
+            updateIndicatorLegend(param, data);
+        });
+
+        // Initialize with latest bar values
+        updateOhlcLegend(null, data);
+        updateIndicatorLegend(null, data);
+    }
+
+    /**
+     * Subscribe crosshair on indicator pane charts for their legends
+     */
+    function setupPaneCrosshairLegend(paneId, legendId, indicators) {
+        const chart = charts[paneId];
+        if (!chart) return;
+
+        chart.subscribeCrosshairMove(function(param) {
+            updatePaneLegend(paneId, legendId, indicators, param);
+        });
+
+        // Initialize with no crosshair (will show nothing until hover)
+        updatePaneLegend(paneId, legendId, indicators, null);
+    }
+
+    // =========================================================================
+    // Main chart update
+    // =========================================================================
+
     /**
      * Update main chart with new data
      */
@@ -229,6 +460,9 @@
             chart = init(containerId);
             if (!chart) return;
         }
+
+        // Store data reference for crosshair lookups and live updates
+        chartData[containerId] = data;
 
         const chartSeries = series[containerId];
 
@@ -343,6 +577,9 @@
         // Fit content to view
         chart.timeScale().fitContent();
 
+        // Setup OHLC legend + indicator labels via crosshair
+        setupCrosshairLegend(containerId, data);
+
         // Handle indicator panes
         const indicatorPanes = [];
 
@@ -352,6 +589,7 @@
             indicatorPanes.push('tv-rsi-container');
         } else {
             hideIndicatorPane('tv-rsi-container');
+            hidePaneLegend('rsi-pane-legend');
         }
 
         // MACD Pane
@@ -360,6 +598,7 @@
             indicatorPanes.push('tv-macd-container');
         } else {
             hideIndicatorPane('tv-macd-container');
+            hidePaneLegend('macd-pane-legend');
         }
 
         // OBV Pane
@@ -368,12 +607,21 @@
             indicatorPanes.push('tv-obv-container');
         } else {
             hideIndicatorPane('tv-obv-container');
+            hidePaneLegend('obv-pane-legend');
         }
 
         // Sync time scales
         if (indicatorPanes.length > 0) {
             syncTimeScales(containerId, indicatorPanes);
         }
+    }
+
+    /**
+     * Hide a pane legend
+     */
+    function hidePaneLegend(legendId) {
+        const el = document.getElementById(legendId);
+        if (el) el.innerHTML = '';
     }
 
     /**
@@ -416,10 +664,6 @@
         series[containerId].rsi = rsiSeries;
 
         // Add overbought/oversold lines
-        const lastTime = rsiData[rsiData.length - 1].time;
-        const firstTime = rsiData[0].time;
-
-        // Create horizontal lines using line series with constant values
         const overboughtData = rsiData.map(d => ({ time: d.time, value: 70 }));
         const oversoldData = rsiData.map(d => ({ time: d.time, value: 30 }));
         const midlineData = rsiData.map(d => ({ time: d.time, value: 50 }));
@@ -464,6 +708,11 @@
         });
 
         chart.timeScale().fitContent();
+
+        // Setup RSI pane legend
+        setupPaneCrosshairLegend(containerId, 'rsi-pane-legend', [
+            { key: 'rsi', name: 'RSI (14)', color: lineColors.rsi, precision: 1 },
+        ]);
     }
 
     /**
@@ -550,6 +799,13 @@
         }
 
         chart.timeScale().fitContent();
+
+        // Setup MACD pane legend
+        setupPaneCrosshairLegend(containerId, 'macd-pane-legend', [
+            { key: 'macd', name: 'MACD', color: lineColors.macd, precision: 4 },
+            { key: 'macdSignal', name: 'Signal', color: lineColors.macdSignal, precision: 4 },
+            { key: 'macdHist', name: 'Hist', color: '#26a69a', precision: 4 },
+        ]);
     }
 
     /**
@@ -603,6 +859,11 @@
         zeroSeries.setData(zeroLineData);
 
         chart.timeScale().fitContent();
+
+        // Setup OBV pane legend
+        setupPaneCrosshairLegend(containerId, 'obv-pane-legend', [
+            { key: 'obv', name: 'OBV', color: lineColors.obv, formatVolume: true },
+        ]);
     }
 
     /**
@@ -618,6 +879,47 @@
             destroy(containerId);
         }
     }
+
+    // =========================================================================
+    // Live bar update (Phase 3)
+    // =========================================================================
+
+    /**
+     * Update the last bar on the chart with a new price (for live updates).
+     * Uses lightweight-charts' native .update() for efficient in-place updates.
+     */
+    function updateLastBar(containerId, price, timestamp) {
+        const mainSeries = series[containerId];
+        if (!mainSeries || !mainSeries.candlestick) return;
+
+        const data = chartData[containerId];
+        if (!data || !data.candlestick || data.candlestick.length === 0) return;
+
+        const lastBar = data.candlestick[data.candlestick.length - 1];
+
+        // Update the last bar's close and adjust high/low
+        const updatedBar = {
+            time: lastBar.time,
+            open: lastBar.open,
+            high: Math.max(lastBar.high, price),
+            low: Math.min(lastBar.low, price),
+            close: price,
+        };
+
+        // Update in our stored data
+        data.candlestick[data.candlestick.length - 1] = updatedBar;
+
+        // Update the series (lightweight-charts handles in-place update for same time)
+        mainSeries.candlestick.update(updatedBar);
+
+        // Update the OHLC legend with new values
+        updateOhlcLegend(null, data);
+        updateIndicatorLegend(null, data);
+    }
+
+    // =========================================================================
+    // Theme, fullscreen, destroy
+    // =========================================================================
 
     /**
      * Apply theme to chart
@@ -657,6 +959,7 @@
             chart.remove();
             delete charts[containerId];
             delete series[containerId];
+            delete chartData[containerId];
         }
     }
 
@@ -829,6 +1132,7 @@
     window.TradingViewChartManager = {
         init: init,
         update: update,
+        updateLastBar: updateLastBar,
         applyTheme: applyTheme,
         applyThemeToAll: applyThemeToAll,
         destroy: destroy,
@@ -838,6 +1142,8 @@
         toggleFullscreen: toggleFullscreen,
         enterFullscreen: enterFullscreen,
         exitFullscreen: exitFullscreen,
+        formatVolume: formatVolume,
+        formatPrice: formatPrice,
     };
 
 })();
