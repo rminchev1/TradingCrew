@@ -16,7 +16,8 @@ COLLAPSIBLE_PANELS = [
     "status-panel",
     "decision-panel",
     "reports-panel",
-    "positions-orders-panel",  # New panel for pro trader layout
+    "positions-orders-panel",  # Stock positions & orders panel
+    "options-panel",  # Options positions & orders panel
     "log-panel",
 ]
 

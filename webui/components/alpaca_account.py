@@ -597,6 +597,291 @@ def render_compact_account_bar():
         ], className="compact-account-bar", id="compact-account-bar")
 
 
+def render_options_positions_table():
+    """Render the options positions table with close buttons"""
+    # Check if Alpaca is configured
+    if not _is_alpaca_configured():
+        return _render_not_configured_message("Options Positions")
+
+    try:
+        positions_data = AlpacaUtils.get_options_positions_data()
+
+        if not positions_data:
+            return html.Div([
+                html.Div([
+                    html.I(className="fas fa-file-contract fa-2x mb-3 text-muted"),
+                    html.H6("No Options Positions", className="text-muted"),
+                    html.P("No open options contracts", className="text-muted small mb-0")
+                ], className="text-center p-4")
+            ], className="enhanced-table-container")
+
+        # Create enhanced table rows
+        table_rows = []
+        for position in positions_data:
+            # Helper to decide colour based on the numeric value
+            def _get_pl_color(pl_str: str) -> str:
+                try:
+                    value = float(pl_str.replace("$", "").replace(",", ""))
+                except ValueError:
+                    return "text-muted"
+                if value > 0:
+                    return "text-success"
+                elif value < 0:
+                    return "text-danger"
+                else:
+                    return "text-muted"
+
+            total_pl_color = _get_pl_color(position["Total P/L ($)"])
+            contract_type_color = "text-success" if position["Type"] == "CALL" else "text-danger"
+
+            row = html.Tr([
+                html.Td([
+                    html.Div([
+                        html.Strong(position["Underlying"], className="symbol-text"),
+                        html.Br(),
+                        html.Small([
+                            html.Span(position["Type"], className=f"fw-bold {contract_type_color}"),
+                            f" ${position['Strike'].replace('$', '')}"
+                        ], className="text-muted")
+                    ])
+                ], className="symbol-cell"),
+                html.Td([
+                    html.Div([
+                        html.Small(position["Expiration"], className="text-muted")
+                    ])
+                ], className="exp-cell"),
+                html.Td([
+                    html.Div([
+                        html.Div(f"{position['Qty']} contracts", className="fw-bold"),
+                    ])
+                ], className="qty-cell"),
+                html.Td([
+                    html.Div([
+                        html.Div(position["Market Value"], className="fw-bold"),
+                        html.Small(f"@ {position['Current Price']}", className="text-muted")
+                    ])
+                ], className="value-cell"),
+                html.Td([
+                    html.Div([
+                        html.Div(position["Total P/L ($)"], className=f"fw-bold {total_pl_color}"),
+                        html.Small(position["Total P/L (%)"], className=f"{total_pl_color}")
+                    ])
+                ], className="pnl-cell"),
+                html.Td([
+                    dbc.Button([
+                        html.I(className="fas fa-times-circle me-1"),
+                        "Close"
+                    ],
+                    id={"type": "close-option-btn", "index": position["Symbol"]},
+                    color="danger",
+                    size="sm",
+                    outline=True,
+                    className="liquidate-btn"
+                    )
+                ], className="action-cell")
+            ], className="table-row-hover", id=f"option-position-row-{position['Symbol']}")
+
+            table_rows.append(row)
+
+        # Create enhanced table
+        table = html.Div([
+            html.Table([
+                html.Thead([
+                    html.Tr([
+                        html.Th("Contract", className="table-header"),
+                        html.Th("Expiration", className="table-header"),
+                        html.Th("Qty", className="table-header"),
+                        html.Th("Value", className="table-header"),
+                        html.Th("P/L", className="table-header"),
+                        html.Th("Actions", className="table-header text-center")
+                    ])
+                ]),
+                html.Tbody(table_rows)
+            ], className="enhanced-table")
+        ], className="enhanced-table-container")
+
+        return table
+
+    except Exception as e:
+        print(f"Error rendering options positions table: {e}")
+        return html.Div([
+            html.Div([
+                html.I(className="fas fa-exclamation-triangle fa-2x mb-3 text-warning"),
+                html.H6("Unable to Load Options", className="text-warning"),
+                html.Small(f"Error: {str(e)}", className="text-muted")
+            ], className="text-center p-3")
+        ], className="enhanced-table-container error-state")
+
+
+def render_options_orders_table(page=1, page_size=5):
+    """Render the options orders table"""
+    # Check if Alpaca is configured
+    if not _is_alpaca_configured():
+        return _render_not_configured_message("Options Orders")
+
+    try:
+        orders_data, total_count = AlpacaUtils.get_options_orders(page=page, page_size=page_size, return_total=True)
+        total_pages = max(1, (total_count + page_size - 1) // page_size)
+
+        if not orders_data:
+            return html.Div([
+                html.Div([
+                    html.I(className="fas fa-file-contract fa-2x mb-3 text-muted"),
+                    html.H6("No Options Orders", className="text-muted"),
+                    html.P("No options trading activity", className="text-muted small mb-0")
+                ], className="text-center p-4"),
+                html.Div([
+                    dbc.Pagination(
+                        id="options-orders-pagination",
+                        max_value=1,
+                        active_page=1,
+                        size="sm",
+                        className="mt-2",
+                        style={"display": "none"}
+                    )
+                ], className="d-flex justify-content-end")
+            ], className="enhanced-table-container")
+
+        # Create enhanced table rows
+        table_rows = []
+        for idx, order in enumerate(orders_data):
+            # Status color coding
+            status_color = {
+                "filled": "text-success",
+                "canceled": "text-danger",
+                "pending_new": "text-warning",
+                "accepted": "text-info",
+                "rejected": "text-danger"
+            }.get(str(order.get("Status", "")).lower(), "text-muted")
+
+            # Side color coding
+            side_str = str(order.get("Side", "")).lower()
+            side_color = "text-success" if "buy" in side_str else "text-danger"
+
+            contract_type_color = "text-success" if order.get("Type") == "CALL" else "text-danger"
+
+            row = html.Tr([
+                html.Td([
+                    html.Small(order.get("Date", "-"), className="text-muted")
+                ], className="date-cell"),
+                html.Td([
+                    html.Div([
+                        html.Strong(order["Underlying"], className="symbol-text"),
+                        html.Br(),
+                        html.Small([
+                            html.Span(order["Type"], className=f"fw-bold {contract_type_color}"),
+                            f" {order['Strike']}"
+                        ], className="text-muted")
+                    ])
+                ], className="symbol-cell"),
+                html.Td([
+                    html.Small(order.get("Expiration", "-"), className="text-muted")
+                ], className="exp-cell"),
+                html.Td([
+                    html.Div([
+                        html.Span(order["Side"], className=f"fw-bold {side_color}"),
+                        html.Br(),
+                        html.Small(f"{order['Qty']} contracts", className="text-muted")
+                    ])
+                ], className="side-cell"),
+                html.Td([
+                    html.Div(order["Avg. Fill Price"], className="fw-bold")
+                ], className="price-cell"),
+                html.Td([
+                    html.Span([
+                        html.I(className=f"fas fa-circle me-1 {status_color}"),
+                        str(order["Status"])
+                    ], className=f"status-badge {status_color}")
+                ], className="status-cell")
+            ], className="table-row-hover", id=f"option-order-row-{order.get('Underlying', '')}-{page}-{idx}")
+
+            table_rows.append(row)
+
+        # Create enhanced table with pagination
+        table = html.Div([
+            html.Table([
+                html.Thead([
+                    html.Tr([
+                        html.Th("Date", className="table-header"),
+                        html.Th("Contract", className="table-header"),
+                        html.Th("Exp", className="table-header"),
+                        html.Th("Side & Qty", className="table-header"),
+                        html.Th("Fill Price", className="table-header"),
+                        html.Th("Status", className="table-header")
+                    ])
+                ]),
+                html.Tbody(table_rows)
+            ], className="enhanced-table"),
+            html.Div([
+                html.Small(f"Page {page} of {total_pages} ({total_count} orders)", className="text-muted me-3 align-self-center"),
+                dbc.Pagination(
+                    id="options-orders-pagination",
+                    max_value=total_pages,
+                    active_page=page,
+                    size="sm",
+                    first_last=True,
+                    previous_next=True
+                )
+            ], className="d-flex justify-content-end align-items-center mt-2")
+        ], className="enhanced-table-container")
+
+        return table
+
+    except Exception as e:
+        print(f"Error rendering options orders table: {e}")
+        return html.Div([
+            html.Div([
+                html.I(className="fas fa-exclamation-triangle fa-2x mb-3 text-warning"),
+                html.H6("Unable to Load Options Orders", className="text-warning"),
+                html.Small(f"Error: {str(e)}", className="text-muted")
+            ], className="text-center p-3"),
+            html.Div([
+                dbc.Pagination(
+                    id="options-orders-pagination",
+                    max_value=1,
+                    active_page=1,
+                    size="sm",
+                    className="mt-2",
+                    style={"display": "none"}
+                )
+            ], className="d-flex justify-content-end")
+        ], className="enhanced-table-container error-state")
+
+
+def render_options_section():
+    """Render the options positions and orders section."""
+    return html.Div([
+        dbc.Row([
+            # Options Positions column
+            dbc.Col([
+                html.Div([
+                    html.H6([
+                        html.I(className="fas fa-file-contract me-2"),
+                        "Options Positions"
+                    ], className="mb-2 d-flex align-items-center"),
+                    html.Div(id="options-positions-table-container", children=render_options_positions_table())
+                ])
+            ], lg=6, className="mb-3 mb-lg-0"),
+            # Options Orders column
+            dbc.Col([
+                html.Div([
+                    html.H6([
+                        html.I(className="fas fa-scroll me-2"),
+                        "Options Orders"
+                    ], className="mb-2 d-flex align-items-center"),
+                    html.Div(id="options-orders-table-container", children=render_options_orders_table())
+                ])
+            ], lg=6)
+        ]),
+        # Hidden div for options close confirmations
+        dcc.ConfirmDialog(
+            id='close-option-confirm',
+            message='',
+        ),
+        html.Div(id="close-option-status", className="mt-2")
+    ])
+
+
 def render_positions_orders_section():
     """Render positions and orders side by side in a compact layout."""
     return html.Div([

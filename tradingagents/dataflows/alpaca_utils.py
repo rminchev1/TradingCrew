@@ -91,6 +91,29 @@ def get_alpaca_trading_client() -> TradingClient:
     return TradingClient(api_key, api_secret, paper=True)
 
 
+def is_options_symbol(symbol: str) -> bool:
+    """
+    Check if a symbol is an options contract (OCC format).
+
+    OCC format: SYMBOL (1-6 chars) + YYMMDD (6) + C/P (1) + Strike*1000 (8)
+    Example: AAPL240315C00200000
+    Total length: 15-21 characters
+
+    Args:
+        symbol: The symbol to check
+
+    Returns:
+        True if the symbol matches OCC options format
+    """
+    import re
+    if not symbol or len(symbol) < 15:
+        return False
+
+    # OCC pattern: 1-6 letter underlying + 6 digit date + C or P + 8 digit strike
+    occ_pattern = r'^[A-Z]{1,6}\d{6}[CP]\d{8}$'
+    return bool(re.match(occ_pattern, symbol.upper()))
+
+
 def _parse_timeframe(tf: Union[str, TimeFrame]) -> TimeFrame:
     """Convert a string like '5Min' or a TimeFrame instance into a TimeFrame."""
     if isinstance(tf, TimeFrame):
@@ -318,14 +341,17 @@ class AlpacaUtils:
 
     @staticmethod
     def get_positions_data():
-        """Get current positions from Alpaca account"""
+        """Get current stock positions from Alpaca account (excludes options)"""
         try:
             client = get_alpaca_trading_client()
             positions = client.get_all_positions()
-            
-            # Convert positions to a list of dictionaries
+
+            # Convert positions to a list of dictionaries (filter out options)
             positions_data = []
             for position in positions:
+                # Skip options contracts
+                if is_options_symbol(position.symbol):
+                    continue
                 current_price = float(position.current_price)
                 avg_entry_price = float(position.avg_entry_price)
                 qty = float(position.qty)
@@ -374,7 +400,8 @@ class AlpacaUtils:
             max_fetch = 100
             req = GetOrdersRequest(status="all", limit=max_fetch, nested=False)
             orders_page = client.get_orders(req)
-            orders = list(orders_page)
+            # Filter out options orders
+            orders = [o for o in orders_page if o.symbol and not is_options_symbol(o.symbol)]
             total_count = len(orders)
 
             # Convert orders to a list of dictionaries
@@ -419,6 +446,155 @@ class AlpacaUtils:
             log_external_error(
                 system="alpaca",
                 operation="get_recent_orders",
+                error=e,
+                params={"page": page, "page_size": page_size}
+            )
+            if return_total:
+                return [], 0
+            return []
+
+    @staticmethod
+    def get_options_positions_data():
+        """Get current options positions from Alpaca account"""
+        try:
+            client = get_alpaca_trading_client()
+            positions = client.get_all_positions()
+
+            # Convert options positions to a list of dictionaries
+            positions_data = []
+            for position in positions:
+                # Only include options contracts
+                if not is_options_symbol(position.symbol):
+                    continue
+
+                current_price = float(position.current_price)
+                avg_entry_price = float(position.avg_entry_price)
+                qty = float(position.qty)
+                market_value = float(position.market_value)
+                cost_basis = avg_entry_price * abs(qty)
+
+                # Calculate P/L values
+                today_pl_dollars = float(position.unrealized_intraday_pl)
+                total_pl_dollars = float(position.unrealized_pl)
+                today_pl_percent = (today_pl_dollars / cost_basis) * 100 if cost_basis != 0 else 0
+                total_pl_percent = (total_pl_dollars / cost_basis) * 100 if cost_basis != 0 else 0
+
+                # Parse OCC symbol for display
+                from .options_trading_utils import parse_occ_symbol
+                try:
+                    parsed = parse_occ_symbol(position.symbol)
+                    underlying = parsed.get("underlying", position.symbol[:4])
+                    contract_type = parsed.get("contract_type", "unknown").upper()
+                    strike = parsed.get("strike", 0)
+                    expiration = parsed.get("expiration", "")
+                except:
+                    underlying = position.symbol[:4]
+                    contract_type = "OPT"
+                    strike = 0
+                    expiration = ""
+
+                positions_data.append({
+                    "Symbol": position.symbol,
+                    "Underlying": underlying,
+                    "Type": contract_type,
+                    "Strike": f"${strike:.2f}" if strike else "-",
+                    "Expiration": expiration,
+                    "Qty": int(qty),
+                    "Market Value": f"${market_value:.2f}",
+                    "Avg Entry": f"${avg_entry_price:.2f}",
+                    "Current Price": f"${current_price:.2f}",
+                    "Today's P/L (%)": f"{today_pl_percent:.2f}%",
+                    "Today's P/L ($)": f"${today_pl_dollars:.2f}",
+                    "Total P/L (%)": f"{total_pl_percent:.2f}%",
+                    "Total P/L ($)": f"${total_pl_dollars:.2f}"
+                })
+
+            return positions_data
+        except Exception as e:
+            log_external_error(
+                system="alpaca",
+                operation="get_options_positions_data",
+                error=e
+            )
+            return []
+
+    @staticmethod
+    def get_options_orders(page=1, page_size=7, return_total=False):
+        """Get recent options orders from Alpaca account, with simple pagination.
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of orders per page
+            return_total: If True, returns (orders, total_count) tuple
+        """
+        try:
+            client = get_alpaca_trading_client()
+            max_fetch = 100
+            req = GetOrdersRequest(status="all", limit=max_fetch, nested=False)
+            orders_page = client.get_orders(req)
+            # Filter to only options orders
+            orders = [o for o in orders_page if o.symbol and is_options_symbol(o.symbol)]
+            total_count = len(orders)
+
+            # Convert orders to a list of dictionaries
+            orders_data = []
+            for order in orders:
+                qty = float(order.qty) if order.qty is not None else 0.0
+                filled_qty = float(order.filled_qty) if order.filled_qty is not None else 0.0
+                filled_avg_price = float(order.filled_avg_price) if order.filled_avg_price is not None else 0.0
+
+                # Format order date/time
+                order_date = ""
+                if order.created_at:
+                    order_date = order.created_at.strftime("%m/%d %H:%M")
+
+                # Get order ID (short version for display)
+                order_id = str(order.id) if order.id else "-"
+                order_id_short = order_id[:8] if len(order_id) > 8 else order_id
+
+                # Parse OCC symbol for display
+                from .options_trading_utils import parse_occ_symbol
+                try:
+                    parsed = parse_occ_symbol(order.symbol)
+                    underlying = parsed.get("underlying", order.symbol[:4])
+                    contract_type = parsed.get("contract_type", "unknown").upper()
+                    strike = parsed.get("strike", 0)
+                    expiration = parsed.get("expiration", "")
+                except:
+                    underlying = order.symbol[:4]
+                    contract_type = "OPT"
+                    strike = 0
+                    expiration = ""
+
+                orders_data.append({
+                    "Symbol": order.symbol,
+                    "Underlying": underlying,
+                    "Type": contract_type,
+                    "Strike": f"${strike:.2f}" if strike else "-",
+                    "Expiration": expiration,
+                    "Order Type": order.type,
+                    "Side": order.side,
+                    "Qty": int(qty),
+                    "Filled Qty": int(filled_qty),
+                    "Avg. Fill Price": f"${filled_avg_price:.2f}" if filled_avg_price > 0 else "-",
+                    "Status": order.status,
+                    "Date": order_date,
+                    "Order ID": order_id,
+                    "Order ID Short": order_id_short
+                })
+
+            # Slice out the exact page we want (newest first)
+            start = (page - 1) * page_size
+            page_data = orders_data[start : start + page_size]
+
+            if return_total:
+                return page_data, total_count
+            return page_data
+
+        except Exception as e:
+            log_external_error(
+                system="alpaca",
+                operation="get_options_orders",
                 error=e,
                 params={"page": page, "page_size": page_size}
             )
