@@ -1,31 +1,51 @@
-env/
+# Python
 __pycache__/
-.DS_Store
-*.csv
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.whl
+*.tar.gz
+*.egg
+
+# Data & cache
+data/
 src/
 eval_results/
 eval_data/
-*.egg-info/
-.env
-data/
 analysis_history/
+*.csv
+tradingagents/dataflows/data_cache/
 
 # Database files
 *.db
 *.sqlite
 *.sqlite3
 
-# Build artifacts
-build/
-dist/
-*.whl
-*.tar.gz
-
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
 
 # Testing
 .pytest_cache/
@@ -33,3 +53,10 @@ dist/
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+.benchmarks/
+
+# Claude Code
+.claude/settings.local.json
+
+# Logs
+*.log
