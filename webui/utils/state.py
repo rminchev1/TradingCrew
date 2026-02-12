@@ -148,6 +148,13 @@ class AppState:
             "options_min_delta": 0.20,
             "options_max_delta": 0.70,
             "options_min_open_interest": 100,
+            # Stop-Loss and Take-Profit Settings
+            "enable_stop_loss": False,
+            "stop_loss_percentage": 5.0,
+            "stop_loss_use_ai": True,
+            "enable_take_profit": False,
+            "take_profit_percentage": 10.0,
+            "take_profit_use_ai": True,
         }
 
     def add_symbols_to_queue(self, symbols):

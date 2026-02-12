@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Stop-Loss and Take-Profit Orders**: Automatic protective orders for stock positions
+  - Configure in Settings > System Settings > Risk Management (SL/TP)
+  - Enable/disable stop-loss and take-profit independently
+  - Set default percentage-based levels (SL: 5%, TP: 10%)
+  - AI extraction: Parse trader agent's analysis for recommended SL/TP prices
+  - Bracket orders for stocks (atomic entry + SL + TP)
+  - Separate orders for crypto (no bracket support)
+  - Validation ensures SL/TP levels make sense (e.g., SL below entry for BUY)
+- **New Alpaca Order Functions**:
+  - `place_bracket_order()` - Atomic bracket order placement
+  - `place_stop_order()` - Standalone stop order
+  - `place_limit_order()` - Standalone limit order
+  - `extract_sl_tp_from_analysis()` - AI extraction from markdown tables
+
+### Changed
+- `execute_trading_action()` now accepts optional `sl_tp_config` and `analysis_text` parameters
+- Trading execution flow integrates SL/TP placement automatically when enabled
+
 ---
 
 ## [0.2.9] - 2025-02-11

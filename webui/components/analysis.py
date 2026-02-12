@@ -15,24 +15,24 @@ def execute_trade_after_analysis(ticker, allow_shorts, trade_amount):
     """Execute trade based on analysis results"""
     try:
         print(f"[TRADE] Starting trade execution for {ticker}")
-        
+
         # Get the current state for this symbol
         state = app_state.get_state(ticker)
         if not state:
             print(f"[TRADE] No state found for {ticker}, skipping trade execution")
             return
-            
+
         if not state.get("analysis_complete"):
             print(f"[TRADE] Analysis not complete for {ticker}, skipping trade execution")
             print(f"[TRADE] Analysis status: {state.get('analysis_complete', 'Unknown')}")
             return
-        
+
         print(f"[TRADE] Analysis complete for {ticker}, checking for recommended action")
-        
+
         # Get the recommended action
         recommended_action = state.get("recommended_action")
         print(f"[TRADE] Direct recommended_action: {recommended_action}")
-        
+
         if not recommended_action:
             # Try to extract from final trade decision
             final_decision = state["current_reports"].get("final_trade_decision")
@@ -42,25 +42,48 @@ def execute_trade_after_analysis(ticker, allow_shorts, trade_amount):
                 print(f"[TRADE] Extracting recommendation using mode: {trading_mode}")
                 recommended_action = extract_recommendation(final_decision, trading_mode)
                 print(f"[TRADE] Extracted recommendation: {recommended_action}")
-        
+
         if not recommended_action:
             print(f"[TRADE] No recommended action found for {ticker}, skipping trade execution")
             print(f"[TRADE] Available reports: {list(state['current_reports'].keys())}")
             return
-        
+
         print(f"[TRADE] Executing trade for {ticker}: {recommended_action} with ${trade_amount}")
-        
+
         # Get current position
         current_position = AlpacaUtils.get_current_position_state(ticker)
         print(f"[TRADE] Current position for {ticker}: {current_position}")
-        
-        # Execute the trading action
+
+        # Build SL/TP configuration from system settings
+        system_settings = app_state.system_settings
+        sl_tp_config = {
+            "enable_stop_loss": system_settings.get("enable_stop_loss", False),
+            "stop_loss_percentage": system_settings.get("stop_loss_percentage", 5.0),
+            "stop_loss_use_ai": system_settings.get("stop_loss_use_ai", True),
+            "enable_take_profit": system_settings.get("enable_take_profit", False),
+            "take_profit_percentage": system_settings.get("take_profit_percentage", 10.0),
+            "take_profit_use_ai": system_settings.get("take_profit_use_ai", True),
+        }
+
+        # Log SL/TP config
+        sl_enabled = sl_tp_config["enable_stop_loss"]
+        tp_enabled = sl_tp_config["enable_take_profit"]
+        if sl_enabled or tp_enabled:
+            print(f"[TRADE] SL/TP enabled - SL: {sl_enabled} ({sl_tp_config['stop_loss_percentage']}%), TP: {tp_enabled} ({sl_tp_config['take_profit_percentage']}%)")
+            print(f"[TRADE] AI levels - SL: {sl_tp_config['stop_loss_use_ai']}, TP: {sl_tp_config['take_profit_use_ai']}")
+
+        # Get trader analysis text for AI SL/TP extraction
+        trader_analysis = state["current_reports"].get("trader_investment_plan", "")
+
+        # Execute the trading action with SL/TP support
         result = AlpacaUtils.execute_trading_action(
             symbol=ticker,
             current_position=current_position,
             signal=recommended_action,
             dollar_amount=trade_amount,
-            allow_shorts=allow_shorts
+            allow_shorts=allow_shorts,
+            sl_tp_config=sl_tp_config,
+            analysis_text=trader_analysis
         )
         
         # Check individual action results and provide detailed feedback

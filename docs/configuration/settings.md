@@ -185,6 +185,66 @@ Configure in analysis options:
 | Off | BUY, HOLD, SELL |
 | On | BUY, HOLD, SELL, SHORT |
 
+## Risk Management Settings
+
+Configure automatic stop-loss and take-profit orders in **System Settings > Risk Management**.
+
+### Stop-Loss Settings
+
+| Setting | Description | Default | Range |
+|---------|-------------|---------|-------|
+| Enable Stop-Loss | Place automatic SL orders | Off | On/Off |
+| Default SL % | Percentage below entry (BUY) or above entry (SHORT) | 5.0 | 0.5-50 |
+| Use AI SL Levels | Extract SL from trader analysis table | On | On/Off |
+
+### Take-Profit Settings
+
+| Setting | Description | Default | Range |
+|---------|-------------|---------|-------|
+| Enable Take-Profit | Place automatic TP orders | Off | On/Off |
+| Default TP % | Percentage above entry (BUY) or below entry (SHORT) | 10.0 | 0.5-100 |
+| Use AI TP Levels | Extract TP from trader analysis table | On | On/Off |
+
+### How AI Extraction Works
+
+When "Use AI Levels" is enabled, the system parses the trader agent's output for prices:
+
+```markdown
+| Stop Loss | $142.50 |
+| Target 1 | $165.00 |
+```
+
+The system uses regex patterns to find:
+- Stop-loss: `Stop Loss` row in markdown table
+- Take-profit: `Target 1` or `Target` row in markdown table
+
+If extraction fails or prices are invalid, percentage defaults are used.
+
+### Price Validation
+
+Extracted prices are validated against entry price:
+
+**For BUY/LONG positions:**
+- Stop-loss must be BELOW entry price
+- Take-profit must be ABOVE entry price
+
+**For SHORT positions:**
+- Stop-loss must be ABOVE entry price
+- Take-profit must be BELOW entry price
+
+Invalid prices are ignored and the percentage-based default is calculated instead.
+
+### Bracket Orders vs Separate Orders
+
+| Asset Type | Order Method | Time-in-Force |
+|------------|--------------|---------------|
+| Stocks | Bracket order (atomic) | DAY |
+| Crypto | Separate orders | GTC |
+
+Bracket orders ensure SL/TP orders are placed atomically with the entry. If the entry doesn't fill, no SL/TP orders are created.
+
+For crypto, separate stop and limit orders are placed after the entry order fills.
+
 ## Persistence
 
 ### Browser Storage

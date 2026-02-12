@@ -66,6 +66,13 @@ DEFAULT_SYSTEM_SETTINGS = {
     "options_min_delta": 0.20,
     "options_max_delta": 0.70,
     "options_min_open_interest": 100,
+    # Stop-Loss and Take-Profit Settings
+    "enable_stop_loss": False,
+    "stop_loss_percentage": 5.0,
+    "stop_loss_use_ai": True,
+    "enable_take_profit": False,
+    "take_profit_percentage": 10.0,
+    "take_profit_use_ai": True,
 }
 
 
@@ -107,6 +114,13 @@ def export_settings(settings: dict) -> str:
         "options_min_delta",
         "options_max_delta",
         "options_min_open_interest",
+        # Stop-Loss and Take-Profit settings (not sensitive)
+        "enable_stop_loss",
+        "stop_loss_percentage",
+        "stop_loss_use_ai",
+        "enable_take_profit",
+        "take_profit_percentage",
+        "take_profit_use_ai",
     ]
     safe_settings = {k: v for k, v in settings.items() if k in safe_keys}
     return json.dumps(safe_settings, indent=2)

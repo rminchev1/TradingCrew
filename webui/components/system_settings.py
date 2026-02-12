@@ -415,6 +415,152 @@ def create_scanner_section():
     ])
 
 
+def create_risk_management_section():
+    """Create the Risk Management (Stop-Loss/Take-Profit) section."""
+    return html.Div([
+        # Section description
+        html.Div([
+            html.Small(
+                "Configure automatic stop-loss and take-profit orders for stock positions. "
+                "Uses Alpaca's bracket order system for atomic execution.",
+                className="text-muted d-block mb-3"
+            ),
+        ]),
+
+        # Stop-Loss Settings
+        html.Div([
+            html.Small("Stop-Loss Settings", className="text-muted fw-semibold d-block mb-2"),
+        ]),
+
+        # Enable Stop-Loss Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Enable Stop-Loss", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-enable-stop-loss",
+                    value=False,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Auto-place stop-loss orders", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Stop-Loss Percentage
+        dbc.Row([
+            dbc.Col(dbc.Label("Default SL %", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-stop-loss-percentage",
+                    type="number",
+                    min=0.5,
+                    max=50.0,
+                    step=0.5,
+                    value=5.0,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("% below entry (fallback)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Use AI SL Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Use AI Levels", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-stop-loss-use-ai",
+                    value=True,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Use trader AI recommendations", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        html.Hr(className="my-3"),
+
+        # Take-Profit Settings
+        html.Div([
+            html.Small("Take-Profit Settings", className="text-muted fw-semibold d-block mb-2"),
+        ]),
+
+        # Enable Take-Profit Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Enable Take-Profit", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-enable-take-profit",
+                    value=False,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Auto-place take-profit orders", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Take-Profit Percentage
+        dbc.Row([
+            dbc.Col(dbc.Label("Default TP %", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-take-profit-percentage",
+                    type="number",
+                    min=0.5,
+                    max=100.0,
+                    step=0.5,
+                    value=10.0,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("% above entry (fallback)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Use AI TP Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Use AI Levels", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-take-profit-use-ai",
+                    value=True,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Use trader AI recommendations", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Info note about bracket orders
+        dbc.Alert(
+            [
+                html.I(className="fas fa-info-circle me-2"),
+                "Bracket orders create atomic entry + SL + TP. Crypto uses separate orders (no bracket support)."
+            ],
+            color="info",
+            className="mt-3 mb-0 py-2",
+        ),
+    ])
+
+
 def create_options_trading_section():
     """Create the Options Trading section."""
     return html.Div([
@@ -721,6 +867,13 @@ def create_system_settings_page():
                     "Options Trading",
                     create_options_trading_section(),
                     icon="fas fa-chart-line"
+                ),
+
+                # Risk Management Section
+                create_settings_card(
+                    "Risk Management (SL/TP)",
+                    create_risk_management_section(),
+                    icon="fas fa-shield-alt"
                 ),
             ], lg=6),
         ]),
