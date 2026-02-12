@@ -4,6 +4,9 @@ Options Market Positioning Analyst for TradingAgents
 Analyzes options market data to understand institutional positioning,
 expected price movements, and market sentiment for stock trading decisions.
 
+When options trading is enabled, this analyst also recommends specific
+option contracts (strike, expiration, quantity) for trading.
+
 Note: This analyst is for stocks only - options data is not available for crypto.
 """
 
@@ -20,7 +23,7 @@ except ImportError:
         pass
 
 
-def create_options_analyst(llm, toolkit):
+def create_options_analyst(llm, toolkit, config=None):
     """
     Create an Options Market Positioning Analyst node.
 
@@ -31,13 +34,19 @@ def create_options_analyst(llm, toolkit):
     - Market sentiment (put/call ratios, IV skew)
     - Unusual options activity that may signal upcoming moves
 
+    When options trading is enabled (config["enable_options_trading"]=True),
+    this analyst also recommends specific option contracts for trading.
+
     Args:
         llm: The language model to use
         toolkit: The toolkit containing data access tools
+        config: Optional configuration dict with options trading settings
 
     Returns:
         A function that can be used as a graph node
     """
+    # Check if options trading is enabled
+    enable_options_trading = config.get("enable_options_trading", False) if config else False
 
     def options_analyst_node(state):
         try:
@@ -69,7 +78,67 @@ FINAL TRANSACTION PROPOSAL: **HOLD** - Unable to provide options-based recommend
                 toolkit.get_options_positioning,
             ]
 
-            system_message = """You are an OPTIONS MARKET POSITIONING analyst specializing in understanding institutional positioning and market expectations through options data analysis. Your role is to analyze options market data to provide insights for **STOCK TRADING** decisions (not options trading).
+            # Add options contract tools if options trading is enabled
+            if enable_options_trading:
+                if hasattr(toolkit, 'get_alpaca_option_contracts'):
+                    tools.append(toolkit.get_alpaca_option_contracts)
+                if hasattr(toolkit, 'get_recommended_option_contracts'):
+                    tools.append(toolkit.get_recommended_option_contracts)
+
+            # Build system message based on trading mode
+            if enable_options_trading:
+                system_message = """You are an OPTIONS TRADING analyst specializing in identifying profitable options trades based on market positioning, technical analysis, and risk/reward optimization.
+
+**YOUR MISSION:**
+Analyze options data and recommend SPECIFIC OPTION CONTRACTS for trading:
+1. Identify optimal strikes and expirations based on analysis
+2. Calculate risk/reward ratios for recommended trades
+3. Consider liquidity (open interest, bid-ask spread)
+4. Factor in time decay and volatility expectations
+5. Provide actionable trade recommendations
+
+**OPTIONS TRADING ANALYSIS:**
+
+**1. DIRECTIONAL ANALYSIS:**
+- Determine bullish/bearish/neutral bias from technical and fundamental factors
+- Assess conviction level (high/medium/low) for directional trades
+- Identify potential catalysts (earnings, news, technical breakouts)
+
+**2. CONTRACT SELECTION CRITERIA:**
+- **Strike Selection:**
+  - ATM (at-the-money): Higher delta, lower cost basis risk
+  - OTM (out-of-the-money): Higher leverage, higher risk of total loss
+  - ITM (in-the-money): Higher premium, lower time decay risk
+- **Expiration Selection:**
+  - Short-term (< 14 DTE): High theta decay, use for quick moves
+  - Medium-term (14-45 DTE): Balance of decay and time for move
+  - Longer-term (> 45 DTE): Lower decay, higher premium
+- **Liquidity Requirements:**
+  - Minimum open interest: 100 contracts
+  - Bid-ask spread: < 10% of option price preferred
+
+**3. RISK MANAGEMENT:**
+- Maximum loss = premium paid (for long options)
+- Define profit target (typically 50-100% of premium)
+- Set stop loss level (typically 50% of premium)
+- Consider position sizing based on account risk
+
+**4. RECOMMENDATION FORMAT:**
+When recommending an options trade, include:
+- Action: BUY_CALL, BUY_PUT, WRITE_CALL, WRITE_PUT, etc.
+- Contract: Symbol, Strike, Expiration
+- Quantity: Number of contracts
+- Entry Price: Target entry price or market
+- Profit Target: Expected profit level
+- Stop Loss: Maximum acceptable loss
+- Rationale: Why this specific contract
+
+**FINAL RECOMMENDATION:**
+Conclude with: FINAL OPTIONS PROPOSAL: **ACTION** - [Symbol] $[Strike] [Call/Put], [X] DTE, [Y] contracts @ $[Price]
+Example: FINAL OPTIONS PROPOSAL: **BUY_CALL** - AAPL $200 Call, 30 DTE, 2 contracts @ $5.50
+"""
+            else:
+                system_message = """You are an OPTIONS MARKET POSITIONING analyst specializing in understanding institutional positioning and market expectations through options data analysis. Your role is to analyze options market data to provide insights for **STOCK TRADING** decisions (not options trading).
 
 **YOUR MISSION:**
 Analyze options data to understand:
@@ -217,9 +286,36 @@ For your reference, the current date is {current_date}. The stock we want to ana
                 # Continue conversation
                 result = chain.invoke(messages_history)
 
-            # Ensure final proposal is included
-            if "FINAL TRANSACTION PROPOSAL:" not in result.content:
-                final_prompt = f"""Based on the following options market positioning analysis for {ticker}, please provide your final trading recommendation.
+            # Ensure final proposal is included - handle both options trading and stock trading modes
+            if enable_options_trading:
+                # For options trading mode, look for OPTIONS PROPOSAL
+                if "FINAL OPTIONS PROPOSAL:" not in result.content:
+                    final_prompt = f"""Based on the following options analysis for {ticker}, please provide your final options trading recommendation.
+
+Analysis:
+{result.content}
+
+Consider:
+1. Overall directional bias from put/call ratios and technical analysis
+2. Optimal strike price based on delta and risk tolerance
+3. Appropriate expiration based on expected move timeframe
+4. Liquidity (open interest) for the selected contract
+5. Risk/reward ratio for the trade
+
+You must conclude with: FINAL OPTIONS PROPOSAL: **ACTION** - [Symbol] $[Strike] [Call/Put], [X] DTE, [Y] contracts @ $[Price]
+Example: FINAL OPTIONS PROPOSAL: **BUY_CALL** - {ticker} $200 Call, 30 DTE, 2 contracts @ $5.50
+
+If no options trade is recommended, use: FINAL OPTIONS PROPOSAL: **NO_OPTIONS** - [Reason]"""
+
+                    final_chain = llm
+                    final_result = final_chain.invoke(final_prompt)
+
+                    combined_content = result.content + "\n\n" + final_result.content
+                    result = AIMessage(content=combined_content)
+            else:
+                # For stock trading mode, look for TRANSACTION PROPOSAL
+                if "FINAL TRANSACTION PROPOSAL:" not in result.content:
+                    final_prompt = f"""Based on the following options market positioning analysis for {ticker}, please provide your final trading recommendation.
 
 Analysis:
 {result.content}
@@ -232,17 +328,29 @@ Consider:
 
 You must conclude with: FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** followed by a brief justification based on the options market positioning."""
 
-                final_chain = llm
-                final_result = final_chain.invoke(final_prompt)
+                    final_chain = llm
+                    final_result = final_chain.invoke(final_prompt)
 
-                combined_content = result.content + "\n\n" + final_result.content
-                result = AIMessage(content=combined_content)
+                    combined_content = result.content + "\n\n" + final_result.content
+                    result = AIMessage(content=combined_content)
 
             print(f"[OPTIONS] Options Analyst completed for {ticker}")
-            return {
+
+            # Build return dict with options recommendation if in options trading mode
+            return_dict = {
                 "messages": [result],
                 "options_report": result.content,
             }
+
+            # Extract options recommendation if in options trading mode
+            if enable_options_trading:
+                from ..utils.agent_trading_modes import extract_options_recommendation
+                options_rec = extract_options_recommendation(result.content)
+                if options_rec:
+                    return_dict["options_recommendation"] = options_rec
+                    return_dict["options_action"] = options_rec.get("action", "NO_OPTIONS")
+
+            return return_dict
 
         except Exception as e:
             print(f"[OPTIONS] ERROR in Options Analyst: {e}")

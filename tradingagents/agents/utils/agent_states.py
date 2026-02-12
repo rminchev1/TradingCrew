@@ -91,3 +91,9 @@ class AgentState(MessagesState):
         RiskDebateState, "Current state of the debate on evaluating risk"
     ]
     final_trade_decision: Annotated[str, "Final decision made by the Risk Analysts"]
+
+    # Options trading fields
+    options_trade_plan: Annotated[str, "Options trading plan from options trader"]
+    options_recommendation: Annotated[dict, "Recommended option contract details"]
+    options_action: Annotated[str, "Final options action (BUY_CALL, BUY_PUT, etc.)"]
+    current_position: Annotated[str, "Current stock position state (LONG/SHORT/NEUTRAL)"]

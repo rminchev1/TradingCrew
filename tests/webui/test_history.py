@@ -208,6 +208,90 @@ class TestDeleteAnalysisRun:
         assert result is False
 
 
+class TestCreateSymbolButtons:
+    """Tests for create_symbol_buttons function used in history view"""
+
+    def test_create_symbol_buttons_basic(self, tmp_storage):
+        """Test creating symbol buttons with basic input"""
+        from webui.callbacks.history_callbacks import create_symbol_buttons
+
+        buttons = create_symbol_buttons(["AAPL", "NVDA"], active_index=0)
+
+        # Should be a ButtonGroup
+        assert buttons is not None
+        # First button should have AAPL and be active (primary color)
+        assert len(buttons.children) == 2
+
+    def test_create_symbol_buttons_active_state(self, tmp_storage):
+        """Test that active button is correctly marked"""
+        from webui.callbacks.history_callbacks import create_symbol_buttons
+
+        buttons = create_symbol_buttons(["A", "B", "C"], active_index=1)
+
+        # Second button (index 1) should be active
+        assert buttons.children[0].color == "outline-primary"  # Not active
+        assert buttons.children[1].color == "primary"  # Active
+        assert buttons.children[2].color == "outline-primary"  # Not active
+
+    def test_create_symbol_buttons_history_mode(self, tmp_storage):
+        """Test symbol buttons in history mode include folder icon"""
+        from webui.callbacks.history_callbacks import create_symbol_buttons
+
+        buttons = create_symbol_buttons(["AAPL"], active_index=0, is_history=True)
+
+        # History mode should prefix with folder icon
+        assert "📁" in buttons.children[0].children
+
+    def test_create_symbol_buttons_button_ids(self, tmp_storage):
+        """Test that buttons have correct pattern-matching IDs"""
+        from webui.callbacks.history_callbacks import create_symbol_buttons
+
+        buttons = create_symbol_buttons(["A", "B"], active_index=0)
+
+        # Check IDs are pattern-matching dicts with correct type
+        assert buttons.children[0].id == {"type": "report-symbol-btn", "index": 0}
+        assert buttons.children[1].id == {"type": "report-symbol-btn", "index": 1}
+
+
+class TestHistoryDebateReports:
+    """Tests for debate reports in history storage"""
+
+    def test_save_and_load_debate_reports(self, tmp_storage, mock_app_state_with_debates):
+        """Test that debate reports are saved and loaded correctly"""
+        from webui.utils.history import save_analysis_run, load_analysis_run
+
+        symbols = ["AAPL"]
+        run_id = save_analysis_run(mock_app_state_with_debates, symbols)
+
+        # Load and verify debate reports are present
+        run = load_analysis_run(run_id)
+        assert run is not None
+
+        reports = run["symbol_states"]["AAPL"]["reports"]
+        assert "bull_report" in reports
+        assert "bear_report" in reports
+        assert reports["bull_report"] == "Bullish thesis for AAPL"
+        assert reports["bear_report"] == "Bearish thesis for AAPL"
+
+    def test_save_and_load_risk_debate_reports(self, tmp_storage, mock_app_state_with_debates):
+        """Test that risk debate reports are saved and loaded correctly"""
+        from webui.utils.history import save_analysis_run, load_analysis_run
+
+        symbols = ["AAPL"]
+        run_id = save_analysis_run(mock_app_state_with_debates, symbols)
+
+        # Load and verify risk debate reports are present
+        run = load_analysis_run(run_id)
+        reports = run["symbol_states"]["AAPL"]["reports"]
+
+        assert "risky_report" in reports
+        assert "safe_report" in reports
+        assert "neutral_report" in reports
+        assert reports["risky_report"] == "Aggressive position recommendation"
+        assert reports["safe_report"] == "Conservative position recommendation"
+        assert reports["neutral_report"] == "Balanced position recommendation"
+
+
 class TestFormatRunLabel:
     """Tests for formatting run labels"""
 
@@ -304,6 +388,36 @@ def mock_app_state():
             },
             "agent_prompts": {
                 "market_report": "System prompt for market"
+            }
+        }
+    }
+    return state
+
+
+@pytest.fixture
+def mock_app_state_with_debates():
+    """Create a mock AppState with debate reports for testing"""
+    state = MagicMock()
+    state.tool_calls_count = 15
+    state.llm_calls_count = 10
+    state.generated_reports_count = 9
+    state.symbol_states = {
+        "AAPL": {
+            "current_reports": {
+                "market_report": "AAPL market analysis",
+                "news_report": "AAPL news analysis",
+                "bull_report": "Bullish thesis for AAPL",
+                "bear_report": "Bearish thesis for AAPL",
+                "risky_report": "Aggressive position recommendation",
+                "safe_report": "Conservative position recommendation",
+                "neutral_report": "Balanced position recommendation",
+                "research_manager_report": "Research manager synthesis",
+                "final_trade_decision": "Final decision: BUY"
+            },
+            "agent_prompts": {
+                "market_report": "System prompt for market",
+                "bull_report": "Bull researcher prompt",
+                "bear_report": "Bear researcher prompt"
             }
         }
     }

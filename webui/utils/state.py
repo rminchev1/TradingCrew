@@ -138,6 +138,23 @@ class AppState:
             "scanner_use_options_flow": True,
             "scanner_cache_ttl": 300,
             "scanner_dynamic_universe": True,
+            # Options Trading Settings
+            "enable_options_trading": False,
+            "options_trading_level": 2,
+            "options_max_contracts": 10,
+            "options_max_position_value": 5000,
+            "options_min_dte": 7,
+            "options_max_dte": 45,
+            "options_min_delta": 0.20,
+            "options_max_delta": 0.70,
+            "options_min_open_interest": 100,
+            # Stop-Loss and Take-Profit Settings
+            "enable_stop_loss": False,
+            "stop_loss_percentage": 5.0,
+            "stop_loss_use_ai": True,
+            "enable_take_profit": False,
+            "take_profit_percentage": 10.0,
+            "take_profit_use_ai": True,
         }
 
     def add_symbols_to_queue(self, symbols):

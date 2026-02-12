@@ -9,18 +9,30 @@ Two trading modes supported:
 2. Trading Mode (allow_shorts=True): LONG/NEUTRAL/SHORT actions with position logic
 """
 
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 
 
 class TradingModeConfig:
     """Configuration class for trading modes"""
-    
+
     # Investment mode actions
     INVESTMENT_ACTIONS = ["BUY", "HOLD", "SELL"]
-    
+
     # Trading mode actions
     TRADING_ACTIONS = ["LONG", "NEUTRAL", "SHORT"]
-    
+
+    # Options trading actions
+    OPTIONS_ACTIONS = [
+        "BUY_CALL",      # Buy to open call
+        "BUY_PUT",       # Buy to open put
+        "SELL_CALL",     # Sell to close call
+        "SELL_PUT",      # Sell to close put
+        "WRITE_CALL",    # Sell to open (covered call)
+        "WRITE_PUT",     # Sell to open (cash-secured put)
+        "HOLD_OPTIONS",  # Hold existing options position
+        "NO_OPTIONS",    # No options trade
+    ]
+
     # Position states
     POSITION_LONG = "LONG"
     POSITION_SHORT = "SHORT"
@@ -387,20 +399,215 @@ def get_position_transition(current_position: str, new_signal: str) -> Dict[str,
 def format_final_decision(recommendation: str, trading_mode: str) -> str:
     """
     Format the final decision string consistently
-    
+
     Args:
         recommendation: The recommendation (BUY/HOLD/SELL or LONG/NEUTRAL/SHORT)
-        trading_mode: 'investment' or 'trading'
-        
+        trading_mode: 'investment', 'trading', or 'options'
+
     Returns:
         Formatted final decision string
     """
     if not recommendation:
         return "FINAL DECISION: **NO_RECOMMENDATION**"
-        
+
     recommendation = recommendation.upper()
-    
-    if trading_mode == "investment":
+
+    if trading_mode == "options":
+        return f"FINAL OPTIONS PROPOSAL: **{recommendation}**"
+    elif trading_mode == "investment":
         return f"FINAL TRANSACTION PROPOSAL: **{recommendation}**"
     else:  # trading mode
-        return f"FINAL TRANSACTION PROPOSAL: **{recommendation}**" 
+        return f"FINAL TRANSACTION PROPOSAL: **{recommendation}**"
+
+
+def get_options_trading_context(config: Optional[Dict[str, Any]] = None,
+                                current_options_positions: Optional[List] = None) -> Dict[str, str]:
+    """
+    Get options trading mode context information for agent prompts.
+
+    Args:
+        config: Configuration dictionary containing options trading settings
+        current_options_positions: List of current options positions
+
+    Returns:
+        Dict containing options trading mode context information
+    """
+    if config is None:
+        config = {}
+
+    max_contracts = config.get("options_max_contracts", 10)
+    max_position_value = config.get("options_max_position_value", 5000)
+    min_dte = config.get("options_min_dte", 7)
+    max_dte = config.get("options_max_dte", 45)
+    min_delta = config.get("options_min_delta", 0.20)
+    max_delta = config.get("options_max_delta", 0.70)
+    min_open_interest = config.get("options_min_open_interest", 100)
+
+    positions_summary = ""
+    if current_options_positions:
+        positions_summary = "\nCurrent Options Positions:\n"
+        for pos in current_options_positions:
+            positions_summary += f"- {pos['symbol']}: {pos['qty']} contracts @ ${pos['avg_entry_price']:.2f} (P/L: ${pos['unrealized_pl']:.2f})\n"
+    else:
+        positions_summary = "\nNo current options positions."
+
+    return {
+        "mode": "options",
+        "mode_name": "OPTIONS TRADING MODE",
+        "actions": ", ".join(TradingModeConfig.OPTIONS_ACTIONS),
+        "action_list": TradingModeConfig.OPTIONS_ACTIONS,
+        "positions_summary": positions_summary,
+        "instructions": f"""
+You are operating in OPTIONS TRADING MODE for end-of-day decision making.
+
+**AVAILABLE OPTIONS ACTIONS:**
+- **BUY_CALL**: Buy to open a call option (bullish bet)
+- **BUY_PUT**: Buy to open a put option (bearish bet)
+- **SELL_CALL**: Sell to close an existing call position
+- **SELL_PUT**: Sell to close an existing put position
+- **WRITE_CALL**: Sell to open a covered call (income strategy)
+- **WRITE_PUT**: Sell to open a cash-secured put (income/entry strategy)
+- **HOLD_OPTIONS**: Maintain existing options position
+- **NO_OPTIONS**: Do not take any options trade
+
+**OPTIONS TRADING PARAMETERS:**
+- Maximum contracts per trade: {max_contracts}
+- Maximum position value: ${max_position_value}
+- Days to expiration range: {min_dte}-{max_dte} DTE
+- Delta range: {min_delta}-{max_delta}
+- Minimum open interest: {min_open_interest}
+
+**CONTRACT SELECTION CRITERIA:**
+1. **Strike Selection**: Choose strikes based on directional conviction and risk tolerance
+2. **Expiration Selection**: Balance time decay vs. movement probability
+3. **Liquidity**: Ensure adequate open interest and tight bid-ask spreads
+4. **Risk/Reward**: Define max loss (premium paid) and profit targets
+
+**OPTIONS-SPECIFIC CONSIDERATIONS:**
+- **Theta Decay**: Time decay accelerates as expiration approaches
+- **IV Rank**: Consider implied volatility relative to historical range
+- **Earnings/Events**: Be aware of upcoming catalysts affecting IV
+- **Delta/Gamma**: Understand sensitivity to underlying price movement
+- **Bid-Ask Spread**: Wide spreads reduce profit potential
+
+{positions_summary}
+
+**DECISION FORMAT:**
+When recommending an options trade, specify:
+- Action (BUY_CALL, BUY_PUT, etc.)
+- Underlying symbol
+- Strike price with rationale
+- Expiration date (DTE)
+- Number of contracts
+- Entry price (limit or market)
+- Profit target and stop loss
+
+Always conclude with: FINAL OPTIONS PROPOSAL: **ACTION** - [Details]
+Example: FINAL OPTIONS PROPOSAL: **BUY_CALL** - AAPL $200 Call, 30 DTE, 2 contracts @ $5.50
+""",
+        "decision_format": "ACTION - [Symbol] $[Strike] [Call/Put] [Exp] [Qty] @ $[Price]",
+        "final_format": "FINAL OPTIONS PROPOSAL: **ACTION** - [Symbol] $[Strike] [Call/Put] [Exp] [Qty] @ $[Price]"
+    }
+
+
+def extract_options_recommendation(response_content: str) -> Optional[Dict]:
+    """
+    Extract options trading recommendation from agent response.
+
+    Args:
+        response_content: The agent's response content
+
+    Returns:
+        Dict with extracted options recommendation or None if not found
+    """
+    import re
+
+    content = response_content.upper()
+
+    # Look for FINAL OPTIONS PROPOSAL pattern
+    patterns = [
+        r"FINAL OPTIONS PROPOSAL:\s*\*\*(\w+)\*\*\s*[-:]\s*(.+)",
+        r"FINAL OPTIONS DECISION:\s*\*\*(\w+)\*\*\s*[-:]\s*(.+)",
+        r"OPTIONS RECOMMENDATION:\s*\*\*(\w+)\*\*\s*[-:]\s*(.+)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, content)
+        if match:
+            action = match.group(1)
+            details = match.group(2).strip()
+
+            if action in TradingModeConfig.OPTIONS_ACTIONS:
+                # Try to parse details
+                recommendation = {
+                    "action": action,
+                    "details": details,
+                    "raw_match": match.group(0)
+                }
+
+                # Extract components from details
+                # Pattern: [Symbol] $[Strike] [Call/Put] [Exp] [Qty] @ $[Price]
+                detail_pattern = r"(\w+)\s+\$?([\d.]+)\s+(CALL|PUT)[,\s]+(\d+)\s*DTE[,\s]+(\d+)\s+CONTRACTS?\s*@\s*\$?([\d.]+)"
+                detail_match = re.search(detail_pattern, details)
+
+                if detail_match:
+                    recommendation.update({
+                        "underlying": detail_match.group(1),
+                        "strike": float(detail_match.group(2)),
+                        "contract_type": detail_match.group(3).lower(),
+                        "dte": int(detail_match.group(4)),
+                        "qty": int(detail_match.group(5)),
+                        "price": float(detail_match.group(6))
+                    })
+
+                return recommendation
+
+    # Fallback - look for action keywords
+    for action in TradingModeConfig.OPTIONS_ACTIONS:
+        if f"**{action}**" in content[-500:]:  # Check last 500 chars
+            return {"action": action, "details": None}
+
+    return None
+
+
+def validate_options_recommendation(recommendation: Dict, config: Optional[Dict] = None) -> Tuple[bool, str]:
+    """
+    Validate if options recommendation meets configured constraints.
+
+    Args:
+        recommendation: Options recommendation dict
+        config: Configuration with options constraints
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not recommendation:
+        return False, "No recommendation provided"
+
+    action = recommendation.get("action", "").upper()
+
+    # Validate action is known
+    if action not in TradingModeConfig.OPTIONS_ACTIONS:
+        return False, f"Unknown options action: {action}"
+
+    # No-trade actions are always valid
+    if action in ["HOLD_OPTIONS", "NO_OPTIONS"]:
+        return True, ""
+
+    # For trade actions, validate parameters if available
+    if config:
+        qty = recommendation.get("qty", 1)
+        max_contracts = config.get("options_max_contracts", 10)
+        if qty > max_contracts:
+            return False, f"Quantity {qty} exceeds maximum {max_contracts} contracts"
+
+        dte = recommendation.get("dte")
+        if dte:
+            min_dte = config.get("options_min_dte", 7)
+            max_dte = config.get("options_max_dte", 45)
+            if dte < min_dte:
+                return False, f"DTE {dte} below minimum {min_dte}"
+            if dte > max_dte:
+                return False, f"DTE {dte} above maximum {max_dte}"
+
+    return True, ""

@@ -1223,5 +1223,140 @@ class Toolkit:
         results.append("- **ATR:** Use for position sizing (1-2x ATR for stop loss) | Higher ATR = More volatile")
         results.append("")
         results.append("**EOD Strategy:** Look for trend + momentum + volume confirmation for overnight positions")
-        
+
         return "\n".join(results)
+
+    # =========================================================================
+    # Options Trading Tools (for options trading mode)
+    # =========================================================================
+
+    @staticmethod
+    @tool
+    @timing_wrapper("OPTIONS_TRADING")
+    def get_alpaca_option_contracts(
+        ticker: Annotated[str, "Stock ticker symbol (e.g., AAPL, TSLA)"],
+        contract_type: Annotated[str, "Contract type: 'call' or 'put'"],
+        min_strike: Annotated[float, "Minimum strike price"],
+        max_strike: Annotated[float, "Maximum strike price"],
+        expiration_gte: Annotated[str, "Earliest expiration date (YYYY-MM-DD)"],
+        expiration_lte: Annotated[str, "Latest expiration date (YYYY-MM-DD)"],
+    ) -> str:
+        """
+        Fetch available option contracts from Alpaca API.
+
+        Use this tool to find specific option contracts for trading.
+        Returns contracts with strike, expiration, open interest, and pricing info.
+
+        Args:
+            ticker: Stock ticker symbol (e.g., "AAPL", "TSLA")
+            contract_type: "call" or "put"
+            min_strike: Minimum strike price to filter
+            max_strike: Maximum strike price to filter
+            expiration_gte: Earliest expiration date (YYYY-MM-DD)
+            expiration_lte: Latest expiration date (YYYY-MM-DD)
+
+        Returns:
+            str: Formatted list of available option contracts
+        """
+        from tradingagents.dataflows.options_trading_utils import get_option_contracts
+
+        contracts = get_option_contracts(
+            underlying=ticker,
+            contract_type=contract_type,
+            strike_price_gte=min_strike,
+            strike_price_lte=max_strike,
+            expiration_date_gte=expiration_gte,
+            expiration_date_lte=expiration_lte,
+            min_open_interest=100,
+            limit=50
+        )
+
+        if not contracts:
+            return f"No option contracts found for {ticker} matching the specified criteria."
+
+        # Format as markdown table
+        result = f"# Option Contracts for {ticker}\n\n"
+        result += f"**Filter:** {contract_type.upper()}S, Strike ${min_strike}-${max_strike}, Exp {expiration_gte} to {expiration_lte}\n\n"
+        result += "| Symbol | Strike | Expiration | Type | OI | Last Price |\n"
+        result += "|--------|--------|------------|------|-----|------------|\n"
+
+        for c in contracts[:20]:  # Limit to 20 results
+            price_str = f"${c['close_price']:.2f}" if c['close_price'] > 0 else "N/A"
+            result += f"| {c['symbol']} | ${c['strike']:.2f} | {c['expiration']} | {c['contract_type'].upper()} | {c['open_interest']:,} | {price_str} |\n"
+
+        result += f"\n**Total contracts found:** {len(contracts)}"
+
+        return result
+
+    @staticmethod
+    @tool
+    @timing_wrapper("OPTIONS_TRADING")
+    def get_recommended_option_contracts(
+        ticker: Annotated[str, "Stock ticker symbol (e.g., AAPL)"],
+        direction: Annotated[str, "Trading direction: 'bullish' or 'bearish'"],
+        risk_profile: Annotated[str, "Risk profile: 'conservative', 'moderate', or 'aggressive'"],
+        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+    ) -> str:
+        """
+        Get AI-recommended option contracts based on market analysis.
+
+        This tool analyzes the underlying stock and recommends specific option
+        contracts based on the trading direction and risk profile.
+
+        Args:
+            ticker: Stock ticker symbol
+            direction: "bullish" for calls, "bearish" for puts
+            risk_profile: "conservative" (ATM, longer DTE), "moderate" (OTM, medium DTE),
+                         "aggressive" (deep OTM, short DTE)
+            curr_date: Current date for DTE calculation
+
+        Returns:
+            str: Recommended contracts with rationale
+        """
+        from tradingagents.dataflows.options_trading_utils import get_recommended_contracts
+
+        recommendations = get_recommended_contracts(
+            ticker=ticker,
+            direction=direction,
+            risk_profile=risk_profile,
+            curr_date=curr_date
+        )
+
+        return recommendations
+
+    @staticmethod
+    @tool
+    @timing_wrapper("OPTIONS_TRADING")
+    def get_current_options_positions() -> str:
+        """
+        Get current options positions from Alpaca account.
+
+        Returns a summary of all open options positions including:
+        - Contract details (symbol, strike, expiration)
+        - Position size and P/L
+        - Current market value
+
+        Returns:
+            str: Formatted summary of options positions
+        """
+        from tradingagents.dataflows.options_trading_utils import get_options_positions
+
+        positions = get_options_positions()
+
+        if not positions:
+            return "No open options positions."
+
+        result = "# Current Options Positions\n\n"
+        result += "| Symbol | Type | Strike | Exp | Qty | Entry | Current | P/L ($) | P/L (%) |\n"
+        result += "|--------|------|--------|-----|-----|-------|---------|---------|--------|\n"
+
+        total_pl = 0
+        for p in positions:
+            result += f"| {p['symbol'][:16]} | {p['contract_type'].upper()} | ${p['strike']:.2f} | "
+            result += f"{p['expiration']} | {p['qty']} | ${p['avg_entry_price']:.2f} | "
+            result += f"${p['current_price']:.2f} | ${p['unrealized_pl']:.2f} | {p['unrealized_pl_pct']:.1f}% |\n"
+            total_pl += p['unrealized_pl']
+
+        result += f"\n**Total Options P/L:** ${total_pl:.2f}"
+
+        return result

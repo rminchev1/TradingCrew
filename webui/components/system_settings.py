@@ -415,6 +415,330 @@ def create_scanner_section():
     ])
 
 
+def create_risk_management_section():
+    """Create the Risk Management (Stop-Loss/Take-Profit) section."""
+    return html.Div([
+        # Section description
+        html.Div([
+            html.Small(
+                "Configure automatic stop-loss and take-profit orders for stock positions. "
+                "Uses Alpaca's bracket order system for atomic execution.",
+                className="text-muted d-block mb-3"
+            ),
+        ]),
+
+        # Stop-Loss Settings
+        html.Div([
+            html.Small("Stop-Loss Settings", className="text-muted fw-semibold d-block mb-2"),
+        ]),
+
+        # Enable Stop-Loss Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Enable Stop-Loss", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-enable-stop-loss",
+                    value=False,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Auto-place stop-loss orders", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Stop-Loss Percentage
+        dbc.Row([
+            dbc.Col(dbc.Label("Default SL %", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-stop-loss-percentage",
+                    type="number",
+                    min=0.5,
+                    max=50.0,
+                    step=0.5,
+                    value=5.0,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("% below entry (fallback)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Use AI SL Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Use AI Levels", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-stop-loss-use-ai",
+                    value=True,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Use trader AI recommendations", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        html.Hr(className="my-3"),
+
+        # Take-Profit Settings
+        html.Div([
+            html.Small("Take-Profit Settings", className="text-muted fw-semibold d-block mb-2"),
+        ]),
+
+        # Enable Take-Profit Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Enable Take-Profit", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-enable-take-profit",
+                    value=False,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Auto-place take-profit orders", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Take-Profit Percentage
+        dbc.Row([
+            dbc.Col(dbc.Label("Default TP %", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-take-profit-percentage",
+                    type="number",
+                    min=0.5,
+                    max=100.0,
+                    step=0.5,
+                    value=10.0,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("% above entry (fallback)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Use AI TP Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Use AI Levels", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-take-profit-use-ai",
+                    value=True,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Use trader AI recommendations", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Info note about bracket orders
+        dbc.Alert(
+            [
+                html.I(className="fas fa-info-circle me-2"),
+                "Bracket orders create atomic entry + SL + TP. Crypto uses separate orders (no bracket support)."
+            ],
+            color="info",
+            className="mt-3 mb-0 py-2",
+        ),
+    ])
+
+
+def create_options_trading_section():
+    """Create the Options Trading section."""
+    return html.Div([
+        # Enable Options Trading Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Enable Options Trading", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-enable-options-trading",
+                    value=False,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Trade options contracts", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Options Trading Level
+        dbc.Row([
+            dbc.Col(dbc.Label("Trading Level", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Select(
+                    id="setting-options-trading-level",
+                    options=[
+                        {"label": "Level 1 - Covered Calls/Puts", "value": 1},
+                        {"label": "Level 2 - Buy Calls/Puts", "value": 2},
+                        {"label": "Level 3 - Spreads", "value": 3},
+                    ],
+                    value=2,
+                    size="sm"
+                ),
+                width=4
+            ),
+            dbc.Col(
+                html.Small("Alpaca options tier", className="text-muted"),
+                width=4
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Max Contracts
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Contracts", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-options-max-contracts",
+                    type="number",
+                    min=1,
+                    max=100,
+                    value=10,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Per trade limit (1-100)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Max Position Value
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Position Value ($)", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-options-max-position-value",
+                    type="number",
+                    min=100,
+                    max=100000,
+                    value=5000,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Max $ in options", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        html.Hr(className="my-2"),
+
+        # DTE Range
+        html.Div([
+            html.Small("Days to Expiration (DTE) Range", className="text-muted d-block mb-2"),
+        ]),
+        dbc.Row([
+            dbc.Col(dbc.Label("Min DTE", className="mb-0"), width=2),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-options-min-dte",
+                    type="number",
+                    min=0,
+                    max=365,
+                    value=7,
+                    size="sm"
+                ),
+                width=2
+            ),
+            dbc.Col(dbc.Label("Max DTE", className="mb-0 text-end"), width=2),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-options-max-dte",
+                    type="number",
+                    min=1,
+                    max=365,
+                    value=45,
+                    size="sm"
+                ),
+                width=2
+            ),
+            dbc.Col(
+                html.Small("7-45 days typical", className="text-muted"),
+                width=4
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Delta Range
+        html.Div([
+            html.Small("Delta Range (strike selection)", className="text-muted d-block mb-2"),
+        ]),
+        dbc.Row([
+            dbc.Col(dbc.Label("Min Delta", className="mb-0"), width=2),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-options-min-delta",
+                    type="number",
+                    min=0.05,
+                    max=0.95,
+                    step=0.05,
+                    value=0.20,
+                    size="sm"
+                ),
+                width=2
+            ),
+            dbc.Col(dbc.Label("Max Delta", className="mb-0 text-end"), width=2),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-options-max-delta",
+                    type="number",
+                    min=0.05,
+                    max=0.95,
+                    step=0.05,
+                    value=0.70,
+                    size="sm"
+                ),
+                width=2
+            ),
+            dbc.Col(
+                html.Small("0.20-0.70 typical", className="text-muted"),
+                width=4
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Min Open Interest
+        dbc.Row([
+            dbc.Col(dbc.Label("Min Open Interest", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-options-min-open-interest",
+                    type="number",
+                    min=10,
+                    max=10000,
+                    value=100,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Liquidity filter", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+    ])
+
+
 def create_settings_actions():
     """Create the action buttons for the settings page."""
     return dbc.Card([
@@ -465,8 +789,8 @@ def create_settings_actions():
 def create_system_settings_page():
     """Create the full system settings page."""
     return dbc.Container([
-        # Hidden store for settings persistence
-        dcc.Store(id='system-settings-store', storage_type='local'),
+        # Note: system-settings-store and settings-sync-dummy are in the main layout (layout.py)
+        # This ensures settings are synced to app_state on any page load, not just Settings page
 
         # Page header
         html.H3([
@@ -536,6 +860,20 @@ def create_system_settings_page():
                     "Market Scanner",
                     create_scanner_section(),
                     icon="fas fa-search-dollar"
+                ),
+
+                # Options Trading Section
+                create_settings_card(
+                    "Options Trading",
+                    create_options_trading_section(),
+                    icon="fas fa-chart-line"
+                ),
+
+                # Risk Management Section
+                create_settings_card(
+                    "Risk Management (SL/TP)",
+                    create_risk_management_section(),
+                    icon="fas fa-shield-alt"
                 ),
             ], lg=6),
         ]),

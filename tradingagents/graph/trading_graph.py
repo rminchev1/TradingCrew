@@ -99,6 +99,7 @@ class TradingAgentsGraph:
         self.trader_memory = FinancialSituationMemory("trader_memory")
         self.invest_judge_memory = FinancialSituationMemory("invest_judge_memory")
         self.risk_manager_memory = FinancialSituationMemory("risk_manager_memory")
+        self.options_trader_memory = FinancialSituationMemory("options_trader_memory")
 
         # Create tool nodes
         self.tool_nodes = self._create_tool_nodes()
@@ -118,6 +119,7 @@ class TradingAgentsGraph:
             self.trader_memory,
             self.invest_judge_memory,
             self.risk_manager_memory,
+            self.options_trader_memory,
             self.conditional_logic,
             self.config,
         )
@@ -136,6 +138,20 @@ class TradingAgentsGraph:
 
     def _create_tool_nodes(self) -> Dict[str, ToolNode]:
         """Create tool nodes for different data sources."""
+        # Base options tools
+        options_tools = [
+            # options market positioning tools
+            self.toolkit.get_options_positioning,
+        ]
+
+        # Add options trading tools if enabled
+        if self.config.get("enable_options_trading", False):
+            options_tools.extend([
+                self.toolkit.get_alpaca_option_contracts,
+                self.toolkit.get_recommended_option_contracts,
+                self.toolkit.get_current_options_positions,
+            ])
+
         return {
             "market": ToolNode(
                 [
@@ -192,12 +208,7 @@ class TradingAgentsGraph:
                     self.toolkit.get_yield_curve_analysis,
                 ]
             ),
-            "options": ToolNode(
-                [
-                    # options market positioning tools
-                    self.toolkit.get_options_positioning,
-                ]
-            ),
+            "options": ToolNode(options_tools),
         }
 
     def propagate(self, company_name, trade_date):

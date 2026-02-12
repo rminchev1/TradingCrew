@@ -10,9 +10,9 @@ from webui.components.header import create_header
 from webui.components.config_panel import create_trading_control_panel
 from webui.components.status_panel import create_status_panel
 from webui.components.chart_panel import create_chart_panel
-from webui.components.decision_panel import create_compact_decision_panel
+# Removed: create_compact_decision_panel (Trading Signal panel removed)
 from webui.components.reports_panel import create_reports_panel
-from webui.components.alpaca_account import render_compact_account_bar, render_positions_orders_section
+from webui.components.alpaca_account import render_compact_account_bar, render_positions_orders_section, render_options_section
 from webui.components.scanner_panel import create_scanner_panel
 from webui.components.ticker_progress_panel import create_ticker_progress_panel
 from webui.components.watchlist_panel import create_watchlist_section
@@ -57,7 +57,11 @@ def create_stores():
     return [
         dcc.Store(id='app-store'),
         dcc.Store(id='chart-store', data={'last_symbol': None, 'selected_period': '1d'}),
-        create_storage_store_component()
+        create_storage_store_component(),
+        # System settings store - must be in main layout for startup sync
+        dcc.Store(id='system-settings-store', storage_type='local'),
+        # Dummy store for startup sync callback (syncs localStorage to app_state)
+        dcc.Store(id='settings-sync-dummy'),
     ]
 
 
@@ -152,17 +156,6 @@ def create_trading_content():
 
                 # Compact trading controls
                 create_trading_control_panel(),
-
-                html.Hr(className="my-3"),
-
-                # Decision/Signal display
-                html.Div([
-                    html.H6([
-                        html.I(className="fas fa-bullseye me-2"),
-                        "Trading Signal"
-                    ], className="mb-2 text-muted"),
-                    create_compact_decision_panel(),
-                ]),
             ], className="p-3")
         ], className="trading-panel-card h-100")
     ], className="trading-panel-section")
@@ -177,10 +170,22 @@ def create_trading_content():
     # ═══════════════════════════════════════════════════════════════════════
     positions_orders_section = create_collapsible_section(
         "positions-orders-panel",
-        "Positions & Orders",
+        "Stock Positions & Orders",
         "💼",
         dbc.CardBody(render_positions_orders_section(), className="p-2"),
         default_open=True,
+        compact=True
+    )
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # ROW 3b: Options Positions & Orders (Collapsible)
+    # ═══════════════════════════════════════════════════════════════════════
+    options_section = create_collapsible_section(
+        "options-panel",
+        "Options Positions & Orders",
+        "📜",
+        dbc.CardBody(render_options_section(), className="p-2"),
+        default_open=False,
         compact=True
     )
 
@@ -270,8 +275,11 @@ def create_trading_content():
         # Main Trading Area (Chart + Controls)
         main_trading_row,
 
-        # Positions & Orders
+        # Positions & Orders (Stocks)
         positions_orders_section,
+
+        # Options Positions & Orders
+        options_section,
 
         # Agent Reports
         reports_section,

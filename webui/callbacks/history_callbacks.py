@@ -3,7 +3,7 @@ History Callbacks for TradingAgents WebUI
 Handles saving, loading, and displaying analysis history.
 """
 
-from dash import Input, Output, State, callback_context, html, no_update
+from dash import Input, Output, State, callback_context, html, no_update, ctx, ALL
 import dash_bootstrap_components as dbc
 import dash
 
@@ -190,6 +190,229 @@ def register_history_callbacks(app):
             get_report_content("final_trade_decision", "Final Decision", "fa-gavel"),
         )
 
+    # =========================================================================
+    # Update Researcher Debate Tab from History
+    # =========================================================================
+    @app.callback(
+        Output("researcher-debate-tab-content", "children", allow_duplicate=True),
+        [Input("history-selector", "value"),
+         Input("report-pagination", "active_page")],
+        prevent_initial_call=True
+    )
+    def update_researcher_debate_from_history(run_id, active_page):
+        """Update researcher debate content when viewing history."""
+        from dash import dcc
+
+        if not run_id or run_id == "current":
+            # Let the normal callbacks handle it
+            return no_update
+
+        # Load historical data
+        run_data = load_analysis_run(run_id)
+        if not run_data:
+            return no_update
+
+        symbols = run_data.get("symbols", [])
+        if not symbols:
+            return no_update
+
+        # Get current symbol based on pagination
+        page_idx = (active_page or 1) - 1
+        if page_idx >= len(symbols):
+            page_idx = 0
+
+        symbol = symbols[page_idx]
+        symbol_data = run_data.get("symbol_states", {}).get(symbol, {})
+        reports = symbol_data.get("reports", {})
+
+        bull_report = reports.get("bull_report", "")
+        bear_report = reports.get("bear_report", "")
+
+        if not bull_report and not bear_report:
+            return html.Div([
+                html.I(className="fas fa-comments fa-2x text-muted mb-2"),
+                html.P("No researcher debate in this historical run", className="text-muted")
+            ], className="text-center py-4")
+
+        debate_components = []
+
+        # Bull section
+        if bull_report:
+            debate_components.append(
+                html.Div([
+                    html.Div([
+                        html.Span("🐂 Bull Researcher", style={"fontWeight": "bold", "color": "#10B981"})
+                    ], className="mb-2"),
+                    dcc.Markdown(
+                        bull_report,
+                        className='enhanced-markdown-content',
+                        style={
+                            "background": "linear-gradient(135deg, #064E3B 0%, #047857 100%)",
+                            "border-radius": "8px",
+                            "padding": "1rem",
+                            "border-left": "4px solid #10B981",
+                            "color": "#E2E8F0",
+                            "margin-bottom": "1rem"
+                        }
+                    )
+                ])
+            )
+
+        # Bear section
+        if bear_report:
+            debate_components.append(
+                html.Div([
+                    html.Div([
+                        html.Span("🐻 Bear Researcher", style={"fontWeight": "bold", "color": "#EF4444"})
+                    ], className="mb-2"),
+                    dcc.Markdown(
+                        bear_report,
+                        className='enhanced-markdown-content',
+                        style={
+                            "background": "linear-gradient(135deg, #7F1D1D 0%, #B91C1C 100%)",
+                            "border-radius": "8px",
+                            "padding": "1rem",
+                            "border-left": "4px solid #EF4444",
+                            "color": "#E2E8F0",
+                            "margin-bottom": "1rem"
+                        }
+                    )
+                ])
+            )
+
+        return html.Div(
+            debate_components,
+            style={
+                "background": "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+                "border-radius": "8px",
+                "padding": "1.5rem",
+                "min-height": "400px"
+            }
+        )
+
+    # =========================================================================
+    # Update Risk Debate Tab from History
+    # =========================================================================
+    @app.callback(
+        Output("risk-debate-tab-content", "children", allow_duplicate=True),
+        [Input("history-selector", "value"),
+         Input("report-pagination", "active_page")],
+        prevent_initial_call=True
+    )
+    def update_risk_debate_from_history(run_id, active_page):
+        """Update risk debate content when viewing history."""
+        from dash import dcc
+
+        if not run_id or run_id == "current":
+            # Let the normal callbacks handle it
+            return no_update
+
+        # Load historical data
+        run_data = load_analysis_run(run_id)
+        if not run_data:
+            return no_update
+
+        symbols = run_data.get("symbols", [])
+        if not symbols:
+            return no_update
+
+        # Get current symbol based on pagination
+        page_idx = (active_page or 1) - 1
+        if page_idx >= len(symbols):
+            page_idx = 0
+
+        symbol = symbols[page_idx]
+        symbol_data = run_data.get("symbol_states", {}).get(symbol, {})
+        reports = symbol_data.get("reports", {})
+
+        risky_report = reports.get("risky_report", "")
+        safe_report = reports.get("safe_report", "")
+        neutral_report = reports.get("neutral_report", "")
+
+        if not risky_report and not safe_report and not neutral_report:
+            return html.Div([
+                html.I(className="fas fa-balance-scale fa-2x text-muted mb-2"),
+                html.P("No risk debate in this historical run", className="text-muted")
+            ], className="text-center py-4")
+
+        debate_components = []
+
+        # Risky section
+        if risky_report:
+            debate_components.append(
+                html.Div([
+                    html.Div([
+                        html.Span("⚡ Risky Analyst", style={"fontWeight": "bold", "color": "#EF4444"})
+                    ], className="mb-2"),
+                    dcc.Markdown(
+                        risky_report,
+                        className='enhanced-markdown-content',
+                        style={
+                            "background": "linear-gradient(135deg, #7F1D1D 0%, #B91C1C 100%)",
+                            "border-radius": "8px",
+                            "padding": "1rem",
+                            "border-left": "4px solid #EF4444",
+                            "color": "#E2E8F0",
+                            "margin-bottom": "1rem"
+                        }
+                    )
+                ])
+            )
+
+        # Safe section
+        if safe_report:
+            debate_components.append(
+                html.Div([
+                    html.Div([
+                        html.Span("🛡️ Safe Analyst", style={"fontWeight": "bold", "color": "#10B981"})
+                    ], className="mb-2"),
+                    dcc.Markdown(
+                        safe_report,
+                        className='enhanced-markdown-content',
+                        style={
+                            "background": "linear-gradient(135deg, #064E3B 0%, #047857 100%)",
+                            "border-radius": "8px",
+                            "padding": "1rem",
+                            "border-left": "4px solid #10B981",
+                            "color": "#E2E8F0",
+                            "margin-bottom": "1rem"
+                        }
+                    )
+                ])
+            )
+
+        # Neutral section
+        if neutral_report:
+            debate_components.append(
+                html.Div([
+                    html.Div([
+                        html.Span("⚖️ Neutral Analyst", style={"fontWeight": "bold", "color": "#3B82F6"})
+                    ], className="mb-2"),
+                    dcc.Markdown(
+                        neutral_report,
+                        className='enhanced-markdown-content',
+                        style={
+                            "background": "linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 100%)",
+                            "border-radius": "8px",
+                            "padding": "1rem",
+                            "border-left": "4px solid #3B82F6",
+                            "color": "#E2E8F0",
+                            "margin-bottom": "1rem"
+                        }
+                    )
+                ])
+            )
+
+        return html.Div(
+            debate_components,
+            style={
+                "background": "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+                "border-radius": "8px",
+                "padding": "1.5rem",
+                "min-height": "400px"
+            }
+        )
+
     # Reset save button text after delay
     @app.callback(
         Output("save-history-btn", "children", allow_duplicate=True),
@@ -213,6 +436,63 @@ def register_history_callbacks(app):
                 return no_update
 
         return [html.I(className="fas fa-save me-1"), "Save"]
+
+    # =========================================================================
+    # Handle History Symbol Button Clicks
+    # =========================================================================
+    @app.callback(
+        [Output("report-pagination", "active_page", allow_duplicate=True),
+         Output("report-pagination-container", "children", allow_duplicate=True),
+         Output("current-symbol-report-display", "children", allow_duplicate=True)],
+        [Input({"type": "report-symbol-btn", "index": ALL}, "n_clicks")],
+        [State("history-selector", "value")],
+        prevent_initial_call=True
+    )
+    def handle_history_symbol_click(symbol_clicks, run_id):
+        """Handle symbol button clicks when viewing historical data."""
+        import json
+
+        if not any(symbol_clicks) or not ctx.triggered:
+            return dash.no_update, dash.no_update, dash.no_update
+
+        # Find which button was clicked
+        trigger_id = ctx.triggered[0]["prop_id"]
+        if "report-symbol-btn" not in trigger_id:
+            return dash.no_update, dash.no_update, dash.no_update
+
+        # Extract index from the button ID
+        button_data = json.loads(trigger_id.split('.')[0])
+        clicked_index = button_data["index"]
+
+        # Get symbols from the appropriate source
+        if run_id and run_id != "current" and app_state.viewing_history:
+            # Viewing historical data
+            run_data = app_state.historical_run
+            if not run_data:
+                run_data = load_analysis_run(run_id)
+            symbols = run_data.get("symbols", []) if run_data else []
+            is_history = True
+        else:
+            # Current session
+            symbols = list(app_state.symbol_states.keys())
+            is_history = False
+
+        if not symbols or clicked_index >= len(symbols):
+            return dash.no_update, dash.no_update, dash.no_update
+
+        # Update the pagination page number (1-indexed)
+        page_number = clicked_index + 1
+        symbol = symbols[clicked_index]
+
+        # Rebuild the symbol buttons with updated active state
+        updated_buttons = create_symbol_buttons(symbols, clicked_index, is_history=is_history)
+
+        # Update display text
+        prefix = "📁 " if is_history else "📈 "
+        suffix = " (History)" if is_history else ""
+        display_text = f"{prefix}{symbol}{suffix}"
+
+        return page_number, updated_buttons, display_text
 
 
 def create_symbol_buttons(symbols, active_index=0, is_history=False):

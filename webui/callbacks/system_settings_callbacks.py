@@ -31,6 +31,47 @@ def register_system_settings_callbacks(app):
     """Register all system settings callbacks."""
 
     # =========================================================================
+    # Sync settings to app_state on app startup (CRITICAL for SL/TP settings)
+    # This callback MUST run on initial load to sync localStorage to app_state
+    # =========================================================================
+    @app.callback(
+        Output("settings-sync-dummy", "data"),
+        Input("system-settings-store", "data"),
+        # NO prevent_initial_call - we want this to run on page load!
+    )
+    def sync_settings_on_startup(stored_settings):
+        """Sync settings from localStorage to app_state on page load.
+
+        This is critical because other callbacks have prevent_initial_call=True,
+        which means settings wouldn't be synced to app_state until user visits
+        the Settings page. This callback ensures SL/TP and other settings are
+        available immediately when the app starts.
+        """
+        if stored_settings is None:
+            stored_settings = {}
+
+        # Merge with defaults
+        settings = DEFAULT_SYSTEM_SETTINGS.copy()
+        settings.update(stored_settings)
+
+        # Sync to app_state for use by analysis engine
+        sync_settings_to_app_state(settings)
+        print(f"[SETTINGS] Startup sync complete - SL enabled: {settings.get('enable_stop_loss')}, TP enabled: {settings.get('enable_take_profit')}")
+
+        # Update Reddit live client with credentials if available
+        try:
+            from tradingagents.dataflows.reddit_live import RedditLiveClient
+            RedditLiveClient.update_credentials(
+                client_id=settings.get("reddit_client_id"),
+                client_secret=settings.get("reddit_client_secret"),
+                user_agent=settings.get("reddit_user_agent"),
+            )
+        except Exception as e:
+            print(f"[SETTINGS] Could not update Reddit credentials: {e}")
+
+        return no_update
+
+    # =========================================================================
     # Load settings from store on page load
     # =========================================================================
     @app.callback(
@@ -58,6 +99,23 @@ def register_system_settings_callbacks(app):
             Output("setting-scanner-options-flow", "value", allow_duplicate=True),
             Output("setting-scanner-cache-ttl", "value", allow_duplicate=True),
             Output("setting-scanner-dynamic-universe", "value", allow_duplicate=True),
+            # Options trading settings
+            Output("setting-enable-options-trading", "value", allow_duplicate=True),
+            Output("setting-options-trading-level", "value", allow_duplicate=True),
+            Output("setting-options-max-contracts", "value", allow_duplicate=True),
+            Output("setting-options-max-position-value", "value", allow_duplicate=True),
+            Output("setting-options-min-dte", "value", allow_duplicate=True),
+            Output("setting-options-max-dte", "value", allow_duplicate=True),
+            Output("setting-options-min-delta", "value", allow_duplicate=True),
+            Output("setting-options-max-delta", "value", allow_duplicate=True),
+            Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Stop-Loss and Take-Profit settings
+            Output("setting-enable-stop-loss", "value", allow_duplicate=True),
+            Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
+            Output("setting-stop-loss-use-ai", "value", allow_duplicate=True),
+            Output("setting-enable-take-profit", "value", allow_duplicate=True),
+            Output("setting-take-profit-percentage", "value", allow_duplicate=True),
+            Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
         ],
         Input("system-settings-store", "data"),
         prevent_initial_call=True
@@ -109,6 +167,23 @@ def register_system_settings_callbacks(app):
             settings.get("scanner_use_options_flow", True),
             settings.get("scanner_cache_ttl", 300),
             settings.get("scanner_dynamic_universe", True),
+            # Options trading settings
+            settings.get("enable_options_trading", False),
+            settings.get("options_trading_level", 2),
+            settings.get("options_max_contracts", 10),
+            settings.get("options_max_position_value", 5000),
+            settings.get("options_min_dte", 7),
+            settings.get("options_max_dte", 45),
+            settings.get("options_min_delta", 0.20),
+            settings.get("options_max_delta", 0.70),
+            settings.get("options_min_open_interest", 100),
+            # Stop-Loss and Take-Profit settings
+            settings.get("enable_stop_loss", False),
+            settings.get("stop_loss_percentage", 5.0),
+            settings.get("stop_loss_use_ai", True),
+            settings.get("enable_take_profit", False),
+            settings.get("take_profit_percentage", 10.0),
+            settings.get("take_profit_use_ai", True),
         )
 
     # =========================================================================
@@ -147,6 +222,23 @@ def register_system_settings_callbacks(app):
             State("setting-scanner-options-flow", "value"),
             State("setting-scanner-cache-ttl", "value"),
             State("setting-scanner-dynamic-universe", "value"),
+            # Options trading settings
+            State("setting-enable-options-trading", "value"),
+            State("setting-options-trading-level", "value"),
+            State("setting-options-max-contracts", "value"),
+            State("setting-options-max-position-value", "value"),
+            State("setting-options-min-dte", "value"),
+            State("setting-options-max-dte", "value"),
+            State("setting-options-min-delta", "value"),
+            State("setting-options-max-delta", "value"),
+            State("setting-options-min-open-interest", "value"),
+            # Stop-Loss and Take-Profit settings
+            State("setting-enable-stop-loss", "value"),
+            State("setting-stop-loss-percentage", "value"),
+            State("setting-stop-loss-use-ai", "value"),
+            State("setting-enable-take-profit", "value"),
+            State("setting-take-profit-percentage", "value"),
+            State("setting-take-profit-use-ai", "value"),
             State("system-settings-store", "data"),
         ],
         prevent_initial_call=True
@@ -159,6 +251,10 @@ def register_system_settings_callbacks(app):
         deep_llm, quick_llm,
         max_debate, max_risk, parallel_analysts, online_tools, max_recur, max_parallel_tickers,
         scanner_results, scanner_llm, scanner_options, scanner_cache, scanner_dynamic,
+        enable_options_trading, options_trading_level, options_max_contracts, options_max_position_value,
+        options_min_dte, options_max_dte, options_min_delta, options_max_delta, options_min_open_interest,
+        enable_stop_loss, stop_loss_percentage, stop_loss_use_ai,
+        enable_take_profit, take_profit_percentage, take_profit_use_ai,
         current_store
     ):
         """Save settings to localStorage."""
@@ -190,6 +286,23 @@ def register_system_settings_callbacks(app):
             "scanner_use_options_flow": scanner_options,
             "scanner_cache_ttl": scanner_cache,
             "scanner_dynamic_universe": scanner_dynamic,
+            # Options trading settings
+            "enable_options_trading": enable_options_trading,
+            "options_trading_level": int(options_trading_level) if options_trading_level else 2,
+            "options_max_contracts": options_max_contracts,
+            "options_max_position_value": options_max_position_value,
+            "options_min_dte": options_min_dte,
+            "options_max_dte": options_max_dte,
+            "options_min_delta": options_min_delta,
+            "options_max_delta": options_max_delta,
+            "options_min_open_interest": options_min_open_interest,
+            # Stop-Loss and Take-Profit settings
+            "enable_stop_loss": enable_stop_loss,
+            "stop_loss_percentage": stop_loss_percentage,
+            "stop_loss_use_ai": stop_loss_use_ai,
+            "enable_take_profit": enable_take_profit,
+            "take_profit_percentage": take_profit_percentage,
+            "take_profit_use_ai": take_profit_use_ai,
         }
 
         # Sync to app_state for use by analysis engine
@@ -242,6 +355,23 @@ def register_system_settings_callbacks(app):
             Output("setting-scanner-options-flow", "value", allow_duplicate=True),
             Output("setting-scanner-cache-ttl", "value", allow_duplicate=True),
             Output("setting-scanner-dynamic-universe", "value", allow_duplicate=True),
+            # Options trading settings
+            Output("setting-enable-options-trading", "value", allow_duplicate=True),
+            Output("setting-options-trading-level", "value", allow_duplicate=True),
+            Output("setting-options-max-contracts", "value", allow_duplicate=True),
+            Output("setting-options-max-position-value", "value", allow_duplicate=True),
+            Output("setting-options-min-dte", "value", allow_duplicate=True),
+            Output("setting-options-max-dte", "value", allow_duplicate=True),
+            Output("setting-options-min-delta", "value", allow_duplicate=True),
+            Output("setting-options-max-delta", "value", allow_duplicate=True),
+            Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Stop-Loss and Take-Profit settings
+            Output("setting-enable-stop-loss", "value", allow_duplicate=True),
+            Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
+            Output("setting-stop-loss-use-ai", "value", allow_duplicate=True),
+            Output("setting-enable-take-profit", "value", allow_duplicate=True),
+            Output("setting-take-profit-percentage", "value", allow_duplicate=True),
+            Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
             Output("settings-toast", "is_open", allow_duplicate=True),
             Output("settings-toast", "children", allow_duplicate=True),
             Output("settings-toast", "icon", allow_duplicate=True),
@@ -281,6 +411,23 @@ def register_system_settings_callbacks(app):
             defaults.get("scanner_use_options_flow", True),
             defaults.get("scanner_cache_ttl", 300),
             defaults.get("scanner_dynamic_universe", True),
+            # Options trading settings
+            defaults.get("enable_options_trading", False),
+            defaults.get("options_trading_level", 2),
+            defaults.get("options_max_contracts", 10),
+            defaults.get("options_max_position_value", 5000),
+            defaults.get("options_min_dte", 7),
+            defaults.get("options_max_dte", 45),
+            defaults.get("options_min_delta", 0.20),
+            defaults.get("options_max_delta", 0.70),
+            defaults.get("options_min_open_interest", 100),
+            # Stop-Loss and Take-Profit settings
+            defaults.get("enable_stop_loss", False),
+            defaults.get("stop_loss_percentage", 5.0),
+            defaults.get("stop_loss_use_ai", True),
+            defaults.get("enable_take_profit", False),
+            defaults.get("take_profit_percentage", 10.0),
+            defaults.get("take_profit_use_ai", True),
             True,
             "Settings reset to defaults. Click 'Save' to persist.",
             "info",
@@ -329,6 +476,23 @@ def register_system_settings_callbacks(app):
             Output("setting-scanner-options-flow", "value", allow_duplicate=True),
             Output("setting-scanner-cache-ttl", "value", allow_duplicate=True),
             Output("setting-scanner-dynamic-universe", "value", allow_duplicate=True),
+            # Options trading settings
+            Output("setting-enable-options-trading", "value", allow_duplicate=True),
+            Output("setting-options-trading-level", "value", allow_duplicate=True),
+            Output("setting-options-max-contracts", "value", allow_duplicate=True),
+            Output("setting-options-max-position-value", "value", allow_duplicate=True),
+            Output("setting-options-min-dte", "value", allow_duplicate=True),
+            Output("setting-options-max-dte", "value", allow_duplicate=True),
+            Output("setting-options-min-delta", "value", allow_duplicate=True),
+            Output("setting-options-max-delta", "value", allow_duplicate=True),
+            Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Stop-Loss and Take-Profit settings
+            Output("setting-enable-stop-loss", "value", allow_duplicate=True),
+            Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
+            Output("setting-stop-loss-use-ai", "value", allow_duplicate=True),
+            Output("setting-enable-take-profit", "value", allow_duplicate=True),
+            Output("setting-take-profit-percentage", "value", allow_duplicate=True),
+            Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
             Output("settings-toast", "is_open", allow_duplicate=True),
             Output("settings-toast", "children", allow_duplicate=True),
             Output("settings-toast", "icon", allow_duplicate=True),
@@ -365,6 +529,23 @@ def register_system_settings_callbacks(app):
                 imported.get("scanner_use_options_flow", True),
                 imported.get("scanner_cache_ttl", 300),
                 imported.get("scanner_dynamic_universe", True),
+                # Options trading settings
+                imported.get("enable_options_trading", False),
+                imported.get("options_trading_level", 2),
+                imported.get("options_max_contracts", 10),
+                imported.get("options_max_position_value", 5000),
+                imported.get("options_min_dte", 7),
+                imported.get("options_max_dte", 45),
+                imported.get("options_min_delta", 0.20),
+                imported.get("options_max_delta", 0.70),
+                imported.get("options_min_open_interest", 100),
+                # Stop-Loss and Take-Profit settings
+                imported.get("enable_stop_loss", False),
+                imported.get("stop_loss_percentage", 5.0),
+                imported.get("stop_loss_use_ai", True),
+                imported.get("enable_take_profit", False),
+                imported.get("take_profit_percentage", 10.0),
+                imported.get("take_profit_use_ai", True),
                 True,
                 f"Settings imported from {filename}. Click 'Save' to persist.",
                 "success",
@@ -374,7 +555,9 @@ def register_system_settings_callbacks(app):
             return (
                 no_update, no_update, no_update, no_update, no_update, no_update,
                 no_update, no_update, no_update, no_update, no_update, no_update,
-                no_update,
+                no_update, no_update, no_update, no_update, no_update, no_update,
+                no_update, no_update, no_update, no_update, no_update, no_update,
+                no_update, no_update, no_update, no_update,
                 True,
                 f"Error importing settings: {str(e)}",
                 "danger",

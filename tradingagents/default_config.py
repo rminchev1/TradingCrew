@@ -34,4 +34,21 @@ DEFAULT_CONFIG = {
     "scanner_use_options_flow": True,  # Include options flow analysis in scanner
     "scanner_cache_ttl": 300,  # Cache TTL in seconds (5 minutes default)
     "scanner_dynamic_universe": True,  # True = top 200 liquid stocks from Alpaca, False = predefined ~100 stocks
+    # Options Trading settings
+    "enable_options_trading": False,  # Master switch for options trading mode
+    "options_trading_level": 2,  # Alpaca options tier: 1=covered, 2=buy calls/puts, 3=spreads
+    "options_max_contracts": 10,  # Maximum contracts per trade
+    "options_max_position_value": 5000,  # Maximum $ value in options positions
+    "options_min_dte": 7,  # Minimum days to expiration
+    "options_max_dte": 45,  # Maximum days to expiration
+    "options_min_delta": 0.20,  # Minimum delta for entries
+    "options_max_delta": 0.70,  # Maximum delta for entries
+    "options_min_open_interest": 100,  # Minimum open interest for liquidity
+    # Stop-Loss and Take-Profit Settings
+    "enable_stop_loss": False,  # Enable automatic stop-loss orders
+    "stop_loss_percentage": 5.0,  # Default SL % below entry (for BUY) or above (for SHORT)
+    "stop_loss_use_ai": True,  # Use AI-recommended SL levels vs fixed percentage
+    "enable_take_profit": False,  # Enable automatic take-profit orders
+    "take_profit_percentage": 10.0,  # Default TP % above entry (for BUY) or below (for SHORT)
+    "take_profit_use_ai": True,  # Use AI-recommended TP levels vs fixed percentage
 }

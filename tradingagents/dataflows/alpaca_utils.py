@@ -1,6 +1,7 @@
 # alpaca_utils.py
 
 import os
+import re
 import time
 import random
 import pandas as pd
@@ -11,8 +12,17 @@ from alpaca.data.requests import StockBarsRequest, CryptoBarsRequest, StockLates
 from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 from alpaca.data.enums import DataFeed
 from alpaca.trading.client import TradingClient
-from alpaca.trading.requests import GetAssetsRequest, GetOrdersRequest, MarketOrderRequest, ClosePositionRequest
-from alpaca.trading.enums import AssetClass, OrderSide, TimeInForce
+from alpaca.trading.requests import (
+    GetAssetsRequest,
+    GetOrdersRequest,
+    MarketOrderRequest,
+    ClosePositionRequest,
+    LimitOrderRequest,
+    StopOrderRequest,
+    TakeProfitRequest,
+    StopLossRequest,
+)
+from alpaca.trading.enums import AssetClass, OrderSide, TimeInForce, OrderClass
 from .config import get_api_key
 from .external_data_logger import log_external_error, ExternalSystem
 
@@ -89,6 +99,29 @@ def get_alpaca_trading_client() -> TradingClient:
     if not api_key or not api_secret:
         raise ValueError("Alpaca API key or secret not found. Please set ALPACA_API_KEY and ALPACA_SECRET_KEY.")
     return TradingClient(api_key, api_secret, paper=True)
+
+
+def is_options_symbol(symbol: str) -> bool:
+    """
+    Check if a symbol is an options contract (OCC format).
+
+    OCC format: SYMBOL (1-6 chars) + YYMMDD (6) + C/P (1) + Strike*1000 (8)
+    Example: AAPL240315C00200000
+    Total length: 15-21 characters
+
+    Args:
+        symbol: The symbol to check
+
+    Returns:
+        True if the symbol matches OCC options format
+    """
+    import re
+    if not symbol or len(symbol) < 15:
+        return False
+
+    # OCC pattern: 1-6 letter underlying + 6 digit date + C or P + 8 digit strike
+    occ_pattern = r'^[A-Z]{1,6}\d{6}[CP]\d{8}$'
+    return bool(re.match(occ_pattern, symbol.upper()))
 
 
 def _parse_timeframe(tf: Union[str, TimeFrame]) -> TimeFrame:
@@ -318,14 +351,17 @@ class AlpacaUtils:
 
     @staticmethod
     def get_positions_data():
-        """Get current positions from Alpaca account"""
+        """Get current stock positions from Alpaca account (excludes options)"""
         try:
             client = get_alpaca_trading_client()
             positions = client.get_all_positions()
-            
-            # Convert positions to a list of dictionaries
+
+            # Convert positions to a list of dictionaries (filter out options)
             positions_data = []
             for position in positions:
+                # Skip options contracts
+                if is_options_symbol(position.symbol):
+                    continue
                 current_price = float(position.current_price)
                 avg_entry_price = float(position.avg_entry_price)
                 qty = float(position.qty)
@@ -374,7 +410,8 @@ class AlpacaUtils:
             max_fetch = 100
             req = GetOrdersRequest(status="all", limit=max_fetch, nested=False)
             orders_page = client.get_orders(req)
-            orders = list(orders_page)
+            # Filter out options orders
+            orders = [o for o in orders_page if o.symbol and not is_options_symbol(o.symbol)]
             total_count = len(orders)
 
             # Convert orders to a list of dictionaries
@@ -419,6 +456,155 @@ class AlpacaUtils:
             log_external_error(
                 system="alpaca",
                 operation="get_recent_orders",
+                error=e,
+                params={"page": page, "page_size": page_size}
+            )
+            if return_total:
+                return [], 0
+            return []
+
+    @staticmethod
+    def get_options_positions_data():
+        """Get current options positions from Alpaca account"""
+        try:
+            client = get_alpaca_trading_client()
+            positions = client.get_all_positions()
+
+            # Convert options positions to a list of dictionaries
+            positions_data = []
+            for position in positions:
+                # Only include options contracts
+                if not is_options_symbol(position.symbol):
+                    continue
+
+                current_price = float(position.current_price)
+                avg_entry_price = float(position.avg_entry_price)
+                qty = float(position.qty)
+                market_value = float(position.market_value)
+                cost_basis = avg_entry_price * abs(qty)
+
+                # Calculate P/L values
+                today_pl_dollars = float(position.unrealized_intraday_pl)
+                total_pl_dollars = float(position.unrealized_pl)
+                today_pl_percent = (today_pl_dollars / cost_basis) * 100 if cost_basis != 0 else 0
+                total_pl_percent = (total_pl_dollars / cost_basis) * 100 if cost_basis != 0 else 0
+
+                # Parse OCC symbol for display
+                from .options_trading_utils import parse_occ_symbol
+                try:
+                    parsed = parse_occ_symbol(position.symbol)
+                    underlying = parsed.get("underlying", position.symbol[:4])
+                    contract_type = parsed.get("contract_type", "unknown").upper()
+                    strike = parsed.get("strike", 0)
+                    expiration = parsed.get("expiration", "")
+                except:
+                    underlying = position.symbol[:4]
+                    contract_type = "OPT"
+                    strike = 0
+                    expiration = ""
+
+                positions_data.append({
+                    "Symbol": position.symbol,
+                    "Underlying": underlying,
+                    "Type": contract_type,
+                    "Strike": f"${strike:.2f}" if strike else "-",
+                    "Expiration": expiration,
+                    "Qty": int(qty),
+                    "Market Value": f"${market_value:.2f}",
+                    "Avg Entry": f"${avg_entry_price:.2f}",
+                    "Current Price": f"${current_price:.2f}",
+                    "Today's P/L (%)": f"{today_pl_percent:.2f}%",
+                    "Today's P/L ($)": f"${today_pl_dollars:.2f}",
+                    "Total P/L (%)": f"{total_pl_percent:.2f}%",
+                    "Total P/L ($)": f"${total_pl_dollars:.2f}"
+                })
+
+            return positions_data
+        except Exception as e:
+            log_external_error(
+                system="alpaca",
+                operation="get_options_positions_data",
+                error=e
+            )
+            return []
+
+    @staticmethod
+    def get_options_orders(page=1, page_size=7, return_total=False):
+        """Get recent options orders from Alpaca account, with simple pagination.
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of orders per page
+            return_total: If True, returns (orders, total_count) tuple
+        """
+        try:
+            client = get_alpaca_trading_client()
+            max_fetch = 100
+            req = GetOrdersRequest(status="all", limit=max_fetch, nested=False)
+            orders_page = client.get_orders(req)
+            # Filter to only options orders
+            orders = [o for o in orders_page if o.symbol and is_options_symbol(o.symbol)]
+            total_count = len(orders)
+
+            # Convert orders to a list of dictionaries
+            orders_data = []
+            for order in orders:
+                qty = float(order.qty) if order.qty is not None else 0.0
+                filled_qty = float(order.filled_qty) if order.filled_qty is not None else 0.0
+                filled_avg_price = float(order.filled_avg_price) if order.filled_avg_price is not None else 0.0
+
+                # Format order date/time
+                order_date = ""
+                if order.created_at:
+                    order_date = order.created_at.strftime("%m/%d %H:%M")
+
+                # Get order ID (short version for display)
+                order_id = str(order.id) if order.id else "-"
+                order_id_short = order_id[:8] if len(order_id) > 8 else order_id
+
+                # Parse OCC symbol for display
+                from .options_trading_utils import parse_occ_symbol
+                try:
+                    parsed = parse_occ_symbol(order.symbol)
+                    underlying = parsed.get("underlying", order.symbol[:4])
+                    contract_type = parsed.get("contract_type", "unknown").upper()
+                    strike = parsed.get("strike", 0)
+                    expiration = parsed.get("expiration", "")
+                except:
+                    underlying = order.symbol[:4]
+                    contract_type = "OPT"
+                    strike = 0
+                    expiration = ""
+
+                orders_data.append({
+                    "Symbol": order.symbol,
+                    "Underlying": underlying,
+                    "Type": contract_type,
+                    "Strike": f"${strike:.2f}" if strike else "-",
+                    "Expiration": expiration,
+                    "Order Type": order.type,
+                    "Side": order.side,
+                    "Qty": int(qty),
+                    "Filled Qty": int(filled_qty),
+                    "Avg. Fill Price": f"${filled_avg_price:.2f}" if filled_avg_price > 0 else "-",
+                    "Status": order.status,
+                    "Date": order_date,
+                    "Order ID": order_id,
+                    "Order ID Short": order_id_short
+                })
+
+            # Slice out the exact page we want (newest first)
+            start = (page - 1) * page_size
+            page_data = orders_data[start : start + page_size]
+
+            if return_total:
+                return page_data, total_count
+            return page_data
+
+        except Exception as e:
+            log_external_error(
+                system="alpaca",
+                operation="get_options_orders",
                 error=e,
                 params={"page": page, "page_size": page_size}
             )
@@ -590,6 +776,310 @@ class AlpacaUtils:
             return {"success": False, "error": error_msg}
 
     @staticmethod
+    def extract_sl_tp_from_analysis(analysis_text: str, entry_price: float, is_short: bool = False) -> dict:
+        """
+        Extract stop-loss and take-profit levels from trader agent's analysis text.
+
+        The trader agent outputs a markdown table with format:
+        | Aspect | Details |
+        |--------|---------|
+        | Entry Price | $X.XX |
+        | Stop Loss | $X.XX |
+        | Target 1 | $X.XX |
+        | Target 2 | $X.XX |
+
+        Args:
+            analysis_text: The trader's analysis text containing the decision table
+            entry_price: The current entry price (for validation)
+            is_short: Whether this is a SHORT position (inverts SL/TP logic)
+
+        Returns:
+            Dictionary with 'stop_loss' and 'take_profit' prices, or None if not found
+        """
+        result = {
+            "stop_loss": None,
+            "take_profit": None,
+            "entry_price_from_ai": None,
+        }
+
+        if not analysis_text:
+            return result
+
+        # Extract Stop Loss price from markdown table
+        sl_patterns = [
+            r'\|\s*Stop Loss\s*\|\s*\$?([\d,]+\.?\d*)',
+            r'Stop Loss[:\s]+\$?([\d,]+\.?\d*)',
+            r'stop[- ]?loss[:\s]+\$?([\d,]+\.?\d*)',
+        ]
+
+        for pattern in sl_patterns:
+            match = re.search(pattern, analysis_text, re.IGNORECASE)
+            if match:
+                try:
+                    result["stop_loss"] = float(match.group(1).replace(",", ""))
+                    break
+                except ValueError:
+                    continue
+
+        # Extract Take Profit / Target 1 price from markdown table
+        tp_patterns = [
+            r'\|\s*Target\s*1?\s*\|\s*\$?([\d,]+\.?\d*)',
+            r'Target\s*1?[:\s]+\$?([\d,]+\.?\d*)',
+            r'take[- ]?profit[:\s]+\$?([\d,]+\.?\d*)',
+            r'profit[- ]?target[:\s]+\$?([\d,]+\.?\d*)',
+        ]
+
+        for pattern in tp_patterns:
+            match = re.search(pattern, analysis_text, re.IGNORECASE)
+            if match:
+                try:
+                    result["take_profit"] = float(match.group(1).replace(",", ""))
+                    break
+                except ValueError:
+                    continue
+
+        # Extract AI's entry price for reference
+        entry_patterns = [
+            r'\|\s*Entry Price\s*\|\s*\$?([\d,]+\.?\d*)',
+            r'Entry Price[:\s]+\$?([\d,]+\.?\d*)',
+        ]
+
+        for pattern in entry_patterns:
+            match = re.search(pattern, analysis_text, re.IGNORECASE)
+            if match:
+                try:
+                    result["entry_price_from_ai"] = float(match.group(1).replace(",", ""))
+                    break
+                except ValueError:
+                    continue
+
+        # Validate extracted prices make sense
+        sl = result["stop_loss"]
+        tp = result["take_profit"]
+
+        if is_short:
+            # For SHORT: SL should be ABOVE entry, TP should be BELOW entry
+            if sl is not None and sl <= entry_price:
+                print(f"[SL/TP] Invalid SHORT stop-loss {sl} <= entry {entry_price}, ignoring")
+                result["stop_loss"] = None
+            if tp is not None and tp >= entry_price:
+                print(f"[SL/TP] Invalid SHORT take-profit {tp} >= entry {entry_price}, ignoring")
+                result["take_profit"] = None
+        else:
+            # For BUY/LONG: SL should be BELOW entry, TP should be ABOVE entry
+            if sl is not None and sl >= entry_price:
+                print(f"[SL/TP] Invalid LONG stop-loss {sl} >= entry {entry_price}, ignoring")
+                result["stop_loss"] = None
+            if tp is not None and tp <= entry_price:
+                print(f"[SL/TP] Invalid LONG take-profit {tp} <= entry {entry_price}, ignoring")
+                result["take_profit"] = None
+
+        return result
+
+    @staticmethod
+    def place_bracket_order(
+        symbol: str,
+        side: str,
+        qty: int,
+        stop_loss_price: float,
+        take_profit_price: float = None
+    ) -> dict:
+        """
+        Place a bracket order (entry + stop-loss + optional take-profit) with Alpaca.
+
+        Bracket orders are atomic - all legs are created together.
+        Only works for stocks; crypto doesn't support bracket orders.
+
+        Args:
+            symbol: Stock symbol (e.g., "AAPL")
+            side: "buy" or "sell"
+            qty: Number of shares (must be integer for bracket orders)
+            stop_loss_price: Stop-loss trigger price
+            take_profit_price: Take-profit limit price (optional)
+
+        Returns:
+            Dictionary with order result information
+        """
+        try:
+            # Crypto doesn't support bracket orders
+            is_crypto = "/" in symbol.upper()
+            if is_crypto:
+                return {
+                    "success": False,
+                    "error": f"Bracket orders not supported for crypto ({symbol}). Use separate orders."
+                }
+
+            client = get_alpaca_trading_client()
+
+            # Normalize symbol
+            alpaca_symbol = symbol.upper().replace("/", "")
+
+            # Determine order side
+            order_side = OrderSide.BUY if side.lower() == "buy" else OrderSide.SELL
+
+            # Build bracket order request
+            order_params = {
+                "symbol": alpaca_symbol,
+                "qty": qty,
+                "side": order_side,
+                "time_in_force": TimeInForce.DAY,
+                "order_class": OrderClass.BRACKET,
+                "stop_loss": StopLossRequest(stop_price=round(stop_loss_price, 2)),
+            }
+
+            # Add take-profit if specified
+            if take_profit_price is not None:
+                order_params["take_profit"] = TakeProfitRequest(limit_price=round(take_profit_price, 2))
+
+            order_request = MarketOrderRequest(**order_params)
+
+            # Submit the bracket order
+            order = client.submit_order(order_request)
+
+            return {
+                "success": True,
+                "order_id": order.id,
+                "symbol": order.symbol,
+                "side": str(order.side),
+                "qty": float(order.qty) if order.qty else None,
+                "order_class": "bracket",
+                "stop_loss_price": stop_loss_price,
+                "take_profit_price": take_profit_price,
+                "status": str(order.status),
+                "message": f"Successfully placed bracket order for {symbol} with SL=${stop_loss_price}"
+                          + (f" and TP=${take_profit_price}" if take_profit_price else "")
+            }
+
+        except Exception as e:
+            error_msg = f"Error placing bracket order for {symbol}: {e}"
+            log_external_error(
+                system="alpaca",
+                operation="place_bracket_order",
+                error=e,
+                symbol=symbol,
+                params={"side": side, "qty": qty, "stop_loss": stop_loss_price, "take_profit": take_profit_price}
+            )
+            return {"success": False, "error": error_msg}
+
+    @staticmethod
+    def place_stop_order(symbol: str, side: str, qty: int, stop_price: float) -> dict:
+        """
+        Place a standalone stop order (for crypto or as fallback).
+
+        Args:
+            symbol: Symbol (e.g., "AAPL" or "BTC/USD")
+            side: "buy" or "sell"
+            qty: Number of shares/units
+            stop_price: Stop trigger price
+
+        Returns:
+            Dictionary with order result information
+        """
+        try:
+            client = get_alpaca_trading_client()
+
+            # Normalize symbol
+            alpaca_symbol = symbol.upper().replace("/", "")
+
+            # Determine order side
+            order_side = OrderSide.BUY if side.lower() == "buy" else OrderSide.SELL
+
+            # Crypto uses GTC, stocks use DAY
+            is_crypto = "/" in symbol.upper()
+            tif = TimeInForce.GTC if is_crypto else TimeInForce.DAY
+
+            order_request = StopOrderRequest(
+                symbol=alpaca_symbol,
+                qty=qty,
+                side=order_side,
+                time_in_force=tif,
+                stop_price=round(stop_price, 2)
+            )
+
+            order = client.submit_order(order_request)
+
+            return {
+                "success": True,
+                "order_id": order.id,
+                "symbol": order.symbol,
+                "side": str(order.side),
+                "qty": float(order.qty) if order.qty else None,
+                "stop_price": stop_price,
+                "status": str(order.status),
+                "message": f"Successfully placed stop order for {symbol} at ${stop_price}"
+            }
+
+        except Exception as e:
+            error_msg = f"Error placing stop order for {symbol}: {e}"
+            log_external_error(
+                system="alpaca",
+                operation="place_stop_order",
+                error=e,
+                symbol=symbol,
+                params={"side": side, "qty": qty, "stop_price": stop_price}
+            )
+            return {"success": False, "error": error_msg}
+
+    @staticmethod
+    def place_limit_order(symbol: str, side: str, qty: int, limit_price: float) -> dict:
+        """
+        Place a standalone limit order (for take-profit on crypto or as fallback).
+
+        Args:
+            symbol: Symbol (e.g., "AAPL" or "BTC/USD")
+            side: "buy" or "sell"
+            qty: Number of shares/units
+            limit_price: Limit price
+
+        Returns:
+            Dictionary with order result information
+        """
+        try:
+            client = get_alpaca_trading_client()
+
+            # Normalize symbol
+            alpaca_symbol = symbol.upper().replace("/", "")
+
+            # Determine order side
+            order_side = OrderSide.BUY if side.lower() == "buy" else OrderSide.SELL
+
+            # Crypto uses GTC, stocks use DAY
+            is_crypto = "/" in symbol.upper()
+            tif = TimeInForce.GTC if is_crypto else TimeInForce.DAY
+
+            order_request = LimitOrderRequest(
+                symbol=alpaca_symbol,
+                qty=qty,
+                side=order_side,
+                time_in_force=tif,
+                limit_price=round(limit_price, 2)
+            )
+
+            order = client.submit_order(order_request)
+
+            return {
+                "success": True,
+                "order_id": order.id,
+                "symbol": order.symbol,
+                "side": str(order.side),
+                "qty": float(order.qty) if order.qty else None,
+                "limit_price": limit_price,
+                "status": str(order.status),
+                "message": f"Successfully placed limit order for {symbol} at ${limit_price}"
+            }
+
+        except Exception as e:
+            error_msg = f"Error placing limit order for {symbol}: {e}"
+            log_external_error(
+                system="alpaca",
+                operation="place_limit_order",
+                error=e,
+                symbol=symbol,
+                params={"side": side, "qty": qty, "limit_price": limit_price}
+            )
+            return {"success": False, "error": error_msg}
+
+    @staticmethod
     def close_position(symbol: str, percentage: float = 100.0) -> dict:
         """
         Close a position (partially or completely)
@@ -640,27 +1130,45 @@ class AlpacaUtils:
             return {"success": False, "error": error_msg}
 
     @staticmethod
-    def execute_trading_action(symbol: str, current_position: str, signal: str, 
-                             dollar_amount: float, allow_shorts: bool = False) -> dict:
+    def execute_trading_action(
+        symbol: str,
+        current_position: str,
+        signal: str,
+        dollar_amount: float,
+        allow_shorts: bool = False,
+        sl_tp_config: dict = None,
+        analysis_text: str = None
+    ) -> dict:
         """
-        Execute trading action based on current position and signal
-        
+        Execute trading action based on current position and signal.
+
+        Supports optional stop-loss and take-profit orders via bracket orders (stocks)
+        or separate orders (crypto).
+
         Args:
             symbol: Stock symbol
             current_position: Current position state ("LONG", "SHORT", "NEUTRAL")
             signal: Trading signal from analysis
             dollar_amount: Dollar amount for trades
             allow_shorts: Whether short selling is allowed
-            
+            sl_tp_config: Optional dict with SL/TP configuration:
+                - enable_stop_loss: bool
+                - stop_loss_percentage: float (default %)
+                - stop_loss_use_ai: bool (use AI-extracted levels)
+                - enable_take_profit: bool
+                - take_profit_percentage: float (default %)
+                - take_profit_use_ai: bool (use AI-extracted levels)
+            analysis_text: Optional trader analysis text for AI SL/TP extraction
+
         Returns:
             Dictionary with execution results
         """
         try:
             results = []
-            
+
             # Helper to calculate integer quantity for any orders (used by both trading modes)
-            def _calc_qty(sym: str, amount: float) -> int:
-                """Return integer share qty based on latest quote price."""
+            def _calc_qty(sym: str, amount: float) -> tuple:
+                """Return (integer share qty, price) based on latest quote price."""
                 try:
                     quote = AlpacaUtils.get_latest_quote(sym)
                     price = quote.get("bid_price") or quote.get("ask_price")
@@ -668,15 +1176,135 @@ class AlpacaUtils:
                         # Fallback: assume $1 to avoid div-by-zero; will raise later if Alpaca rejects
                         price = 1
                     qty = int(amount / price)
-                    return max(qty, 1)
+                    return max(qty, 1), price
                 except Exception:
-                    # Fallback: at least 1 share
-                    return 1
+                    # Fallback: at least 1 share, unknown price
+                    return 1, None
+
+            def _calculate_sl_tp_prices(entry_price: float, is_short: bool, config: dict, analysis: str):
+                """Calculate stop-loss and take-profit prices based on config and AI extraction."""
+                sl_price = None
+                tp_price = None
+
+                if not config:
+                    print(f"[SL/TP] No config provided, skipping SL/TP")
+                    return sl_price, tp_price
+
+                enable_sl = config.get("enable_stop_loss", False)
+                enable_tp = config.get("enable_take_profit", False)
+
+                print(f"[SL/TP] Settings check - enable_stop_loss: {enable_sl} (type: {type(enable_sl)}), enable_take_profit: {enable_tp} (type: {type(enable_tp)})")
+
+                if not enable_sl and not enable_tp:
+                    print(f"[SL/TP] Both SL and TP are disabled, skipping")
+                    return sl_price, tp_price
+
+                use_ai_sl = config.get("stop_loss_use_ai", True)
+                use_ai_tp = config.get("take_profit_use_ai", True)
+                sl_pct = config.get("stop_loss_percentage", 5.0)
+                tp_pct = config.get("take_profit_percentage", 10.0)
+
+                # Try AI extraction first if enabled
+                ai_levels = {}
+                if analysis and (use_ai_sl or use_ai_tp):
+                    ai_levels = AlpacaUtils.extract_sl_tp_from_analysis(analysis, entry_price, is_short)
+                    print(f"[SL/TP] AI extraction: SL=${ai_levels.get('stop_loss')}, TP=${ai_levels.get('take_profit')}")
+
+                # Calculate stop-loss
+                if enable_sl:
+                    if use_ai_sl and ai_levels.get("stop_loss"):
+                        sl_price = ai_levels["stop_loss"]
+                        print(f"[SL/TP] Using AI stop-loss: ${sl_price}")
+                    else:
+                        # Use percentage-based default
+                        if is_short:
+                            sl_price = entry_price * (1 + sl_pct / 100)  # SL above entry for SHORT
+                        else:
+                            sl_price = entry_price * (1 - sl_pct / 100)  # SL below entry for BUY/LONG
+                        print(f"[SL/TP] Using default {sl_pct}% stop-loss: ${sl_price:.2f}")
+
+                # Calculate take-profit
+                if enable_tp:
+                    if use_ai_tp and ai_levels.get("take_profit"):
+                        tp_price = ai_levels["take_profit"]
+                        print(f"[SL/TP] Using AI take-profit: ${tp_price}")
+                    else:
+                        # Use percentage-based default
+                        if is_short:
+                            tp_price = entry_price * (1 - tp_pct / 100)  # TP below entry for SHORT
+                        else:
+                            tp_price = entry_price * (1 + tp_pct / 100)  # TP above entry for BUY/LONG
+                        print(f"[SL/TP] Using default {tp_pct}% take-profit: ${tp_price:.2f}")
+
+                return sl_price, tp_price
+
+            def _place_entry_with_sl_tp(sym: str, side: str, qty: int, entry_price: float, is_short: bool):
+                """Place entry order with SL/TP using bracket orders (stocks) or separate orders (crypto)."""
+                is_crypto = "/" in sym.upper()
+
+                # Debug: Log SL/TP config being used
+                print(f"[SL/TP] Config received: {sl_tp_config}")
+                print(f"[SL/TP] Entry price: ${entry_price}, Side: {side}, Is short: {is_short}")
+
+                # Calculate SL/TP prices
+                sl_price, tp_price = _calculate_sl_tp_prices(
+                    entry_price, is_short, sl_tp_config, analysis_text
+                )
+
+                print(f"[SL/TP] Calculated prices - SL: ${sl_price}, TP: ${tp_price}")
+
+                # If no SL/TP configured, just place market order
+                if sl_price is None and tp_price is None:
+                    print(f"[SL/TP] No SL/TP prices calculated, placing regular market order")
+                    if is_crypto:
+                        return AlpacaUtils.place_market_order(sym, side, notional=dollar_amount)
+                    else:
+                        return AlpacaUtils.place_market_order(sym, side, qty=qty)
+
+                # Try bracket order for stocks
+                if not is_crypto and sl_price is not None:
+                    bracket_result = AlpacaUtils.place_bracket_order(
+                        sym, side, qty, sl_price, tp_price
+                    )
+                    if bracket_result.get("success"):
+                        return bracket_result
+                    else:
+                        # Bracket failed, fall back to market order
+                        print(f"[SL/TP] Bracket order failed, falling back to market order: {bracket_result.get('error')}")
+                        market_result = AlpacaUtils.place_market_order(sym, side, qty=qty)
+                        market_result["sl_tp_note"] = "Bracket order failed, placed market order without SL/TP"
+                        return market_result
+
+                # For crypto or if only TP is set, use market order + separate SL/TP orders
+                if is_crypto:
+                    entry_result = AlpacaUtils.place_market_order(sym, side, notional=dollar_amount)
+                else:
+                    entry_result = AlpacaUtils.place_market_order(sym, side, qty=qty)
+
+                if not entry_result.get("success"):
+                    return entry_result
+
+                # Place separate SL/TP orders for crypto
+                # Note: For crypto, qty is estimated from entry price. Actual fill qty may differ
+                # slightly in volatile markets. The SL/TP orders use this estimated qty.
+                sl_tp_results = []
+                exit_side = "sell" if side.lower() == "buy" else "buy"
+
+                if sl_price is not None:
+                    sl_result = AlpacaUtils.place_stop_order(sym, exit_side, qty, sl_price)
+                    sl_tp_results.append({"type": "stop_loss", "result": sl_result})
+
+                if tp_price is not None:
+                    tp_result = AlpacaUtils.place_limit_order(sym, exit_side, qty, tp_price)
+                    sl_tp_results.append({"type": "take_profit", "result": tp_result})
+
+                entry_result["sl_tp_orders"] = sl_tp_results
+                return entry_result
             
             if allow_shorts:
                 # Trading mode: LONG/NEUTRAL/SHORT signals
                 signal = signal.upper()
-                
+
                 if current_position == "LONG":
                     if signal == "LONG":
                         results.append({"action": "hold", "message": f"Keeping LONG position in {symbol}"})
@@ -696,10 +1324,11 @@ class AlpacaUtils:
                                 results.append({"action": "open_short", "result": {"success": False, "error": error_msg}})
                             else:
                                 # Calculate integer quantity for short (fractional shares cannot be shorted)
-                                qty_int = _calc_qty(symbol, dollar_amount)
-                                short_result = AlpacaUtils.place_market_order(symbol, "sell", qty=qty_int)
+                                qty_int, entry_price = _calc_qty(symbol, dollar_amount)
+                                # Use SL/TP helper for entry with protective orders
+                                short_result = _place_entry_with_sl_tp(symbol, "sell", qty_int, entry_price, is_short=True)
                                 results.append({"action": "open_short", "result": short_result})
-                
+
                 elif current_position == "SHORT":
                     if signal == "SHORT":
                         results.append({"action": "hold", "message": f"Keeping SHORT position in {symbol}"})
@@ -712,28 +1341,16 @@ class AlpacaUtils:
                         close_result = AlpacaUtils.close_position(symbol)
                         results.append({"action": "close_short", "result": close_result})
                         if close_result.get("success"):
-                            # Open LONG position - use notional amount for crypto, quantity for stocks
-                            is_crypto = "/" in symbol.upper()
-                            if is_crypto:
-                                # For crypto, use exact dollar amount (notional)
-                                long_result = AlpacaUtils.place_market_order(symbol, "buy", notional=dollar_amount)
-                            else:
-                                # For stocks, calculate quantity
-                                qty_int = _calc_qty(symbol, dollar_amount)
-                                long_result = AlpacaUtils.place_market_order(symbol, "buy", qty=qty_int)
+                            # Open LONG position with SL/TP
+                            qty_int, entry_price = _calc_qty(symbol, dollar_amount)
+                            long_result = _place_entry_with_sl_tp(symbol, "buy", qty_int, entry_price, is_short=False)
                             results.append({"action": "open_long", "result": long_result})
-                
+
                 elif current_position == "NEUTRAL":
                     if signal == "LONG":
-                        # Open LONG position - use notional amount for crypto, quantity for stocks
-                        is_crypto = "/" in symbol.upper()
-                        if is_crypto:
-                            # For crypto, use exact dollar amount (notional)
-                            long_result = AlpacaUtils.place_market_order(symbol, "buy", notional=dollar_amount)
-                        else:
-                            # For stocks, calculate quantity
-                            qty_int = _calc_qty(symbol, dollar_amount)
-                            long_result = AlpacaUtils.place_market_order(symbol, "buy", qty=qty_int)
+                        # Open LONG position with SL/TP
+                        qty_int, entry_price = _calc_qty(symbol, dollar_amount)
+                        long_result = _place_entry_with_sl_tp(symbol, "buy", qty_int, entry_price, is_short=False)
                         results.append({"action": "open_long", "result": long_result})
                     elif signal == "SHORT":
                         # Check if this is crypto - Alpaca doesn't support crypto short selling directly
@@ -742,9 +1359,9 @@ class AlpacaUtils:
                             error_msg = f"Direct short selling not supported for crypto assets like {symbol}. Consider using derivatives or margin trading platforms."
                             results.append({"action": "open_short", "result": {"success": False, "error": error_msg}})
                         else:
-                            # For stocks, attempt short selling
-                            qty_int = _calc_qty(symbol, dollar_amount)
-                            short_result = AlpacaUtils.place_market_order(symbol, "sell", qty=qty_int)
+                            # For stocks, attempt short selling with SL/TP
+                            qty_int, entry_price = _calc_qty(symbol, dollar_amount)
+                            short_result = _place_entry_with_sl_tp(symbol, "sell", qty_int, entry_price, is_short=True)
                             results.append({"action": "open_short", "result": short_result})
                     elif signal == "NEUTRAL":
                         results.append({"action": "hold", "message": f"No position needed for {symbol}"})
@@ -753,22 +1370,16 @@ class AlpacaUtils:
                 # Investment mode: BUY/HOLD/SELL signals
                 signal = signal.upper()
                 has_position = current_position == "LONG"
-                
+
                 if signal == "BUY":
                     if has_position:
                         results.append({"action": "hold", "message": f"Already have position in {symbol}"})
                     else:
-                        # Buy position - use notional amount for crypto, quantity for stocks
-                        is_crypto = "/" in symbol.upper()
-                        if is_crypto:
-                            # For crypto, use exact dollar amount (notional)
-                            buy_result = AlpacaUtils.place_market_order(symbol, "buy", notional=dollar_amount)
-                        else:
-                            # For stocks, calculate quantity
-                            qty_int = _calc_qty(symbol, dollar_amount)
-                            buy_result = AlpacaUtils.place_market_order(symbol, "buy", qty=qty_int)
+                        # Buy position with SL/TP
+                        qty_int, entry_price = _calc_qty(symbol, dollar_amount)
+                        buy_result = _place_entry_with_sl_tp(symbol, "buy", qty_int, entry_price, is_short=False)
                         results.append({"action": "buy", "result": buy_result})
-                
+
                 elif signal == "SELL":
                     if has_position:
                         # Sell position
@@ -776,7 +1387,7 @@ class AlpacaUtils:
                         results.append({"action": "sell", "result": sell_result})
                     else:
                         results.append({"action": "hold", "message": f"No position to sell in {symbol}"})
-                
+
                 elif signal == "HOLD":
                     results.append({"action": "hold", "message": f"Holding current position in {symbol}"})
             
