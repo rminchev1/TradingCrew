@@ -85,13 +85,22 @@ def timing_wrapper(analyst_type, timeout_seconds=120):
                     input_summary[key] = value
 
             print(f"[{analyst_type}] 🔧 Starting tool '{tool_name}' with inputs: {input_summary}")
-            
+
             # Notify the state management system of tool call execution
             try:
                 from webui.utils.state import app_state
                 import datetime
                 timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-                
+
+                # Pipeline pause/stop checkpoint before each tool call
+                try:
+                    interrupt_status = app_state.check_pipeline_interrupt(symbol=_get_current_symbol())
+                    if interrupt_status == "stopped":
+                        print(f"[{analyst_type}] Pipeline stopped before tool '{tool_name}' could execute")
+                        return f"Error: Pipeline stopped. Tool '{tool_name}' was not executed."
+                except Exception:
+                    pass  # If check fails (e.g. CLI mode), continue normally
+
                 # Execute the function with timeout protection
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(run_function)
