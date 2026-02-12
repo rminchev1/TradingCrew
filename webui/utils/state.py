@@ -101,6 +101,14 @@ class AppState:
         self.trade_amount = 1000
         self.trade_occurred = False
 
+        # Pipeline control (pause/resume/stop)
+        self._pause_event = threading.Event()
+        self._pause_event.set()  # Starts in "running" (not paused) state
+        self._stop_event = threading.Event()  # When set, signals all threads to stop
+        self.pipeline_paused = False
+        self.pipeline_stopped = False
+        self.paused_symbols = set()
+
         # Scanner state
         self.scanner_running = False
         self.scanner_results = []  # List of ScannerResult objects
@@ -444,6 +452,8 @@ class AppState:
             self.session_start_time = None
             # Reset loop tracking
             self.next_loop_run_time = None
+        # Reset pipeline controls (outside lock since reset_pipeline_controls is lock-free)
+        self.reset_pipeline_controls()
 
     def get_tool_calls_for_display(self, agent_filter=None, symbol_filter=None):
         """Get tool calls in a consistent format for UI display, optionally filtered by agent type and symbol"""
@@ -656,7 +666,88 @@ class AppState:
         self.market_hour_enabled = False
         self.analysis_running = False
         print("[STATE] Stopping market hour mode")
-    
+
+    def pause_pipeline(self):
+        """Pause the analysis pipeline at the next breakpoint."""
+        with self._lock:
+            self._pause_event.clear()  # Will cause wait() to block
+            self.pipeline_paused = True
+            self.needs_ui_update = True
+            print("[STATE] Pipeline paused")
+
+    def resume_pipeline(self):
+        """Resume the paused pipeline."""
+        with self._lock:
+            self.pipeline_paused = False
+            self._pause_event.set()  # Unblocks any waiting threads
+            self.needs_ui_update = True
+            print("[STATE] Pipeline resumed")
+
+    def stop_pipeline(self):
+        """Stop the analysis pipeline. All in-flight work will be abandoned."""
+        with self._lock:
+            self._stop_event.set()  # Signal all threads to exit
+            self._pause_event.set()  # Unblock any paused threads so they can see the stop signal
+            self.pipeline_paused = False
+            self.pipeline_stopped = True
+            self.analysis_running = False
+            # Also set legacy stop flags for loop/market-hour modes
+            self.stop_loop = True
+            self.stop_market_hour = True
+            self.loop_enabled = False
+            self.market_hour_enabled = False
+            self.next_loop_run_time = None
+            self.needs_ui_update = True
+            print("[STATE] Pipeline stopped")
+
+    def reset_pipeline_controls(self):
+        """Reset pipeline control events for a fresh run."""
+        self._pause_event.set()  # Not paused
+        self._stop_event.clear()  # Not stopped
+        self.pipeline_paused = False
+        self.pipeline_stopped = False
+        self.paused_symbols = set()
+
+    def check_pipeline_interrupt(self, symbol=None):
+        """Check pause/stop flags at a breakpoint. Call between graph stream chunks.
+
+        Returns:
+            str: "continue" if pipeline should proceed,
+                 "stopped" if pipeline was stopped (caller should exit).
+                 Blocks while paused until resumed or stopped.
+        """
+        # Check for stop first (fast path)
+        if self._stop_event.is_set():
+            return "stopped"
+
+        # If pause is active, record which symbol is paused and wait
+        if not self._pause_event.is_set():
+            if symbol:
+                with self._lock:
+                    self.paused_symbols.add(symbol)
+            print(f"[PIPELINE] {symbol or 'Unknown'} paused at breakpoint, waiting for resume...")
+
+            # Block until resumed or stopped
+            while not self._pause_event.is_set():
+                if self._stop_event.is_set():
+                    if symbol:
+                        with self._lock:
+                            self.paused_symbols.discard(symbol)
+                    return "stopped"
+                self._pause_event.wait(timeout=0.5)
+
+            # Resumed - remove from paused set
+            if symbol:
+                with self._lock:
+                    self.paused_symbols.discard(symbol)
+            print(f"[PIPELINE] {symbol or 'Unknown'} resumed")
+
+        # Final stop check after unblocking
+        if self._stop_event.is_set():
+            return "stopped"
+
+        return "continue"
+
     def _start_new_session_for_symbol_unlocked(self, symbol):
         """Start a new analysis session for an existing symbol (internal, no lock)."""
         import time

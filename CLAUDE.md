@@ -120,7 +120,7 @@ tradingagents/           # Core framework
 
 webui/                   # Dash-based Web UI
   components/            # 19 UI components (create_*() functions)
-  callbacks/             # 16 callback modules (register_*_callbacks(app) functions)
+  callbacks/             # 17 callback modules (register_*_callbacks(app) functions, incl. panel_visibility)
   utils/state.py         # Global AppState class (thread-safe)
   utils/local_storage.py # SQLite persistence
   utils/storage.py       # Default settings, export/import
@@ -136,10 +136,28 @@ tests/                   # pytest test suite
 
 ### Multi-Agent Flow
 ```
-6 Analyst Agents (parallel) → Bull/Bear Debate → Research Manager Decision
-                                                          ↓
-                              Risk Debators (3) → Portfolio Manager → Trade Decision
+6 Analyst Agents (sequential*) → Bull/Bear Debate → Research Manager Decision
+                                                            ↓
+                                Trader → Risk Debators (3) → Portfolio Manager → Trade Decision
 ```
+*WebUI forces `parallel_analysts=False` for proper report status updates; tickers still run in parallel.
+
+### Execution Threading Model
+```
+User clicks Start → on_control_button_click() → background analysis_thread()
+                                                        ↓
+                ThreadPoolExecutor (max_parallel_tickers workers)
+                    ├─ Thread 1: analyze_single_ticker(AAPL)
+                    │     └─ run_analysis() → graph.stream() loop
+                    │           └─ check_pipeline_interrupt() ← pause/stop checkpoint
+                    ├─ Thread 2: analyze_single_ticker(NVDA)
+                    └─ Thread 3: analyze_single_ticker(TSLA)
+```
+
+Three execution modes share this pattern:
+- **Single run**: Analyzes all symbols once
+- **Loop mode**: Repeats at interval, checks `stop_loop` between iterations
+- **Market hour mode**: Runs at scheduled EST/EDT times
 
 ### Agent Types
 | Agent | File Location | Report Field |
@@ -160,6 +178,58 @@ tests/                   # pytest test suite
 - **In-memory**: `webui/utils/state.py` → `AppState` class (thread-safe with `_lock`)
 - **Persistent**: `webui/utils/local_storage.py` → SQLite database (`tradingcrew.db`)
 - **Settings defaults**: `webui/utils/storage.py` → `DEFAULT_SYSTEM_SETTINGS`
+
+### Dynamic Panel Visibility (DOM Removal Pattern)
+Dashboard panels can be hidden/shown from the Settings page. Hidden panels are **fully removed from the DOM** (not CSS `display:none`) to keep the page lightweight.
+
+**How it works:**
+1. `create_trading_content()` in `layout.py` renders empty wrapper `<div>`s (e.g., `panel-wrapper-account-bar`)
+2. `panel_visibility_callbacks.py` has a single callback that reads `system-settings-store` and populates each wrapper with the panel content (via `_build_*()` functions) or `[]` (empty) if hidden
+3. `suppress_callback_exceptions=True` (set in `webui/config/constants.py`) allows callbacks targeting IDs inside hidden panels to silently fail
+
+**9 togglable panels** (setting key → wrapper ID):
+| Setting Key | Wrapper ID | Builder Function |
+|---|---|---|
+| `show_panel_account_bar` | `panel-wrapper-account-bar` | `_build_account_bar()` |
+| `show_panel_scanner` | `panel-wrapper-scanner` | `_build_scanner_section()` |
+| `show_panel_watchlist` | `panel-wrapper-watchlist` | `_build_watchlist_section()` |
+| `show_panel_chart` | `panel-wrapper-main-trading-row` | `_build_main_trading_row()` |
+| `show_panel_trading` | `panel-wrapper-main-trading-row` | `_build_main_trading_row()` |
+| `show_panel_positions` | `panel-wrapper-positions` | `_build_positions_section()` |
+| `show_panel_options` | `panel-wrapper-options` | `_build_options_section()` |
+| `show_panel_reports` | `panel-wrapper-reports` | `_build_reports_section()` |
+| `show_panel_logs` | `panel-wrapper-logs` | `_build_log_panel()` |
+
+**Chart + Trading Controls** share a wrapper (`panel-wrapper-main-trading-row`). `_build_main_trading_row(show_chart, show_trading)` dynamically adjusts column widths — full-width when one is hidden, empty when both hidden.
+
+**Critical rule — Store/Interval Relocation:**
+When a panel can be removed from the DOM, any `dcc.Store` or `dcc.Interval` inside it will also be destroyed. These MUST be relocated to global scope in `create_stores()` / `create_intervals()` in `layout.py`. Relocated stores/intervals:
+- `scanner-results-store`, `watchlist-store`, `watchlist-reorder-store`, `run-watchlist-store`, `log-last-index` → `create_stores()`
+- `watchlist-refresh-interval`, `log-update-interval` → `create_intervals()`
+
+**When adding a new panel to the visibility system**, update these files:
+1. `webui/utils/storage.py` — add `show_panel_<name>` to `DEFAULT_SYSTEM_SETTINGS` + `safe_keys`
+2. `webui/utils/state.py` — add to `AppState.system_settings`
+3. `webui/components/system_settings.py` — add toggle in `create_dashboard_panels_section()`
+4. `webui/callbacks/system_settings_callbacks.py` — add to all 4 callbacks (load/save/reset/import)
+5. `webui/layout.py` — add wrapper div + builder function
+6. `webui/callbacks/panel_visibility_callbacks.py` — add Output + builder call
+7. Relocate any stores/intervals from the panel component to global scope
+
+### Pipeline Control (Pause/Resume/Stop)
+Pipeline execution can be paused, resumed, and stopped using `threading.Event` primitives in `AppState`:
+- **`_pause_event`**: When cleared, `check_pipeline_interrupt()` blocks the calling thread. When set, execution continues.
+- **`_stop_event`**: When set, all threads exit at the next checkpoint.
+- **Checkpoints**: Inserted in the `graph.stream()` loop in `webui/components/analysis.py`. Each LangGraph node completion yields a chunk, providing a natural breakpoint.
+- **Methods**: `pause_pipeline()`, `resume_pipeline()`, `stop_pipeline()`, `reset_pipeline_controls()`, `check_pipeline_interrupt(symbol)`
+
+```
+UI States:  Idle → [Start] → Running → [Pause] → Paused → [Resume] → Running
+                                  ↓                           ↓
+                               [Stop]                      [Stop]
+                                  ↓                           ↓
+                                Idle                        Idle
+```
 
 ---
 
@@ -358,6 +428,26 @@ def _get_current_symbol():
     return app_state.analyzing_symbol  # Fallback for CLI/single-ticker
 ```
 
+### LangGraph Execution Model
+```python
+# The graph is compiled WITHOUT checkpointing:
+workflow.compile()  # No MemorySaver or persistence
+
+# WebUI uses graph.stream() which yields after each node completes:
+for chunk in graph.graph.stream(initial_state, stream_mode="values", config={"recursion_limit": 100}):
+    # Each chunk = one node completed (analyst, debater, manager, etc.)
+    # This is where pause/stop checkpoints live
+    app_state.check_pipeline_interrupt(symbol=ticker)
+
+# graph.invoke() is used in non-debug CLI mode (no streaming, no interrupts)
+```
+
+**Key facts:**
+- No checkpoint-based resumption — pause works by blocking the thread, not saving state
+- `recursion_limit=100` prevents infinite debate loops
+- Each tool call has a 120s timeout (`agent_utils.py:timing_wrapper`)
+- Debate rounds: investment = `2 * max_debate_rounds` messages, risk = `3 * max_risk_discuss_rounds` messages
+
 ### Analyst Tool Separation (IMPORTANT)
 Each analyst has specific data sources - do NOT mix them:
 
@@ -380,6 +470,10 @@ Output("component-id", "value", allow_duplicate=True)
 
 # Access app_state from callbacks:
 from webui.utils.state import app_state
+
+# Dynamic buttons: Buttons rendered dynamically (e.g., control-button-container)
+# may not exist in the DOM initially. Use suppress_callback_exceptions=True (already set)
+# and guard callbacks with: if not n_clicks: return dash.no_update
 ```
 
 ### Database Operations
@@ -388,6 +482,37 @@ from webui.utils.state import app_state
 from webui.utils.local_storage import save_settings, get_settings
 
 # Tables: kv_store, analyst_reports, analysis_runs, scanner_results
+```
+
+### ChromaDB (Memory System)
+```python
+# ChromaDB is used for financial situation memory (bull/bear memory)
+# Location: tradingagents/agents/utils/memory.py
+# Uses embedded (in-memory) client, NOT http client
+
+self.chroma_client = chromadb.Client(Settings(allow_reset=True))
+```
+
+**Known issue — `chromadb-client` package conflict:**
+If `chromadb-client` (the thin/HTTP-only package) is installed alongside `chromadb`, it overwrites `chromadb/is_thin_client.py` to `is_thin_client = True`, which blocks the embedded client with:
+```
+RuntimeError: Chroma is running in http-only client mode
+```
+**Fix:** Uninstall `chromadb-client` and reinstall `chromadb`:
+```bash
+pip uninstall chromadb-client -y
+pip install --force-reinstall chromadb
+```
+
+### Python Environment
+The app runs using **pyenv Python 3.11.4** (`/Users/radoslavminchev/.pyenv/versions/3.11.4/`), not conda. Always use the correct pip when installing packages:
+```bash
+/Users/radoslavminchev/.pyenv/versions/3.11.4/bin/pip install <package>
+```
+
+**NumPy version constraint:** pandas and numexpr are compiled against NumPy 1.x. If `pip install --force-reinstall` pulls in NumPy 2.x, pandas will crash with `_ARRAY_API not found`. Fix with:
+```bash
+pip install "numpy<2"
 ```
 
 ---
@@ -528,6 +653,7 @@ tests/
 | WebUI component | `tests/webui/test_<component>.py` |
 | WebUI callback | `tests/webui/test_<callback_module>.py` |
 | State management | `tests/webui/test_state.py` |
+| Pipeline controls | `tests/webui/test_pipeline_controls.py` |
 | Data flow/API | `tests/dataflows/test_<module>.py` |
 | Settings | `tests/webui/test_settings.py` |
 
@@ -638,12 +764,19 @@ app_state.tool_calls_log.append(tool_call_info)
 | `tradingagents/agents/utils/agent_utils.py` | Tool tracking & timing | `timing_wrapper()`, `_get_current_symbol()` |
 | `tradingagents/default_config.py` | Config defaults | `DEFAULT_CONFIG` dict |
 | `webui/app_dash.py` | App factory | `create_app()`, `run_app()` |
-| `webui/layout.py` | Layout assembly | `create_main_layout()` |
-| `webui/utils/state.py` | Global state + thread-local | `AppState`, `get_thread_symbol()` |
+| `webui/layout.py` | Layout assembly + panel builders | `create_main_layout()`, `_build_*()` functions, `create_stores()`, `create_intervals()` |
+| `webui/utils/state.py` | Global state + thread-local + pipeline control | `AppState`, `get_thread_symbol()`, `check_pipeline_interrupt()` |
 | `webui/utils/local_storage.py` | SQLite persistence | `save_settings()`, `get_settings()` |
 | `webui/utils/storage.py` | Settings defaults | `DEFAULT_SYSTEM_SETTINGS` |
-| `webui/callbacks/control_callbacks.py` | Analysis control | Settings persistence, start/stop |
-| `webui/callbacks/system_settings_callbacks.py` | System settings | API keys, LLM config |
+| `webui/callbacks/control_callbacks.py` | Analysis control | Settings persistence, start/stop/pause/resume |
+| `webui/callbacks/status_callbacks.py` | Status table & refresh | `update_status_table()`, `manage_refresh_intervals_and_status()` |
+| `webui/callbacks/system_settings_callbacks.py` | System settings | API keys, LLM config, panel visibility |
+| `webui/callbacks/panel_visibility_callbacks.py` | Panel hide/show | `render_visible_panels()` — populates wrapper divs |
+| `webui/components/system_settings.py` | Settings page UI | `create_dashboard_panels_section()`, `create_api_keys_section()` |
+| `webui/components/analysis.py` | Analysis execution | `run_analysis()` (stream loop with pause/stop checkpoints) |
+| `tradingagents/agents/utils/memory.py` | ChromaDB memory | `FinancialSituationMemory` (bull/bear memory) |
+| `tradingagents/graph/setup.py` | Graph construction | `setup_graph()`, `_create_parallel_analysts_coordinator()` |
+| `tradingagents/graph/conditional_logic.py` | Routing functions | `should_continue_debate()`, `should_continue_risk_analysis()` |
 
 ---
 
@@ -664,11 +797,18 @@ with ThreadPoolExecutor(max_workers=get_max_parallel_tickers()) as executor:
 
 ### Analyst Execution
 ```python
-# Controlled by config: parallel_analysts (default True)
+# Controlled by config: parallel_analysts (default True in config, but WebUI overrides to False)
 # Location: tradingagents/graph/setup.py
 
-# When True, all 6 analysts run concurrently via ThreadPoolExecutor
-# When False, analysts run sequentially
+# When True: all analysts run concurrently via ThreadPoolExecutor (0.5s stagger between starts)
+#   - Each analyst gets a deep-copied state for isolation
+#   - Results merged back after all complete
+# When False: analysts run as sequential LangGraph nodes (WebUI default)
+#   - Each node completion yields a stream chunk → natural breakpoint for pause/stop
+#   - WebUI uses False for proper per-agent status updates in the UI
+
+# IMPORTANT: webui/components/analysis.py line 246 forces:
+config["parallel_analysts"] = False  # Sequential analysts for proper report updates
 ```
 
 ---
@@ -698,6 +838,13 @@ app_state.symbol_states         # dict - per-symbol analysis state
 app_state.system_settings       # dict - system configuration
 app_state.scanner_running       # bool - scanner in progress
 app_state.next_loop_run_time    # datetime - next loop iteration (EST/EDT)
+
+# Pipeline control
+app_state.pipeline_paused       # bool - pipeline is paused
+app_state.pipeline_stopped      # bool - pipeline was stopped
+app_state.paused_symbols        # set  - symbols currently blocked at a breakpoint
+app_state._pause_event          # threading.Event - cleared=paused, set=running
+app_state._stop_event           # threading.Event - set=stop requested
 ```
 
 ---
@@ -716,3 +863,11 @@ app_state.next_loop_run_time    # datetime - next loop iteration (EST/EDT)
 10. **Settings require multiple file updates** - Follow the pattern above
 11. **Callbacks need `prevent_initial_call=True`** to avoid load-time execution
 12. **Test API connections** before assuming they work
+13. **Pipeline control uses `threading.Event`** — `check_pipeline_interrupt()` must be called between stream chunks; it blocks on pause and returns `"stopped"` on stop
+14. **`stop_pipeline()` must unblock paused threads** — Always call `_pause_event.set()` before `_stop_event.set()` to prevent deadlocked threads
+15. **`reset()` resets pipeline controls** — Any fresh analysis start calls `reset()` which calls `reset_pipeline_controls()` automatically
+16. **Dynamic buttons need guard checks** — Callbacks for dynamically-rendered buttons (like `pause-resume-btn`) must check `if not n_clicks: return dash.no_update`
+17. **Stores/Intervals must survive panel removal** — If a `dcc.Store` or `dcc.Interval` is inside a hideable panel, relocate it to `create_stores()`/`create_intervals()` in `layout.py`
+18. **Never install `chromadb-client` alongside `chromadb`** — It overwrites `is_thin_client=True` and breaks embedded mode. Fix: `pip uninstall chromadb-client && pip install --force-reinstall chromadb`
+19. **NumPy must stay < 2.0** — pandas/numexpr are compiled against NumPy 1.x. If a dependency upgrade pulls NumPy 2.x, fix with `pip install "numpy<2"`
+20. **App uses pyenv Python 3.11.4** — Not conda. Use `/Users/radoslavminchev/.pyenv/versions/3.11.4/bin/pip` for the correct environment
