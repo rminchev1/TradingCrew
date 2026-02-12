@@ -57,6 +57,10 @@ def register_status_callbacks(app):
                     status_icon = "✅"
                     status_text = "COMPLETED"
                     status_color = COLORS["completed"]
+                elif status == "in_progress" and app_state.pipeline_paused:
+                    status_icon = "⏸️"
+                    status_text = "PAUSED"
+                    status_color = COLORS["in_progress"]
                 elif status == "in_progress":
                     status_icon = "🔄"
                     status_text = "IN PROGRESS"
@@ -104,8 +108,8 @@ def register_status_callbacks(app):
         """
         Manage the refresh intervals and their associated status message.
         """
-        # Fast refresh (1 s) only needed while analysis is in progress or when UI still needs an immediate update.
-        refresh_disabled = not (app_state.analysis_running or app_state.needs_ui_update)
+        # Fast refresh (1 s) needed while analysis is in progress, paused (to stay responsive), or when UI still needs an immediate update.
+        refresh_disabled = not (app_state.analysis_running or app_state.pipeline_paused or app_state.needs_ui_update)
 
         # The medium-rate interval (5 s) is kept ON at all times so that the tabs/summary
         # can still update even after the analysis thread has ended.  Its lightweight
@@ -118,7 +122,15 @@ def register_status_callbacks(app):
             app_state.needs_ui_update = False
 
         # Enhanced status message for different modes
-        if app_state.market_hour_enabled:
+        if app_state.pipeline_paused:
+            paused_count = len(app_state.paused_symbols)
+            if paused_count > 0:
+                status_msg = f"⏸️ Pipeline paused ({paused_count} symbol{'s' if paused_count != 1 else ''} waiting)"
+            else:
+                status_msg = "⏸️ Pipeline paused - will pause at next breakpoint"
+            status_class = "text-warning mt-2"
+            return refresh_disabled, medium_refresh_disabled, status_msg, status_class
+        elif app_state.market_hour_enabled:
             if app_state.analysis_running:
                 status_msg = "🔄 Market hour mode - Analysis in progress"
                 status_class = "text-warning mt-2"

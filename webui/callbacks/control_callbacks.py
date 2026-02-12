@@ -330,16 +330,46 @@ def register_control_callbacks(app):
         [Input("refresh-interval", "n_intervals")]
     )
     def update_control_button(n_intervals):
-        """Update the control button (Start/Stop) based on current state"""
+        """Update control buttons based on current state (idle/running/paused)"""
         if app_state.analysis_running or app_state.loop_enabled or app_state.market_hour_enabled:
-            return dbc.Button(
-                "Stop Analysis",
-                id="control-btn",
-                color="danger",
-                size="lg",
-                className="w-100 mt-2"
-            )
+            if app_state.pipeline_paused:
+                # PAUSED state: Resume + Stop
+                return html.Div([
+                    dbc.Button(
+                        [html.I(className="fas fa-play me-1"), "Resume"],
+                        id="pause-resume-btn",
+                        color="success",
+                        size="lg",
+                        className="flex-grow-1"
+                    ),
+                    dbc.Button(
+                        [html.I(className="fas fa-stop me-1"), "Stop"],
+                        id="control-btn",
+                        color="danger",
+                        size="lg",
+                        className="flex-grow-1"
+                    ),
+                ], className="d-flex gap-2 mt-2")
+            else:
+                # RUNNING state: Pause + Stop
+                return html.Div([
+                    dbc.Button(
+                        [html.I(className="fas fa-pause me-1"), "Pause"],
+                        id="pause-resume-btn",
+                        color="warning",
+                        size="lg",
+                        className="flex-grow-1"
+                    ),
+                    dbc.Button(
+                        [html.I(className="fas fa-stop me-1"), "Stop"],
+                        id="control-btn",
+                        color="danger",
+                        size="lg",
+                        className="flex-grow-1"
+                    ),
+                ], className="d-flex gap-2 mt-2")
         else:
+            # IDLE state: Start Analysis
             return dbc.Button(
                 "Start Analysis",
                 id="control-btn",
@@ -347,6 +377,23 @@ def register_control_callbacks(app):
                 size="lg",
                 className="w-100 mt-2"
             )
+
+    @app.callback(
+        Output("result-text", "children", allow_duplicate=True),
+        Input("pause-resume-btn", "n_clicks"),
+        prevent_initial_call=True
+    )
+    def on_pause_resume_click(n_clicks):
+        """Handle pause/resume button clicks."""
+        if not n_clicks:
+            return dash.no_update
+
+        if app_state.pipeline_paused:
+            app_state.resume_pipeline()
+            return "Analysis resumed."
+        else:
+            app_state.pause_pipeline()
+            return "Analysis pausing at next breakpoint..."
 
     @app.callback(
         Output("trading-mode-info", "children"),
@@ -537,14 +584,14 @@ def register_control_callbacks(app):
         
         # Handle stop action
         if is_stop_action:
-            if app_state.loop_enabled:
-                app_state.stop_loop_mode()
+            was_loop = app_state.loop_enabled
+            was_market_hour = app_state.market_hour_enabled
+            app_state.stop_pipeline()  # Unified stop: handles all modes, unblocks paused threads
+            if was_loop:
                 return "Loop analysis stopped.", dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
-            elif app_state.market_hour_enabled:
-                app_state.stop_market_hour_mode()
+            elif was_market_hour:
                 return "Market hour analysis stopped.", dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             else:
-                app_state.analysis_running = False
                 return "Analysis stopped.", dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
         # Handle start action
@@ -717,6 +764,12 @@ def register_control_callbacks(app):
                         # Wait until next execution time (compare in Eastern time)
                         now_eastern = datetime.datetime.now(eastern)
                         while now_eastern < next_dt and not app_state.stop_market_hour:
+                            # Check for pause during wait interval
+                            if app_state.pipeline_paused:
+                                print("[MARKET_HOUR] Paused during wait interval")
+                                interrupt = app_state.check_pipeline_interrupt()
+                                if interrupt == "stopped":
+                                    break
                             time.sleep(30)
                             now_eastern = datetime.datetime.now(eastern)
 
@@ -752,6 +805,8 @@ def register_control_callbacks(app):
                     
                     def analyze_single_ticker_market_hour(symbol, sched_time):
                         """Analyze a single ticker in market hour mode (for parallel execution)."""
+                        if app_state._stop_event.is_set():
+                            return symbol, False, "Pipeline stopped before analysis started"
                         try:
                             app_state.start_analyzing_symbol(symbol)
                             sh, sm = sched_time
@@ -819,6 +874,8 @@ def register_control_callbacks(app):
                 
                 def analyze_single_ticker_loop(symbol):
                     """Analyze a single ticker in loop mode (for parallel execution)."""
+                    if app_state._stop_event.is_set():
+                        return symbol, False, "Pipeline stopped before analysis started"
                     try:
                         app_state.start_analyzing_symbol(symbol)
                         print(f"[LOOP-PARALLEL] Starting analysis for {symbol}")
@@ -878,10 +935,16 @@ def register_control_callbacks(app):
                     app_state.next_loop_run_time = next_run
                     print(f"[LOOP] Next iteration scheduled at {next_run.strftime('%I:%M %p %Z')}")
 
-                    # Wait for the specified interval (checking for stop every 30 seconds)
+                    # Wait for the specified interval (checking for stop/pause every 30 seconds)
                     wait_time = app_state.loop_interval_minutes * 60  # Convert to seconds
                     elapsed = 0
                     while elapsed < wait_time and not app_state.stop_loop:
+                        # Check for pause during wait interval
+                        if app_state.pipeline_paused:
+                            print("[LOOP] Paused during wait interval")
+                            interrupt = app_state.check_pipeline_interrupt()
+                            if interrupt == "stopped":
+                                break
                         time.sleep(min(30, wait_time - elapsed))
                         elapsed += 30
                     
@@ -897,6 +960,8 @@ def register_control_callbacks(app):
 
                 def analyze_single_ticker(symbol):
                     """Analyze a single ticker (for parallel execution)."""
+                    if app_state._stop_event.is_set():
+                        return symbol, False, "Pipeline stopped before analysis started"
                     import threading
                     thread_id = threading.current_thread().name
                     print(f"[PARALLEL] Worker {thread_id} picked up {symbol}")

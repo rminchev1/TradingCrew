@@ -262,11 +262,19 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         # Run analysis with tracing using current date
         print(f"Starting graph stream for {ticker} with current market data")
         trace = []
+        analysis_interrupted = False
         for chunk in graph.graph.stream(
             graph.propagator.create_initial_state(ticker, current_date),
             stream_mode="values",
             config={"recursion_limit": 100}
         ):
+            # Pause/Stop checkpoint - check between graph node completions
+            interrupt_status = app_state.check_pipeline_interrupt(symbol=ticker)
+            if interrupt_status == "stopped":
+                print(f"[ANALYSIS] Pipeline stopped for {ticker}, exiting stream loop")
+                analysis_interrupted = True
+                break
+
             # Track progress
             trace.append(chunk)
 
@@ -274,7 +282,7 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
             app_state.process_chunk_updates(chunk, symbol=ticker)
 
             app_state.needs_ui_update = True
-            
+
             # Update progress bar if provided
             if progress is not None:
                 # Simulate progress based on steps completed
@@ -282,10 +290,20 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
                 total_agents = len(current_state["agent_statuses"])
                 if total_agents > 0:
                     progress(completed_agents / total_agents)
-            
+
             # Small delay to prevent UI lag
             time.sleep(0.1)
-        
+
+        # Handle interrupted analysis
+        if analysis_interrupted:
+            if current_state:
+                current_state["analysis_running"] = False
+                for agent, status in current_state["agent_statuses"].items():
+                    if status == "in_progress":
+                        app_state.update_agent_status(agent, "pending", symbol=ticker)
+            print(f"[ANALYSIS] Analysis interrupted for {ticker}")
+            return "Analysis stopped"
+
         # Extract final results
         final_state = trace[-1]
         decision = graph.process_signal(final_state["final_trade_decision"])
