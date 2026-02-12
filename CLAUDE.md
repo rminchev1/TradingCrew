@@ -82,6 +82,25 @@ When to update docs:
 - **Bug fix affecting users**: Update `troubleshooting.md` if relevant
 - **Every release**: Update `CHANGELOG.md` with version, date, and changes
 
+### 4. Update CLAUDE.md After Meaningful Changes
+**After completing any meaningful feature, refactor, or architectural change, CLAUDE.md MUST be updated.**
+
+This is NOT optional. CLAUDE.md is the single source of truth for development patterns. Stale docs cause rediscovery of conventions and bugs.
+
+**What to update:**
+- **New UI pattern**: Add to Architecture Patterns or Common Development Tasks
+- **New callback pattern**: Update Callback Patterns or add a new section
+- **File added/removed/renamed**: Update Key File Reference table
+- **New gotcha discovered**: Add to Critical Gotchas
+- **Setting added**: Ensure the "Adding a New System Setting" section is still accurate
+- **Architecture change**: Update the relevant Architecture section
+
+**How to update:**
+1. Read the current CLAUDE.md section you plan to modify (avoid stale edits)
+2. Make surgical edits — update only what changed, don't rewrite entire sections
+3. Keep the same formatting style (tables, code blocks, bullet lists)
+4. If a section is now wrong, fix it; if a section is missing, add it
+
 ---
 
 ## Project Overview
@@ -230,6 +249,25 @@ UI States:  Idle → [Start] → Running → [Pause] → Paused → [Resume] →
                                   ↓                           ↓
                                 Idle                        Idle
 ```
+
+### Symbol Selection (Dropdown Pattern)
+Both the **Chart** and **Reports** panels use `dbc.Select` dropdowns for symbol selection (not button grids). They sync via hidden `dbc.Pagination` components.
+
+**Components:**
+| Panel | Select ID | Populate Callback | Change Handler |
+|-------|-----------|-------------------|----------------|
+| Chart | `chart-symbol-select` | `update_chart_symbol_select()` in `chart_callbacks.py` | `handle_chart_symbol_select()` |
+| Reports | `report-symbol-select` | `update_report_symbol_select()` in `report_callbacks.py` | `handle_report_symbol_select()` |
+
+**How it works:**
+1. Populate callbacks run on `app-store` + `refresh-interval`, read `app_state.symbol_states` to build options (`[{"label": "AAPL", "value": "1"}, ...]`), and set value based on `app_state.current_symbol`
+2. Change handlers fire on Select value change, set `app_state.current_symbol`, and output to both `chart-pagination.active_page` and `report-pagination.active_page`
+3. The hidden paginations trigger downstream chart data / report content callbacks
+4. Populate callbacks use `State("...-symbol-select", "value")` and compare with new value — only output `dash.no_update` for value when unchanged, to avoid re-triggering the change handler on every refresh
+
+**History mode:** When `history-selector` changes, `load_historical_run()` in `history_callbacks.py` outputs directly to `report-symbol-select.options` and `.value` with `📁`-prefixed labels.
+
+**CSS:** `.symbol-select` class in `custom.css` styles both dropdowns. Light theme override: `body.theme-bw .symbol-select`.
 
 ---
 
@@ -772,6 +810,11 @@ app_state.tool_calls_log.append(tool_call_info)
 | `webui/callbacks/status_callbacks.py` | Status table & refresh | `update_status_table()`, `manage_refresh_intervals_and_status()` |
 | `webui/callbacks/system_settings_callbacks.py` | System settings | API keys, LLM config, panel visibility |
 | `webui/callbacks/panel_visibility_callbacks.py` | Panel hide/show | `render_visible_panels()` — populates wrapper divs |
+| `webui/callbacks/chart_callbacks.py` | Chart + symbol select | `update_chart_symbol_select()`, `handle_chart_symbol_select()`, `update_chart()` |
+| `webui/callbacks/report_callbacks.py` | Reports + symbol select | `update_report_symbol_select()`, `handle_report_symbol_select()` |
+| `webui/callbacks/history_callbacks.py` | History save/load | `load_historical_run()` → populates `report-symbol-select` |
+| `webui/components/chart_panel.py` | Chart panel UI | `create_chart_panel()` — `dbc.Select(id="chart-symbol-select")` |
+| `webui/components/reports_panel.py` | Reports panel UI | `create_reports_panel()` — `dbc.Select(id="report-symbol-select")` |
 | `webui/components/system_settings.py` | Settings page UI | `create_dashboard_panels_section()`, `create_api_keys_section()` |
 | `webui/components/analysis.py` | Analysis execution | `run_analysis()` (stream loop with pause/stop checkpoints) |
 | `tradingagents/agents/utils/memory.py` | ChromaDB memory | `FinancialSituationMemory` (bull/bear memory) |
@@ -871,3 +914,5 @@ app_state._stop_event           # threading.Event - set=stop requested
 18. **Never install `chromadb-client` alongside `chromadb`** — It overwrites `is_thin_client=True` and breaks embedded mode. Fix: `pip uninstall chromadb-client && pip install --force-reinstall chromadb`
 19. **NumPy must stay < 2.0** — pandas/numexpr are compiled against NumPy 1.x. If a dependency upgrade pulls NumPy 2.x, fix with `pip install "numpy<2"`
 20. **App uses pyenv Python 3.11.4** — Not conda. Use `/Users/radoslavminchev/.pyenv/versions/3.11.4/bin/pip` for the correct environment
+21. **Symbol selection uses `dbc.Select` dropdowns** — NOT button grids. Chart: `chart-symbol-select`, Reports: `report-symbol-select`. Values are 1-indexed strings mapping to `app_state.symbol_states` keys. Synced via hidden `dbc.Pagination` components.
+22. **UPDATE CLAUDE.md after meaningful changes** — Any new feature, pattern change, or architectural update must be reflected in this file. Read the section first, then make surgical edits.

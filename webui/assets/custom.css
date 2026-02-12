@@ -861,158 +861,38 @@ body.theme-bw .form-control:focus {
     font-size: 1.4rem;
 }
 
-/* Symbol Pagination Styling */
-.symbol-pagination-container {
-    background-color: rgba(15, 23, 42, 0.3);
-    border-radius: 8px;
-    padding: 12px;
-    border: 1px solid rgba(51, 65, 85, 0.3);
-}
-
-.symbol-pagination-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.symbol-btn {
-    transition: all 0.15s ease !important;
-    min-width: 60px;
-    font-weight: 500;
-    background: linear-gradient(135deg, #334155 0%, #475569 100%);
-    border: 1px solid #475569;
-    color: #E2E8F0;
-    transform: translateY(0);
-    margin: 0 2px;
+/* Symbol Select Dropdown Styling */
+.symbol-select {
+    background: linear-gradient(135deg, #1E293B 0%, #334155 100%) !important;
+    border: 1px solid #475569 !important;
+    color: #E2E8F0 !important;
     border-radius: 6px !important;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.symbol-btn:hover {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
-    border-color: #2563EB !important;
-    color: white !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
-}
-
-/* IMMEDIATE CLICK FEEDBACK - This fires instantly! */
-.symbol-btn:active {
-    background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%) !important;
-    border-color: #1E40AF !important;
-    color: white !important;
-    transform: translateY(0) scale(0.95) !important;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.4) !important;
-    transition: all 0.05s ease !important;
-}
-
-/* SELECTED STATE - This updates after callback */
-.symbol-btn.active {
-    background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
-    border-color: #059669 !important;
-    color: white !important;
     font-weight: 600 !important;
-    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3) !important;
+    font-size: 0.85rem !important;
+    padding: 0.35rem 2rem 0.35rem 0.75rem !important;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394A3B8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
 }
 
-/* SELECTED STATE HOVER */
-.symbol-btn.active:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-    border-color: #047857 !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4) !important;
+.symbol-select:hover {
+    border-color: #3B82F6 !important;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2) !important;
 }
 
-/* SELECTED STATE CLICK */
-.symbol-btn.active:active {
-    background: linear-gradient(135deg, #047857 0%, #065F46 100%) !important;
-    border-color: #065F46 !important;
-    transform: translateY(0) scale(0.98) !important;
-    transition: all 0.05s ease !important;
+.symbol-select:focus {
+    border-color: #3B82F6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+    outline: none !important;
 }
 
-/* Touch device support for immediate feedback */
-@media (hover: none) and (pointer: coarse) {
-    .symbol-btn:active {
-        background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%) !important;
-        border-color: #1E40AF !important;
-        color: white !important;
-        transform: scale(0.95) !important;
-        transition: all 0.1s ease !important;
-    }
-    
-    .symbol-btn.active:active {
-        background: linear-gradient(135deg, #047857 0%, #065F46 100%) !important;
-        border-color: #065F46 !important;
-        transform: scale(0.95) !important;
-    }
-    
-    /* Larger touch targets on mobile */
-    .symbol-btn {
-        min-height: 44px;
-        padding: 8px 12px;
-        font-size: 14px;
-    }
-}
-
-/* Symbol Button Group Styling */
-.btn-group .symbol-btn:not(:last-child) {
-    margin-right: 2px;
-}
-
-.btn-group .symbol-btn:not(:first-child) {
-    margin-left: 2px;
-}
-
-/* Button group container */
-.symbol-pagination-wrapper .btn-group {
-    gap: 4px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-/* Focus states for accessibility */
-.symbol-btn:focus {
-    outline: 2px solid #3B82F6;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-}
-
-.symbol-btn.active:focus {
-    outline: 2px solid #10B981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
-}
-
-/* Navigation Info */
-.symbol-pagination-wrapper .text-muted {
-    font-size: 0.85rem;
-    color: #64748B !important;
-    font-weight: 500;
-}
-
-.symbol-pagination-wrapper .text-muted i {
-    color: #3B82F6;
-    margin-right: 0.5rem;
-}
-
-/* Responsive Symbol Pagination */
-@media (max-width: 768px) {
-    .symbol-btn {
-        min-width: 50px !important;
-        font-size: 0.8rem;
-        padding: 0.25rem 0.5rem !important;
-        margin: 0 1px !important;
-    }
-    
-    .symbol-pagination-wrapper .btn-group {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
-    .pagination-row {
-        padding: 8px;
-    }
+.symbol-select option {
+    background: #1E293B;
+    color: #E2E8F0;
+    padding: 0.5rem;
 }
 
 /* Enhanced Tabs Styling */
@@ -1048,45 +928,6 @@ body.theme-bw .form-control:focus {
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-/* Loading States for Symbol Pagination */
-.symbol-pagination-container .text-muted {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    color: #64748B;
-    font-style: italic;
-}
-
-/* Animation for Symbol Button Clicks */
-@keyframes symbolClick {
-    0% { transform: scale(1); }
-    50% { transform: scale(0.95); }
-    100% { transform: scale(1); }
-}
-
-.symbol-btn:active {
-    animation: symbolClick 0.15s ease;
-}
-
-/* Enhanced Visual Feedback */
-.symbol-btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
-}
-
-/* Gradient Background for Active State */
-.symbol-btn.active {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
-    background-size: 200% 200%;
-    animation: gradientShift 3s ease infinite;
-}
-
-@keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
 
 /* Debate iframe styling */
 .debate-iframe {
@@ -2207,23 +2048,29 @@ body.theme-bw .nav-pills .nav-link.active.report-nav-pill {
     box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3) !important;
 }
 
-/* Light Theme - Symbol Buttons */
-body.theme-bw .symbol-btn {
-    background-color: #F1F5F9 !important;
+/* Light Theme - Symbol Select */
+body.theme-bw .symbol-select {
+    background: #F8FAFC !important;
     border-color: #CBD5E1 !important;
-    color: #475569 !important;
-}
-
-body.theme-bw .symbol-btn:hover {
-    background-color: #E2E8F0 !important;
-    border-color: #94A3B8 !important;
     color: #1E293B !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
 }
 
-body.theme-bw .symbol-btn.active {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
-    color: #FFFFFF !important;
+body.theme-bw .symbol-select:hover {
     border-color: #3B82F6 !important;
+}
+
+body.theme-bw .symbol-select:focus {
+    border-color: #3B82F6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+}
+
+body.theme-bw .symbol-select option {
+    background: #FFFFFF;
+    color: #1E293B;
 }
 
 /* Light Theme - Current Symbol Badge */

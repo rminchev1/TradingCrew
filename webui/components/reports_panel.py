@@ -8,17 +8,6 @@ from webui.components.prompt_modal import create_prompt_modal
 from webui.components.tool_outputs_modal import create_tool_outputs_modal
 
 
-def create_symbol_pagination(pagination_id, max_symbols=1):
-    """Create a custom pagination component using symbol names instead of page numbers"""
-    return html.Div(id=f"{pagination_id}-container",
-                   children=[
-                       html.Div("No symbols available",
-                               className="text-muted text-center",
-                               style={"padding": "10px"})
-                   ],
-                   className="symbol-pagination-container")
-
-
 def create_nav_item(tab_id, icon, label, is_active=False):
     """Create a navigation pill item"""
     return dbc.NavItem(
@@ -74,14 +63,20 @@ def create_reports_panel():
         # Row 1: Symbol selector (left) + Current symbol (right)
         dbc.Row([
             dbc.Col([
-                create_symbol_pagination("report-pagination")
-            ], lg=8, md=7, className="d-flex align-items-center"),
+                dbc.Select(
+                    id="report-symbol-select",
+                    options=[],
+                    placeholder="Select symbol...",
+                    size="sm",
+                    className="symbol-select"
+                )
+            ], width="auto", style={"minWidth": "160px"}, className="d-flex align-items-center"),
             dbc.Col([
                 html.Div([
                     html.Span(id="current-symbol-report-display", className="current-symbol-badge")
                 ], className="text-end")
-            ], lg=4, md=5, className="d-flex align-items-center justify-content-end")
-        ], className="mb-3 symbol-nav-row"),
+            ], className="d-flex align-items-center justify-content-end")
+        ], className="mb-3 symbol-nav-row g-2"),
 
         # Row 2: Navigation pills grouped by category
         # Labels include a span for dynamic data indicator (✓ when report has content)

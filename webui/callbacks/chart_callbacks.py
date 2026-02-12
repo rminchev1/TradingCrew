@@ -1,12 +1,11 @@
 """
 Chart-related callbacks for TradingAgents WebUI
-Enhanced with symbol-based pagination and technical indicators.
+Enhanced with symbol dropdown selector and technical indicators.
 
 Uses TradingView lightweight-charts for professional charting.
 """
 
-from dash import Input, Output, State, ctx, html, ALL, dash, ClientsideFunction
-import dash_bootstrap_components as dbc
+from dash import Input, Output, State, ctx, html, dash
 import pandas as pd
 from datetime import datetime
 
@@ -15,109 +14,55 @@ from webui.utils.charts import get_yahoo_data, add_indicators
 from webui.utils.chart_data import prepare_chart_data
 
 
-def create_symbol_button(symbol, index, is_active=False):
-    """Create a symbol button for pagination"""
-    return dbc.Button(
-        symbol,
-        id={"type": "symbol-btn", "index": index, "component": "charts"},
-        color="primary" if is_active else "outline-primary",
-        size="sm",
-        className=f"symbol-btn {'active' if is_active else ''}",
-    )
-
-
 def register_chart_callbacks(app):
-    """Register all chart-related callbacks including symbol pagination"""
+    """Register all chart-related callbacks including symbol dropdown"""
 
     @app.callback(
-        Output("chart-pagination-container", "children", allow_duplicate=True),
+        [Output("chart-symbol-select", "options"),
+         Output("chart-symbol-select", "value")],
         [Input("app-store", "data"),
          Input("refresh-interval", "n_intervals")],
+        [State("chart-symbol-select", "value")],
         prevent_initial_call=True
     )
-    def update_chart_symbol_pagination(store_data, n_intervals):
-        """Update the symbol pagination buttons for charts"""
+    def update_chart_symbol_select(store_data, n_intervals, current_value):
+        """Update the symbol dropdown options for charts"""
         if not app_state.symbol_states:
-            return html.Div("No symbols available",
-                          className="text-muted text-center",
-                          style={"padding": "10px"})
+            return [], None
 
         symbols = list(app_state.symbol_states.keys())
+        options = [{"label": s, "value": str(i + 1)} for i, s in enumerate(symbols)]
+
         current_symbol = app_state.current_symbol
-
-        # Find active symbol index
-        active_index = 0
+        new_value = "1"
         if current_symbol and current_symbol in symbols:
-            active_index = symbols.index(current_symbol)
+            new_value = str(symbols.index(current_symbol) + 1)
 
-        buttons = []
-        for i, symbol in enumerate(symbols):
-            is_active = i == active_index
-            buttons.append(create_symbol_button(symbol, i, is_active))
+        # Only update value if changed to avoid re-triggering downstream
+        if new_value == current_value:
+            return options, dash.no_update
 
-        if len(symbols) > 1:
-            # Add navigation info
-            nav_info = html.Div([
-                html.I(className="fas fa-chart-line me-2"),
-                f"Charts for {len(symbols)} symbols"
-            ], className="text-muted small text-center mt-2")
-
-            return html.Div([
-                dbc.ButtonGroup(buttons, className="d-flex flex-wrap justify-content-center"),
-                nav_info
-            ], className="symbol-pagination-wrapper")
-        else:
-            return dbc.ButtonGroup(buttons, className="d-flex justify-content-center")
+        return options, new_value
 
     @app.callback(
         [Output("chart-pagination", "active_page", allow_duplicate=True),
-         Output("report-pagination", "active_page", allow_duplicate=True),
-         Output("chart-pagination-container", "children", allow_duplicate=True)],
-        [Input({"type": "symbol-btn", "index": ALL, "component": "charts"}, "n_clicks")],
+         Output("report-pagination", "active_page", allow_duplicate=True)],
+        [Input("chart-symbol-select", "value")],
         prevent_initial_call=True
     )
-    def handle_chart_symbol_click(symbol_clicks):
-        """Handle symbol button clicks for charts with immediate visual feedback"""
-        if not any(symbol_clicks) or not ctx.triggered:
-            return dash.no_update, dash.no_update, dash.no_update
+    def handle_chart_symbol_select(value):
+        """Handle symbol dropdown selection for charts"""
+        if not value:
+            return dash.no_update, dash.no_update
 
-        # Find which button was clicked
-        button_id = ctx.triggered[0]["prop_id"]
-        if "symbol-btn" in button_id:
-            # Extract index from the button ID
-            import json
-            button_data = json.loads(button_id.split('.')[0])
-            clicked_index = button_data["index"]
-
-            # Update current symbol
-            symbols = list(app_state.symbol_states.keys())
-            if 0 <= clicked_index < len(symbols):
-                app_state.current_symbol = symbols[clicked_index]
-                page_number = clicked_index + 1
-
-                # ⚡ IMMEDIATE BUTTON UPDATE - No waiting for refresh!
-                buttons = []
-                for i, symbol in enumerate(symbols):
-                    is_active = i == clicked_index  # Active state based on click
-                    buttons.append(create_symbol_button(symbol, i, is_active))
-
-                if len(symbols) > 1:
-                    # Add navigation info
-                    nav_info = html.Div([
-                        html.I(className="fas fa-chart-line me-2"),
-                        f"Charts for {len(symbols)} symbols"
-                    ], className="text-muted small text-center mt-2")
-
-                    button_container = html.Div([
-                        dbc.ButtonGroup(buttons, className="d-flex flex-wrap justify-content-center"),
-                        nav_info
-                    ], className="symbol-pagination-wrapper")
-                else:
-                    button_container = dbc.ButtonGroup(buttons, className="d-flex justify-content-center")
-
-                return page_number, page_number, button_container
-
-        return dash.no_update, dash.no_update, dash.no_update
+        page = int(value)
+        symbols = list(app_state.symbol_states.keys())
+        if 0 < page <= len(symbols):
+            new_symbol = symbols[page - 1]
+            if new_symbol == app_state.current_symbol:
+                return dash.no_update, dash.no_update
+            app_state.current_symbol = new_symbol
+        return page, page
 
     @app.callback(
         [Output("tv-chart-data-store", "data"),
@@ -330,10 +275,10 @@ def register_chart_callbacks(app):
 
         if currently_disabled:
             # Enable live mode
-            return False, "float-end ms-2 chart-live-btn chart-live-active", "success"
+            return False, "chart-live-btn chart-live-active", "success"
         else:
             # Disable live mode
-            return True, "float-end ms-2 chart-live-btn", "outline-success"
+            return True, "chart-live-btn", "outline-success"
 
     @app.callback(
         Output("tv-chart-live-store", "data"),

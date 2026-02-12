@@ -3,8 +3,7 @@ History Callbacks for TradingAgents WebUI
 Handles saving, loading, and displaying analysis history.
 """
 
-from dash import Input, Output, State, callback_context, html, no_update, ctx, ALL
-import dash_bootstrap_components as dbc
+from dash import Input, Output, State, html, no_update, ctx
 import dash
 
 from webui.utils.state import app_state
@@ -92,7 +91,8 @@ def register_history_callbacks(app):
     # Load Historical Run
     # =========================================================================
     @app.callback(
-        [Output("report-pagination-container", "children", allow_duplicate=True),
+        [Output("report-symbol-select", "options", allow_duplicate=True),
+         Output("report-symbol-select", "value", allow_duplicate=True),
          Output("current-symbol-report-display", "children", allow_duplicate=True)],
         [Input("history-selector", "value")],
         prevent_initial_call=True
@@ -103,17 +103,17 @@ def register_history_callbacks(app):
             # Switch back to current session
             app_state.viewing_history = False
             app_state.historical_run = None
-            # Re-trigger the normal report pagination update
             symbols = list(app_state.symbol_states.keys())
             if symbols:
-                return create_symbol_buttons(symbols, 0), f"📈 {symbols[0]}"
-            return html.Div("No current analysis", className="text-muted"), ""
+                options = [{"label": s, "value": str(i + 1)} for i, s in enumerate(symbols)]
+                return options, "1", f"📈 {symbols[0]}"
+            return [], None, ""
 
         # Load historical run
         run_data = load_analysis_run(run_id)
 
         if not run_data:
-            return html.Div("Failed to load run", className="text-danger"), ""
+            return [], None, ""
 
         # Store the historical data in a special key in app_state
         app_state.historical_run = run_data
@@ -121,9 +121,10 @@ def register_history_callbacks(app):
 
         symbols = run_data.get("symbols", [])
         if symbols:
-            return create_symbol_buttons(symbols, 0, is_history=True), f"📁 {symbols[0]} (History)"
+            options = [{"label": f"📁 {s}", "value": str(i + 1)} for i, s in enumerate(symbols)]
+            return options, "1", f"📁 {symbols[0]} (History)"
 
-        return html.Div("No symbols in run", className="text-muted"), ""
+        return [], None, ""
 
     # =========================================================================
     # Update Report Content Based on History Selection
@@ -437,78 +438,3 @@ def register_history_callbacks(app):
 
         return [html.I(className="fas fa-save me-1"), "Save"]
 
-    # =========================================================================
-    # Handle History Symbol Button Clicks
-    # =========================================================================
-    @app.callback(
-        [Output("report-pagination", "active_page", allow_duplicate=True),
-         Output("report-pagination-container", "children", allow_duplicate=True),
-         Output("current-symbol-report-display", "children", allow_duplicate=True)],
-        [Input({"type": "report-symbol-btn", "index": ALL}, "n_clicks")],
-        [State("history-selector", "value")],
-        prevent_initial_call=True
-    )
-    def handle_history_symbol_click(symbol_clicks, run_id):
-        """Handle symbol button clicks when viewing historical data."""
-        import json
-
-        if not any(symbol_clicks) or not ctx.triggered:
-            return dash.no_update, dash.no_update, dash.no_update
-
-        # Find which button was clicked
-        trigger_id = ctx.triggered[0]["prop_id"]
-        if "report-symbol-btn" not in trigger_id:
-            return dash.no_update, dash.no_update, dash.no_update
-
-        # Extract index from the button ID
-        button_data = json.loads(trigger_id.split('.')[0])
-        clicked_index = button_data["index"]
-
-        # Get symbols from the appropriate source
-        if run_id and run_id != "current" and app_state.viewing_history:
-            # Viewing historical data
-            run_data = app_state.historical_run
-            if not run_data:
-                run_data = load_analysis_run(run_id)
-            symbols = run_data.get("symbols", []) if run_data else []
-            is_history = True
-        else:
-            # Current session
-            symbols = list(app_state.symbol_states.keys())
-            is_history = False
-
-        if not symbols or clicked_index >= len(symbols):
-            return dash.no_update, dash.no_update, dash.no_update
-
-        # Update the pagination page number (1-indexed)
-        page_number = clicked_index + 1
-        symbol = symbols[clicked_index]
-
-        # Rebuild the symbol buttons with updated active state
-        updated_buttons = create_symbol_buttons(symbols, clicked_index, is_history=is_history)
-
-        # Update display text
-        prefix = "📁 " if is_history else "📈 "
-        suffix = " (History)" if is_history else ""
-        display_text = f"{prefix}{symbol}{suffix}"
-
-        return page_number, updated_buttons, display_text
-
-
-def create_symbol_buttons(symbols, active_index=0, is_history=False):
-    """Create symbol pagination buttons."""
-    buttons = []
-    for i, symbol in enumerate(symbols):
-        is_active = i == active_index
-        prefix = "📁 " if is_history else ""
-        buttons.append(
-            dbc.Button(
-                f"{prefix}{symbol}",
-                id={"type": "report-symbol-btn", "index": i},
-                color="primary" if is_active else "outline-primary",
-                size="sm",
-                className=f"symbol-btn {'active' if is_active else ''} me-1",
-            )
-        )
-
-    return dbc.ButtonGroup(buttons, className="d-flex flex-wrap")
