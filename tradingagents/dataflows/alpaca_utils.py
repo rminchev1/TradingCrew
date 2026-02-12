@@ -1187,12 +1187,16 @@ class AlpacaUtils:
                 tp_price = None
 
                 if not config:
+                    print(f"[SL/TP] No config provided, skipping SL/TP")
                     return sl_price, tp_price
 
                 enable_sl = config.get("enable_stop_loss", False)
                 enable_tp = config.get("enable_take_profit", False)
 
+                print(f"[SL/TP] Settings check - enable_stop_loss: {enable_sl} (type: {type(enable_sl)}), enable_take_profit: {enable_tp} (type: {type(enable_tp)})")
+
                 if not enable_sl and not enable_tp:
+                    print(f"[SL/TP] Both SL and TP are disabled, skipping")
                     return sl_price, tp_price
 
                 use_ai_sl = config.get("stop_loss_use_ai", True)
@@ -1238,13 +1242,20 @@ class AlpacaUtils:
                 """Place entry order with SL/TP using bracket orders (stocks) or separate orders (crypto)."""
                 is_crypto = "/" in sym.upper()
 
+                # Debug: Log SL/TP config being used
+                print(f"[SL/TP] Config received: {sl_tp_config}")
+                print(f"[SL/TP] Entry price: ${entry_price}, Side: {side}, Is short: {is_short}")
+
                 # Calculate SL/TP prices
                 sl_price, tp_price = _calculate_sl_tp_prices(
                     entry_price, is_short, sl_tp_config, analysis_text
                 )
 
+                print(f"[SL/TP] Calculated prices - SL: ${sl_price}, TP: ${tp_price}")
+
                 # If no SL/TP configured, just place market order
                 if sl_price is None and tp_price is None:
+                    print(f"[SL/TP] No SL/TP prices calculated, placing regular market order")
                     if is_crypto:
                         return AlpacaUtils.place_market_order(sym, side, notional=dollar_amount)
                     else:

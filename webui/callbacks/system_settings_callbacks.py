@@ -31,6 +31,47 @@ def register_system_settings_callbacks(app):
     """Register all system settings callbacks."""
 
     # =========================================================================
+    # Sync settings to app_state on app startup (CRITICAL for SL/TP settings)
+    # This callback MUST run on initial load to sync localStorage to app_state
+    # =========================================================================
+    @app.callback(
+        Output("settings-sync-dummy", "data"),
+        Input("system-settings-store", "data"),
+        # NO prevent_initial_call - we want this to run on page load!
+    )
+    def sync_settings_on_startup(stored_settings):
+        """Sync settings from localStorage to app_state on page load.
+
+        This is critical because other callbacks have prevent_initial_call=True,
+        which means settings wouldn't be synced to app_state until user visits
+        the Settings page. This callback ensures SL/TP and other settings are
+        available immediately when the app starts.
+        """
+        if stored_settings is None:
+            stored_settings = {}
+
+        # Merge with defaults
+        settings = DEFAULT_SYSTEM_SETTINGS.copy()
+        settings.update(stored_settings)
+
+        # Sync to app_state for use by analysis engine
+        sync_settings_to_app_state(settings)
+        print(f"[SETTINGS] Startup sync complete - SL enabled: {settings.get('enable_stop_loss')}, TP enabled: {settings.get('enable_take_profit')}")
+
+        # Update Reddit live client with credentials if available
+        try:
+            from tradingagents.dataflows.reddit_live import RedditLiveClient
+            RedditLiveClient.update_credentials(
+                client_id=settings.get("reddit_client_id"),
+                client_secret=settings.get("reddit_client_secret"),
+                user_agent=settings.get("reddit_user_agent"),
+            )
+        except Exception as e:
+            print(f"[SETTINGS] Could not update Reddit credentials: {e}")
+
+        return no_update
+
+    # =========================================================================
     # Load settings from store on page load
     # =========================================================================
     @app.callback(

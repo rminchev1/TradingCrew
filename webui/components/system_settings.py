@@ -789,8 +789,8 @@ def create_settings_actions():
 def create_system_settings_page():
     """Create the full system settings page."""
     return dbc.Container([
-        # Hidden store for settings persistence
-        dcc.Store(id='system-settings-store', storage_type='local'),
+        # Note: system-settings-store and settings-sync-dummy are in the main layout (layout.py)
+        # This ensures settings are synced to app_state on any page load, not just Settings page
 
         # Page header
         html.H3([

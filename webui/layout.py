@@ -57,7 +57,11 @@ def create_stores():
     return [
         dcc.Store(id='app-store'),
         dcc.Store(id='chart-store', data={'last_symbol': None, 'selected_period': '1d'}),
-        create_storage_store_component()
+        create_storage_store_component(),
+        # System settings store - must be in main layout for startup sync
+        dcc.Store(id='system-settings-store', storage_type='local'),
+        # Dummy store for startup sync callback (syncs localStorage to app_state)
+        dcc.Store(id='settings-sync-dummy'),
     ]
 
 

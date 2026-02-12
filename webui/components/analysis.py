@@ -56,6 +56,14 @@ def execute_trade_after_analysis(ticker, allow_shorts, trade_amount):
 
         # Build SL/TP configuration from system settings
         system_settings = app_state.system_settings
+
+        # Debug: Log all SL/TP related settings from app_state
+        print(f"[TRADE] DEBUG - app_state.system_settings SL/TP values:")
+        print(f"[TRADE]   enable_stop_loss: {system_settings.get('enable_stop_loss')} (type: {type(system_settings.get('enable_stop_loss'))})")
+        print(f"[TRADE]   enable_take_profit: {system_settings.get('enable_take_profit')} (type: {type(system_settings.get('enable_take_profit'))})")
+        print(f"[TRADE]   stop_loss_percentage: {system_settings.get('stop_loss_percentage')}")
+        print(f"[TRADE]   take_profit_percentage: {system_settings.get('take_profit_percentage')}")
+
         sl_tp_config = {
             "enable_stop_loss": system_settings.get("enable_stop_loss", False),
             "stop_loss_percentage": system_settings.get("stop_loss_percentage", 5.0),
@@ -68,6 +76,7 @@ def execute_trade_after_analysis(ticker, allow_shorts, trade_amount):
         # Log SL/TP config
         sl_enabled = sl_tp_config["enable_stop_loss"]
         tp_enabled = sl_tp_config["enable_take_profit"]
+        print(f"[TRADE] SL/TP config built - SL enabled: {sl_enabled}, TP enabled: {tp_enabled}")
         if sl_enabled or tp_enabled:
             print(f"[TRADE] SL/TP enabled - SL: {sl_enabled} ({sl_tp_config['stop_loss_percentage']}%), TP: {tp_enabled} ({sl_tp_config['take_profit_percentage']}%)")
             print(f"[TRADE] AI levels - SL: {sl_tp_config['stop_loss_use_ai']}, TP: {sl_tp_config['take_profit_use_ai']}")
