@@ -7,7 +7,7 @@ from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.dataflows.alpaca_utils import AlpacaUtils
 from tradingagents.agents.utils.agent_trading_modes import extract_recommendation
-from webui.utils.state import app_state
+from webui.utils.state import app_state, set_thread_symbol, clear_thread_symbol
 from webui.utils.charts import create_chart
 
 
@@ -214,6 +214,12 @@ def merge_system_settings_into_config(config):
 
 def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_llm, deep_llm, progress=None):
     """Run the trading analysis using current/real-time data"""
+    # CRITICAL: Set thread-local symbol for parallel ticker analysis
+    # This ensures tool outputs are tagged with the correct symbol when multiple
+    # tickers are analyzed concurrently in separate threads
+    set_thread_symbol(ticker)
+    print(f"[ANALYSIS] Thread-local symbol set to: {ticker}")
+
     try:
         # Always use current date for real-time analysis
         from datetime import datetime
@@ -336,7 +342,10 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         print(f"[ANALYSIS] Real-time analysis for {ticker} finished (success={current_state.get('analysis_complete', False) if current_state else False})")
         if current_state:
             current_state["analysis_running"] = False
-        
+        # CRITICAL: Clear thread-local symbol to prevent stale data
+        clear_thread_symbol()
+        print(f"[ANALYSIS] Thread-local symbol cleared for {ticker}")
+
     return "Real-time analysis complete"
 
 
