@@ -120,7 +120,7 @@ tradingagents/           # Core framework
 
 webui/                   # Dash-based Web UI
   components/            # 19 UI components (create_*() functions)
-  callbacks/             # 16 callback modules (register_*_callbacks(app) functions)
+  callbacks/             # 17 callback modules (register_*_callbacks(app) functions, incl. panel_visibility)
   utils/state.py         # Global AppState class (thread-safe)
   utils/local_storage.py # SQLite persistence
   utils/storage.py       # Default settings, export/import
@@ -178,6 +178,43 @@ Three execution modes share this pattern:
 - **In-memory**: `webui/utils/state.py` → `AppState` class (thread-safe with `_lock`)
 - **Persistent**: `webui/utils/local_storage.py` → SQLite database (`tradingcrew.db`)
 - **Settings defaults**: `webui/utils/storage.py` → `DEFAULT_SYSTEM_SETTINGS`
+
+### Dynamic Panel Visibility (DOM Removal Pattern)
+Dashboard panels can be hidden/shown from the Settings page. Hidden panels are **fully removed from the DOM** (not CSS `display:none`) to keep the page lightweight.
+
+**How it works:**
+1. `create_trading_content()` in `layout.py` renders empty wrapper `<div>`s (e.g., `panel-wrapper-account-bar`)
+2. `panel_visibility_callbacks.py` has a single callback that reads `system-settings-store` and populates each wrapper with the panel content (via `_build_*()` functions) or `[]` (empty) if hidden
+3. `suppress_callback_exceptions=True` (set in `webui/config/constants.py`) allows callbacks targeting IDs inside hidden panels to silently fail
+
+**9 togglable panels** (setting key → wrapper ID):
+| Setting Key | Wrapper ID | Builder Function |
+|---|---|---|
+| `show_panel_account_bar` | `panel-wrapper-account-bar` | `_build_account_bar()` |
+| `show_panel_scanner` | `panel-wrapper-scanner` | `_build_scanner_section()` |
+| `show_panel_watchlist` | `panel-wrapper-watchlist` | `_build_watchlist_section()` |
+| `show_panel_chart` | `panel-wrapper-main-trading-row` | `_build_main_trading_row()` |
+| `show_panel_trading` | `panel-wrapper-main-trading-row` | `_build_main_trading_row()` |
+| `show_panel_positions` | `panel-wrapper-positions` | `_build_positions_section()` |
+| `show_panel_options` | `panel-wrapper-options` | `_build_options_section()` |
+| `show_panel_reports` | `panel-wrapper-reports` | `_build_reports_section()` |
+| `show_panel_logs` | `panel-wrapper-logs` | `_build_log_panel()` |
+
+**Chart + Trading Controls** share a wrapper (`panel-wrapper-main-trading-row`). `_build_main_trading_row(show_chart, show_trading)` dynamically adjusts column widths — full-width when one is hidden, empty when both hidden.
+
+**Critical rule — Store/Interval Relocation:**
+When a panel can be removed from the DOM, any `dcc.Store` or `dcc.Interval` inside it will also be destroyed. These MUST be relocated to global scope in `create_stores()` / `create_intervals()` in `layout.py`. Relocated stores/intervals:
+- `scanner-results-store`, `watchlist-store`, `watchlist-reorder-store`, `run-watchlist-store`, `log-last-index` → `create_stores()`
+- `watchlist-refresh-interval`, `log-update-interval` → `create_intervals()`
+
+**When adding a new panel to the visibility system**, update these files:
+1. `webui/utils/storage.py` — add `show_panel_<name>` to `DEFAULT_SYSTEM_SETTINGS` + `safe_keys`
+2. `webui/utils/state.py` — add to `AppState.system_settings`
+3. `webui/components/system_settings.py` — add toggle in `create_dashboard_panels_section()`
+4. `webui/callbacks/system_settings_callbacks.py` — add to all 4 callbacks (load/save/reset/import)
+5. `webui/layout.py` — add wrapper div + builder function
+6. `webui/callbacks/panel_visibility_callbacks.py` — add Output + builder call
+7. Relocate any stores/intervals from the panel component to global scope
 
 ### Pipeline Control (Pause/Resume/Stop)
 Pipeline execution can be paused, resumed, and stopped using `threading.Event` primitives in `AppState`:
@@ -447,6 +484,37 @@ from webui.utils.local_storage import save_settings, get_settings
 # Tables: kv_store, analyst_reports, analysis_runs, scanner_results
 ```
 
+### ChromaDB (Memory System)
+```python
+# ChromaDB is used for financial situation memory (bull/bear memory)
+# Location: tradingagents/agents/utils/memory.py
+# Uses embedded (in-memory) client, NOT http client
+
+self.chroma_client = chromadb.Client(Settings(allow_reset=True))
+```
+
+**Known issue — `chromadb-client` package conflict:**
+If `chromadb-client` (the thin/HTTP-only package) is installed alongside `chromadb`, it overwrites `chromadb/is_thin_client.py` to `is_thin_client = True`, which blocks the embedded client with:
+```
+RuntimeError: Chroma is running in http-only client mode
+```
+**Fix:** Uninstall `chromadb-client` and reinstall `chromadb`:
+```bash
+pip uninstall chromadb-client -y
+pip install --force-reinstall chromadb
+```
+
+### Python Environment
+The app runs using **pyenv Python 3.11.4** (`/Users/radoslavminchev/.pyenv/versions/3.11.4/`), not conda. Always use the correct pip when installing packages:
+```bash
+/Users/radoslavminchev/.pyenv/versions/3.11.4/bin/pip install <package>
+```
+
+**NumPy version constraint:** pandas and numexpr are compiled against NumPy 1.x. If `pip install --force-reinstall` pulls in NumPy 2.x, pandas will crash with `_ARRAY_API not found`. Fix with:
+```bash
+pip install "numpy<2"
+```
+
 ---
 
 ## Configuration Reference
@@ -696,14 +764,17 @@ app_state.tool_calls_log.append(tool_call_info)
 | `tradingagents/agents/utils/agent_utils.py` | Tool tracking & timing | `timing_wrapper()`, `_get_current_symbol()` |
 | `tradingagents/default_config.py` | Config defaults | `DEFAULT_CONFIG` dict |
 | `webui/app_dash.py` | App factory | `create_app()`, `run_app()` |
-| `webui/layout.py` | Layout assembly | `create_main_layout()` |
+| `webui/layout.py` | Layout assembly + panel builders | `create_main_layout()`, `_build_*()` functions, `create_stores()`, `create_intervals()` |
 | `webui/utils/state.py` | Global state + thread-local + pipeline control | `AppState`, `get_thread_symbol()`, `check_pipeline_interrupt()` |
 | `webui/utils/local_storage.py` | SQLite persistence | `save_settings()`, `get_settings()` |
 | `webui/utils/storage.py` | Settings defaults | `DEFAULT_SYSTEM_SETTINGS` |
 | `webui/callbacks/control_callbacks.py` | Analysis control | Settings persistence, start/stop/pause/resume |
 | `webui/callbacks/status_callbacks.py` | Status table & refresh | `update_status_table()`, `manage_refresh_intervals_and_status()` |
-| `webui/callbacks/system_settings_callbacks.py` | System settings | API keys, LLM config |
+| `webui/callbacks/system_settings_callbacks.py` | System settings | API keys, LLM config, panel visibility |
+| `webui/callbacks/panel_visibility_callbacks.py` | Panel hide/show | `render_visible_panels()` — populates wrapper divs |
+| `webui/components/system_settings.py` | Settings page UI | `create_dashboard_panels_section()`, `create_api_keys_section()` |
 | `webui/components/analysis.py` | Analysis execution | `run_analysis()` (stream loop with pause/stop checkpoints) |
+| `tradingagents/agents/utils/memory.py` | ChromaDB memory | `FinancialSituationMemory` (bull/bear memory) |
 | `tradingagents/graph/setup.py` | Graph construction | `setup_graph()`, `_create_parallel_analysts_coordinator()` |
 | `tradingagents/graph/conditional_logic.py` | Routing functions | `should_continue_debate()`, `should_continue_risk_analysis()` |
 
@@ -796,3 +867,7 @@ app_state._stop_event           # threading.Event - set=stop requested
 14. **`stop_pipeline()` must unblock paused threads** — Always call `_pause_event.set()` before `_stop_event.set()` to prevent deadlocked threads
 15. **`reset()` resets pipeline controls** — Any fresh analysis start calls `reset()` which calls `reset_pipeline_controls()` automatically
 16. **Dynamic buttons need guard checks** — Callbacks for dynamically-rendered buttons (like `pause-resume-btn`) must check `if not n_clicks: return dash.no_update`
+17. **Stores/Intervals must survive panel removal** — If a `dcc.Store` or `dcc.Interval` is inside a hideable panel, relocate it to `create_stores()`/`create_intervals()` in `layout.py`
+18. **Never install `chromadb-client` alongside `chromadb`** — It overwrites `is_thin_client=True` and breaks embedded mode. Fix: `pip uninstall chromadb-client && pip install --force-reinstall chromadb`
+19. **NumPy must stay < 2.0** — pandas/numexpr are compiled against NumPy 1.x. If a dependency upgrade pulls NumPy 2.x, fix with `pip install "numpy<2"`
+20. **App uses pyenv Python 3.11.4** — Not conda. Use `/Users/radoslavminchev/.pyenv/versions/3.11.4/bin/pip` for the correct environment
