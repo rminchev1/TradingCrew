@@ -75,6 +75,11 @@ def create_chart_panel():
                 ], width=8),
                 dbc.Col([
                     dbc.Button("⛶", id="chart-fullscreen-btn", color="outline-secondary", size="sm", className="float-end ms-2", title="Toggle Fullscreen"),
+                    dbc.Button(
+                        [html.Span(className="live-dot"), " LIVE"],
+                        id="chart-live-btn", color="outline-success", size="sm",
+                        className="float-end ms-2 chart-live-btn", title="Toggle Live Updates"
+                    ),
                     dbc.Button("🔄", id="manual-chart-refresh", color="outline-secondary", size="sm", className="float-end", title="Refresh Chart"),
                 ], width=4)
             ], className="mb-2"),
@@ -104,25 +109,48 @@ def create_chart_panel():
                             dbc.Button("✕", id="exit-fullscreen-btn", color="light", size="sm", className="exit-fullscreen-btn"),
                         ]
                     ),
+                    # OHLC data legend (updates on crosshair move)
+                    html.Div(
+                        id="chart-ohlc-legend",
+                        className="chart-ohlc-legend",
+                        children=[
+                            html.Span("O", className="ohlc-label"),
+                            html.Span("-", id="ohlc-open", className="ohlc-value"),
+                            html.Span("H", className="ohlc-label"),
+                            html.Span("-", id="ohlc-high", className="ohlc-value"),
+                            html.Span("L", className="ohlc-label"),
+                            html.Span("-", id="ohlc-low", className="ohlc-value"),
+                            html.Span("C", className="ohlc-label"),
+                            html.Span("-", id="ohlc-close", className="ohlc-value"),
+                            html.Span("", id="ohlc-change", className="ohlc-change"),
+                            html.Span("Vol", className="ohlc-label ohlc-vol-label"),
+                            html.Span("-", id="ohlc-volume", className="ohlc-value"),
+                        ]
+                    ),
+                    # Overlay indicator legend (SMA, EMA, BB — updates on crosshair)
+                    html.Div(id="chart-indicator-legend", className="chart-indicator-legend"),
                     # TradingView chart container (main price chart)
                     html.Div(
                         id="tv-chart-container",
                         className="tradingview-chart",
                         style={"height": "450px", "width": "100%", "minHeight": "350px"}
                     ),
-                    # RSI indicator pane
+                    # RSI indicator pane with legend
+                    html.Div(id="rsi-pane-legend", className="pane-legend"),
                     html.Div(
                         id="tv-rsi-container",
                         className="tradingview-indicator-pane",
                         style={"height": "120px", "width": "100%", "display": "none"}
                     ),
-                    # MACD indicator pane
+                    # MACD indicator pane with legend
+                    html.Div(id="macd-pane-legend", className="pane-legend"),
                     html.Div(
                         id="tv-macd-container",
                         className="tradingview-indicator-pane",
                         style={"height": "120px", "width": "100%", "display": "none"}
                     ),
-                    # OBV indicator pane
+                    # OBV indicator pane with legend
+                    html.Div(id="obv-pane-legend", className="pane-legend"),
                     html.Div(
                         id="tv-obv-container",
                         className="tradingview-indicator-pane",

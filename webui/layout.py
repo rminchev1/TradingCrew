@@ -60,6 +60,13 @@ def create_intervals():
             n_intervals=0,
             disabled=False
         ),
+        # Live chart price updates (disabled by default, toggled by LIVE button)
+        dcc.Interval(
+            id="chart-live-interval",
+            interval=5000,  # 5 seconds
+            n_intervals=0,
+            disabled=True
+        ),
     ]
 
 
@@ -80,6 +87,8 @@ def create_stores():
         dcc.Store(id="watchlist-reorder-store", data={"order": [], "timestamp": 0}),
         dcc.Store(id="run-watchlist-store", storage_type="local", data={"symbols": []}),
         dcc.Store(id="log-last-index", data=0),
+        # Live chart price data store
+        dcc.Store(id="tv-chart-live-store", data=None),
     ]
 
 

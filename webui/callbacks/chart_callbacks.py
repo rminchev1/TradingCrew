@@ -310,3 +310,96 @@ def register_chart_callbacks(app):
         Input("tv-chart-config-store", "data"),
         State("theme-store", "data"),
     )
+
+    # =========================================================================
+    # Live price update callbacks
+    # =========================================================================
+
+    @app.callback(
+        [Output("chart-live-interval", "disabled"),
+         Output("chart-live-btn", "className"),
+         Output("chart-live-btn", "color")],
+        Input("chart-live-btn", "n_clicks"),
+        State("chart-live-interval", "disabled"),
+        prevent_initial_call=True
+    )
+    def toggle_live_mode(n_clicks, currently_disabled):
+        """Toggle live price updates on/off"""
+        if not n_clicks:
+            return dash.no_update, dash.no_update, dash.no_update
+
+        if currently_disabled:
+            # Enable live mode
+            return False, "float-end ms-2 chart-live-btn chart-live-active", "success"
+        else:
+            # Disable live mode
+            return True, "float-end ms-2 chart-live-btn", "outline-success"
+
+    @app.callback(
+        Output("tv-chart-live-store", "data"),
+        Input("chart-live-interval", "n_intervals"),
+        State("chart-store", "data"),
+        prevent_initial_call=True
+    )
+    def fetch_live_price(n_intervals, chart_store_data):
+        """Fetch latest price from Alpaca for live chart updates"""
+        if not chart_store_data or not chart_store_data.get("last_symbol"):
+            return dash.no_update
+
+        symbol = chart_store_data["last_symbol"]
+
+        try:
+            from tradingagents.dataflows.alpaca_utils import AlpacaUtils
+            quote = AlpacaUtils.get_latest_quote(symbol)
+
+            if not quote:
+                return dash.no_update
+
+            # Use mid-price (average of bid/ask), fallback to ask or bid
+            bid = quote.get("bid_price", 0) or 0
+            ask = quote.get("ask_price", 0) or 0
+
+            if bid > 0 and ask > 0:
+                price = (bid + ask) / 2
+            elif ask > 0:
+                price = ask
+            elif bid > 0:
+                price = bid
+            else:
+                return dash.no_update
+
+            return {
+                "symbol": symbol,
+                "price": price,
+                "bid": bid,
+                "ask": ask,
+                "timestamp": datetime.now().isoformat(),
+            }
+
+        except Exception as e:
+            print(f"[LIVE] Error fetching quote for {symbol}: {e}")
+            return dash.no_update
+
+    # Clientside callback to update last bar with live price
+    app.clientside_callback(
+        """
+        function(liveData) {
+            if (!liveData || !liveData.price) {
+                return window.dash_clientside.no_update;
+            }
+
+            if (typeof window.TradingViewChartManager !== 'undefined') {
+                window.TradingViewChartManager.updateLastBar(
+                    'tv-chart-container',
+                    liveData.price,
+                    liveData.timestamp
+                );
+            }
+
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output("tv-chart-update-trigger", "children", allow_duplicate=True),
+        Input("tv-chart-live-store", "data"),
+        prevent_initial_call=True
+    )
