@@ -897,31 +897,40 @@ def register_control_callbacks(app):
 
                 def analyze_single_ticker(symbol):
                     """Analyze a single ticker (for parallel execution)."""
+                    import threading
+                    thread_id = threading.current_thread().name
+                    print(f"[PARALLEL] Worker {thread_id} picked up {symbol}")
                     try:
                         app_state.start_analyzing_symbol(symbol)
-                        print(f"[PARALLEL] Starting analysis for {symbol}")
+                        print(f"[PARALLEL] Starting analysis for {symbol} on {thread_id}")
                         start_analysis(
                             symbol,
                             analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
                             research_depth, allow_shorts, quick_llm, deep_llm, analysts_options
                         )
-                        print(f"[PARALLEL] Completed analysis for {symbol}")
+                        print(f"[PARALLEL] Completed analysis for {symbol} on {thread_id}")
                         return symbol, True, None
                     except Exception as e:
-                        print(f"[PARALLEL] Error analyzing {symbol}: {e}")
+                        print(f"[PARALLEL] Error analyzing {symbol} on {thread_id}: {e}")
                         import traceback
                         traceback.print_exc()
                         return symbol, False, str(e)
                     finally:
+                        print(f"[PARALLEL] Worker {thread_id} releasing {symbol}")
                         app_state.stop_analyzing_symbol(symbol)
 
                 # Execute all tickers in parallel with limited concurrency
                 max_workers = min(get_max_parallel_tickers(), len(symbols))
+                print(f"[PARALLEL] Submitting {len(symbols)} symbols to executor with {max_workers} workers")
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     futures = {executor.submit(analyze_single_ticker, symbol): symbol for symbol in symbols}
+                    print(f"[PARALLEL] All {len(futures)} futures submitted: {list(futures.values())}")
 
+                    completed_count = 0
                     for future in as_completed(futures):
+                        completed_count += 1
                         symbol = futures[future]
+                        print(f"[PARALLEL] Future completed ({completed_count}/{len(futures)}): {symbol}")
                         try:
                             sym, success, error = future.result()
                             if success:
