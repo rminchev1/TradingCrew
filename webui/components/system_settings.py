@@ -561,6 +561,55 @@ def create_risk_management_section():
     ])
 
 
+def create_dashboard_panels_section():
+    """Create the Dashboard Panels visibility section."""
+    panels = [
+        ("show-panel-account-bar", "Account Summary Bar", "Top-level account overview"),
+        ("show-panel-scanner", "Market Scanner", "Scan for trading opportunities"),
+        ("show-panel-watchlist", "Watchlist & Portfolio", "Symbol tracking and run queue"),
+        ("show-panel-chart", "Price Chart & Progress", "Chart and agent progress"),
+        ("show-panel-trading", "Trading Controls", "Analysis configuration panel"),
+        ("show-panel-positions", "Stock Positions & Orders", "Current stock holdings"),
+        ("show-panel-options", "Options Positions", "Current options positions"),
+        ("show-panel-reports", "Agent Reports", "Analyst report cards"),
+        ("show-panel-logs", "Application Logs", "Real-time log streaming"),
+    ]
+
+    rows = []
+    for setting_id, label, description in panels:
+        rows.append(
+            dbc.Row([
+                dbc.Col(dbc.Label(label, className="mb-0"), width=4),
+                dbc.Col(
+                    dbc.Switch(
+                        id=f"setting-{setting_id}",
+                        value=True,
+                        className="mt-1"
+                    ),
+                    width=3
+                ),
+                dbc.Col(
+                    html.Small(description, className="text-muted"),
+                    width=5
+                )
+            ], className="mb-2 align-items-center")
+        )
+
+    rows.append(
+        dbc.Alert(
+            [
+                html.I(className="fas fa-info-circle me-2"),
+                "Hidden panels are fully removed from the page. "
+                "Save settings and switch to Trading tab to apply."
+            ],
+            color="info",
+            className="mt-3 mb-0 py-2",
+        )
+    )
+
+    return html.Div(rows)
+
+
 def create_options_trading_section():
     """Create the Options Trading section."""
     return html.Div([
@@ -832,6 +881,13 @@ def create_system_settings_page():
         # Settings sections
         dbc.Row([
             dbc.Col([
+                # Dashboard Panels Section
+                create_settings_card(
+                    "Dashboard Panels",
+                    create_dashboard_panels_section(),
+                    icon="fas fa-th-large"
+                ),
+
                 # API Keys Section
                 create_settings_card(
                     "API Keys & Credentials",

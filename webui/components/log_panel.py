@@ -4,7 +4,7 @@ Real-time log streaming panel.
 """
 
 import dash_bootstrap_components as dbc
-from dash import html, dcc
+from dash import html
 
 
 def create_log_panel():
@@ -113,16 +113,8 @@ def create_log_panel():
                     ]
                 ),
 
-                # Hidden store for log state
-                dcc.Store(id="log-last-index", data=0),
-
-                # Interval for log updates (1 second) - disabled by default until streaming is on
-                dcc.Interval(
-                    id="log-update-interval",
-                    interval=1000,
-                    n_intervals=0,
-                    disabled=False
-                )
+                # Note: log-last-index and log-update-interval are defined in
+                # layout.py create_stores()/create_intervals() for panel visibility support
             ], className="p-2 collapsible-body"),
             id="log-panel-collapse",
             is_open=False

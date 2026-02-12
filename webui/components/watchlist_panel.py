@@ -6,7 +6,7 @@ Drag & drop JavaScript is in webui/assets/watchlist_dragdrop.js
 """
 
 import dash_bootstrap_components as dbc
-from dash import html, dcc
+from dash import html
 
 from webui.components.run_watchlist import create_run_watchlist_panel
 
@@ -46,22 +46,8 @@ def create_watchlist_panel():
             ]
         ),
 
-        # Store to capture reorder events from JavaScript
-        # JavaScript will use window.dash_clientside.set_props to update this
-        dcc.Store(
-            id="watchlist-reorder-store",
-            data={"order": [], "timestamp": 0}
-        ),
-
-        # Store for watchlist data (loaded from database via callback on page load)
-        dcc.Store(id="watchlist-store", storage_type="memory", data={"symbols": []}),
-
-        # Interval for price updates
-        dcc.Interval(
-            id="watchlist-refresh-interval",
-            interval=30000,  # 30 seconds
-            n_intervals=0
-        )
+        # Note: watchlist-reorder-store, watchlist-store, and watchlist-refresh-interval
+        # are defined in layout.py create_stores()/create_intervals() for panel visibility support
     ], className="watchlist-panel")
 
 

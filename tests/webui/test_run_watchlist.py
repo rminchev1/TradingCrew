@@ -33,8 +33,9 @@ class TestRunWatchlistComponent:
         panel = create_run_watchlist_panel()
         children = panel.children
 
-        # Should have header, items container, clear button, and store
-        assert len(children) == 4
+        # Should have header, items container, and clear button
+        # (store relocated to global layout.py create_stores() for panel visibility support)
+        assert len(children) >= 3
 
         # Check for count span
         header = children[0]
@@ -48,17 +49,12 @@ class TestRunWatchlistComponent:
         clear_btn = children[2]
         assert clear_btn.id == "run-watchlist-clear-btn"
 
-        # Check for store
-        store = children[3]
-        assert store.id == "run-watchlist-store"
-        assert store.storage_type == "local"
-
     def test_create_run_watchlist_panel_store_has_correct_default_data(self):
-        """Test that the store has correct default data structure"""
-        from webui.components.run_watchlist import create_run_watchlist_panel
+        """Test that the run-watchlist-store has correct default data (in global stores)"""
+        from webui.layout import create_stores
 
-        panel = create_run_watchlist_panel()
-        store = panel.children[3]  # Store is the 4th child
+        stores = create_stores()
+        store = next(s for s in stores if hasattr(s, 'id') and s.id == "run-watchlist-store")
 
         assert store.data == {"symbols": []}
 
@@ -361,22 +357,22 @@ class TestStoragePersistence:
     """Tests for Run Queue localStorage persistence"""
 
     def test_run_watchlist_store_uses_local_storage(self):
-        """Test that the store uses localStorage"""
-        from webui.components.run_watchlist import create_run_watchlist_panel
+        """Test that the store uses localStorage (relocated to global stores)"""
+        from webui.layout import create_stores
 
-        panel = create_run_watchlist_panel()
-        store = panel.children[3]
+        stores = create_stores()
+        store = next(s for s in stores if hasattr(s, 'id') and s.id == "run-watchlist-store")
 
         assert store.storage_type == "local"
 
     def test_run_watchlist_store_has_correct_id(self):
-        """Test that the store has the correct ID"""
-        from webui.components.run_watchlist import create_run_watchlist_panel
+        """Test that the store has the correct ID (relocated to global stores)"""
+        from webui.layout import create_stores
 
-        panel = create_run_watchlist_panel()
-        store = panel.children[3]
+        stores = create_stores()
+        store_ids = [s.id for s in stores if hasattr(s, 'id')]
 
-        assert store.id == "run-watchlist-store"
+        assert "run-watchlist-store" in store_ids
 
     def test_default_settings_does_not_include_ticker_input(self):
         """Test that default settings no longer includes ticker_input"""

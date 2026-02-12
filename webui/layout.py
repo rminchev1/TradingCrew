@@ -47,7 +47,19 @@ def create_intervals():
             interval=1000,  # 1 second for market time clock
             n_intervals=0,
             disabled=False
-        )
+        ),
+        # Relocated from panels for hide/show support
+        dcc.Interval(
+            id="watchlist-refresh-interval",
+            interval=30000,  # 30 seconds
+            n_intervals=0
+        ),
+        dcc.Interval(
+            id="log-update-interval",
+            interval=1000,
+            n_intervals=0,
+            disabled=False
+        ),
     ]
 
 
@@ -62,6 +74,12 @@ def create_stores():
         dcc.Store(id='system-settings-store', storage_type='local'),
         # Dummy store for startup sync callback (syncs localStorage to app_state)
         dcc.Store(id='settings-sync-dummy'),
+        # Relocated from panels for hide/show support
+        dcc.Store(id="scanner-results-store", storage_type="local"),
+        dcc.Store(id="watchlist-store", storage_type="memory", data={"symbols": []}),
+        dcc.Store(id="watchlist-reorder-store", data={"order": [], "timestamp": 0}),
+        dcc.Store(id="run-watchlist-store", storage_type="local", data={"symbols": []}),
+        dcc.Store(id="log-last-index", data=0),
     ]
 
 
@@ -101,22 +119,17 @@ def create_collapsible_section(section_id, title, icon, content, default_open=Tr
     ], className="mb-2" if compact else "mb-3")
 
 
-def create_trading_content():
-    """Create the trading tab content."""
-    # ═══════════════════════════════════════════════════════════════════════
-    # ROW 1: Compact Account Summary Bar
-    # ═══════════════════════════════════════════════════════════════════════
-    account_bar = html.Div([
+def _build_account_bar():
+    """Build the account summary bar panel."""
+    return html.Div([
         render_compact_account_bar()
     ], className="account-bar-container mb-3", id="account-bar-wrapper")
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ROW 2: Main Trading Area (Chart Left, Controls Right)
-    # ═══════════════════════════════════════════════════════════════════════
 
-    # Left side: Chart (60% width on large screens)
+def _build_chart_section():
+    """Build the chart + agent progress section."""
     chart_content = create_chart_panel()
-    chart_section = html.Div([
+    return html.Div([
         dbc.Card([
             dbc.CardBody([
                 html.Div([
@@ -125,12 +138,9 @@ def create_trading_content():
                         "Price Chart"
                     ], className="mb-0 d-inline"),
                 ], className="d-flex align-items-center justify-content-between mb-2"),
-                # Chart content (remove outer card wrapper)
                 chart_content.children if hasattr(chart_content, 'children') else chart_content
             ], className="p-2")
         ], className="chart-card"),
-
-        # Agent Progress (below chart)
         dbc.Card([
             dbc.CardBody([
                 html.H6([
@@ -145,84 +155,92 @@ def create_trading_content():
         ], className="mt-2")
     ], className="chart-section")
 
-    # Right side: Trading Control Panel (40% width on large screens)
-    trading_panel = html.Div([
+
+def _build_trading_panel():
+    """Build the trading control panel."""
+    return html.Div([
         dbc.Card([
             dbc.CardBody([
                 html.H5([
                     html.I(className="fas fa-sliders-h me-2"),
                     "Trading Control"
                 ], className="mb-3"),
-
-                # Compact trading controls
                 create_trading_control_panel(),
             ], className="p-3")
         ], className="trading-panel-card h-100")
     ], className="trading-panel-section")
 
-    main_trading_row = dbc.Row([
-        dbc.Col(chart_section, lg=7, xl=8, className="mb-3 mb-lg-0"),
-        dbc.Col(trading_panel, lg=5, xl=4),
-    ], className="mb-3 main-trading-row")
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ROW 3: Positions & Orders (Side by Side, Collapsible)
-    # ═══════════════════════════════════════════════════════════════════════
-    positions_orders_section = create_collapsible_section(
+def _build_main_trading_row(show_chart=True, show_trading=True):
+    """Build the main trading row with dynamic column widths."""
+    if show_chart and show_trading:
+        cols = [
+            dbc.Col(_build_chart_section(), lg=7, xl=8, className="mb-3 mb-lg-0"),
+            dbc.Col(_build_trading_panel(), lg=5, xl=4),
+        ]
+    elif show_chart:
+        cols = [dbc.Col(_build_chart_section(), lg=12)]
+    elif show_trading:
+        cols = [dbc.Col(_build_trading_panel(), lg=12)]
+    else:
+        return []
+    return dbc.Row(cols, className="mb-3 main-trading-row")
+
+
+def _build_positions_section():
+    """Build the stock positions & orders panel."""
+    return create_collapsible_section(
         "positions-orders-panel",
         "Stock Positions & Orders",
-        "💼",
+        "\U0001f4bc",
         dbc.CardBody(render_positions_orders_section(), className="p-2"),
         default_open=True,
         compact=True
     )
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ROW 3b: Options Positions & Orders (Collapsible)
-    # ═══════════════════════════════════════════════════════════════════════
-    options_section = create_collapsible_section(
+
+def _build_options_section():
+    """Build the options positions & orders panel."""
+    return create_collapsible_section(
         "options-panel",
         "Options Positions & Orders",
-        "📜",
+        "\U0001f4dc",
         dbc.CardBody(render_options_section(), className="p-2"),
         default_open=False,
         compact=True
     )
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ROW 4: Watchlist (Collapsible)
-    # ═══════════════════════════════════════════════════════════════════════
-    watchlist_section = create_watchlist_section()
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ROW 5: Agent Reports (Collapsible)
-    # ═══════════════════════════════════════════════════════════════════════
+def _build_watchlist_section():
+    """Build the watchlist panel."""
+    return create_watchlist_section()
+
+
+def _build_reports_section():
+    """Build the agent reports panel."""
     reports_content = create_reports_panel()
-    reports_section = create_collapsible_section(
+    return create_collapsible_section(
         "reports-panel",
         "Agent Reports & Analysis",
-        "📋",
-        reports_content,  # Already returns CardBody with proper content
+        "\U0001f4cb",
+        reports_content,
         default_open=False
     )
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ROW 5: Market Scanner (Collapsible, Less Prominent)
-    # ═══════════════════════════════════════════════════════════════════════
-    scanner_section = create_collapsible_section(
+
+def _build_scanner_section():
+    """Build the market scanner panel."""
+    return create_collapsible_section(
         "scanner-panel",
         "Market Scanner",
-        "🔍",
+        "\U0001f50d",
         dbc.CardBody([
-            # Persistent storage for scanner results (survives page refresh)
-            dcc.Store(id="scanner-results-store", storage_type="local"),
-
+            # Note: scanner-results-store is in global create_stores()
             dbc.Row([
                 dbc.Col([
                     html.Small("Find trading opportunities", className="text-muted"),
                 ], md=6),
                 dbc.Col([
-                    # Timestamp display
                     html.Div(id="scanner-timestamp-display", className="text-muted small text-end"),
                 ], md=3),
                 dbc.Col([
@@ -252,42 +270,35 @@ def create_trading_content():
         compact=True
     )
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # Hidden Components for Backward Compatibility
-    # ═══════════════════════════════════════════════════════════════════════
+
+def _build_log_panel():
+    """Build the application logs panel."""
+    return create_log_panel()
+
+
+def create_trading_content():
+    """Create the trading tab content with wrapper divs for panel visibility."""
+    # Hidden Components for Backward Compatibility (always present)
     hidden_components = html.Div([
-        # Hidden status panel elements
         html.Div(id="status-table", style={"display": "none"}),
-        html.Div(id="tool-calls-text", children="🧰 Tool Calls: 0", style={"display": "none"}),
-        html.Div(id="llm-calls-text", children="🤖 LLM Calls: 0", style={"display": "none"}),
-        html.Div(id="reports-text", children="📊 Generated Reports: 0", style={"display": "none"}),
-        html.Div(id="refresh-status", children="⏸️ Updates paused", style={"display": "none"}),
+        html.Div(id="tool-calls-text", children="\U0001f9f0 Tool Calls: 0", style={"display": "none"}),
+        html.Div(id="llm-calls-text", children="\U0001f916 LLM Calls: 0", style={"display": "none"}),
+        html.Div(id="reports-text", children="\U0001f4ca Generated Reports: 0", style={"display": "none"}),
+        html.Div(id="refresh-status", children="\u23f8\ufe0f Updates paused", style={"display": "none"}),
     ], style={"display": "none"})
 
     return html.Div([
-        # Account Summary Bar
-        account_bar,
+        # Panel wrappers - populated by panel_visibility_callbacks
+        html.Div(id="panel-wrapper-account-bar"),
+        html.Div(id="panel-wrapper-scanner"),
+        html.Div(id="panel-wrapper-watchlist"),
+        html.Div(id="panel-wrapper-main-trading-row"),
+        html.Div(id="panel-wrapper-positions"),
+        html.Div(id="panel-wrapper-options"),
+        html.Div(id="panel-wrapper-reports"),
+        html.Div(id="panel-wrapper-logs"),
 
-        # Market Scanner & Watchlist (top for quick access)
-        scanner_section,
-        watchlist_section,
-
-        # Main Trading Area (Chart + Controls)
-        main_trading_row,
-
-        # Positions & Orders (Stocks)
-        positions_orders_section,
-
-        # Options Positions & Orders
-        options_section,
-
-        # Agent Reports
-        reports_section,
-
-        # Application Logs (Live Streaming)
-        create_log_panel(),
-
-        # Hidden components
+        # Hidden components (always present)
         hidden_components,
     ])
 

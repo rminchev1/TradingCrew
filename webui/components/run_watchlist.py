@@ -6,7 +6,7 @@ for analysis. Users add symbols from the regular watchlist to the Portfolio.
 """
 
 import dash_bootstrap_components as dbc
-from dash import html, dcc
+from dash import html
 
 
 def create_run_watchlist_panel():
@@ -40,12 +40,7 @@ def create_run_watchlist_panel():
             className="mt-3 w-100"
         ),
 
-        # Store for run queue (persisted to localStorage)
-        dcc.Store(
-            id="run-watchlist-store",
-            storage_type="local",
-            data={"symbols": []}
-        )
+        # Note: run-watchlist-store is defined in layout.py create_stores() for panel visibility support
     ], className="run-watchlist-panel")
 
 
