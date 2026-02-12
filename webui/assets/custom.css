@@ -1693,11 +1693,15 @@ body.theme-bw .form-control:focus {
 
 .agent-badge {
     font-size: 0.65em;
-    padding: 2px 6px;
-    min-width: 26px;
+    padding: 2px 8px;
+    min-width: 38px;
     text-align: center;
     font-weight: 600;
     letter-spacing: 0.5px;
+}
+
+.agent-badge i {
+    font-size: 0.85em;
 }
 
 /* Badge color overrides for better visibility */
@@ -1714,6 +1718,10 @@ body.theme-bw .form-control:focus {
     background-color: #475569 !important;
 }
 
+.agent-badge.badge.bg-danger {
+    background-color: #EF4444 !important;
+}
+
 /* Responsive adjustments for progress panel */
 @media (max-width: 768px) {
     .ticker-progress-item {
@@ -1726,8 +1734,8 @@ body.theme-bw .form-control:focus {
 
     .agent-badge {
         font-size: 0.6em;
-        padding: 1px 4px;
-        min-width: 22px;
+        padding: 1px 5px;
+        min-width: 32px;
     }
 }
 

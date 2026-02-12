@@ -5,6 +5,7 @@ Control and configuration callbacks for TradingAgents WebUI
 from dash import Input, Output, State, ctx, html, callback_context
 import dash_bootstrap_components as dbc
 import dash
+import random
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -824,11 +825,15 @@ def register_control_callbacks(app):
                         finally:
                             app_state.stop_analyzing_symbol(symbol)
 
-                    # Run analysis for all symbols in parallel
-                    print(f"[MARKET_HOUR] Starting parallel analysis at {h}:{m:02d}")
+                    # Run analysis for all symbols in parallel (staggered 2s apart)
+                    print(f"[MARKET_HOUR] Starting parallel analysis at {h}:{m:02d} (1-10s random stagger)")
                     max_workers = min(get_max_parallel_tickers(), len(symbols))
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        futures = {executor.submit(analyze_single_ticker_market_hour, symbol, next_time): symbol for symbol in symbols}
+                        futures = {}
+                        for i, symbol in enumerate(symbols):
+                            futures[executor.submit(analyze_single_ticker_market_hour, symbol, next_time)] = symbol
+                            if i < len(symbols) - 1:
+                                time.sleep(random.uniform(1, 10))
 
                         for future in as_completed(futures):
                             if app_state.stop_market_hour:
@@ -896,10 +901,14 @@ def register_control_callbacks(app):
                 while not app_state.stop_loop:
                     print(f"[LOOP] Starting iteration {loop_iteration} with parallel execution")
 
-                    # Run analysis for all symbols in parallel
+                    # Run analysis for all symbols in parallel (staggered 2s apart)
                     max_workers = min(get_max_parallel_tickers(), len(symbols))
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        futures = {executor.submit(analyze_single_ticker_loop, symbol): symbol for symbol in symbols}
+                        futures = {}
+                        for i, symbol in enumerate(symbols):
+                            futures[executor.submit(analyze_single_ticker_loop, symbol)] = symbol
+                            if i < len(symbols) - 1:
+                                time.sleep(random.uniform(1, 10))
 
                         for future in as_completed(futures):
                             if app_state.stop_loop:
@@ -985,13 +994,20 @@ def register_control_callbacks(app):
                         app_state.stop_analyzing_symbol(symbol)
 
                 # Execute all tickers in parallel with limited concurrency
+                # Stagger submissions by 2s to avoid overwhelming API/LLM on startup
                 max_workers = min(get_max_parallel_tickers(), len(symbols))
-                print(f"[PARALLEL] Submitting {len(symbols)} symbols to executor with {max_workers} workers")
+                print(f"[PARALLEL] Submitting {len(symbols)} symbols to executor with {max_workers} workers (1-10s random stagger)")
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    futures = {executor.submit(analyze_single_ticker, symbol): symbol for symbol in symbols}
+                    futures = {}
+                    for i, symbol in enumerate(symbols):
+                        futures[executor.submit(analyze_single_ticker, symbol)] = symbol
+                        if i < len(symbols) - 1:
+                            time.sleep(random.uniform(1, 10))
                     print(f"[PARALLEL] All {len(futures)} futures submitted: {list(futures.values())}")
 
                     completed_count = 0
+                    succeeded = []
+                    failed = []
                     for future in as_completed(futures):
                         completed_count += 1
                         symbol = futures[future]
@@ -1000,10 +1016,61 @@ def register_control_callbacks(app):
                             sym, success, error = future.result()
                             if success:
                                 print(f"[PARALLEL] {sym} analysis completed successfully")
+                                succeeded.append(sym)
                             else:
                                 print(f"[PARALLEL] {sym} analysis failed: {error}")
+                                failed.append((sym, error))
                         except Exception as e:
                             print(f"[PARALLEL] {symbol} analysis raised exception: {e}")
+                            failed.append((symbol, str(e)))
+
+                # Retry failed tickers (up to 1 retry per ticker)
+                max_retries = 1
+                retry_round = 0
+                while failed and retry_round < max_retries and not app_state._stop_event.is_set():
+                    retry_round += 1
+                    retry_symbols = [sym for sym, _ in failed]
+                    print(f"[RETRY] === Retry round {retry_round}/{max_retries} for {len(retry_symbols)} failed tickers: {retry_symbols} ===")
+
+                    # Reset state for failed tickers so they start fresh
+                    for sym in retry_symbols:
+                        app_state.init_symbol_state(sym)
+                        print(f"[RETRY] Reset state for {sym}")
+
+                    failed = []
+                    retry_workers = min(get_max_parallel_tickers(), len(retry_symbols))
+                    with ThreadPoolExecutor(max_workers=retry_workers) as retry_executor:
+                        retry_futures = {}
+                        for i, sym in enumerate(retry_symbols):
+                            retry_futures[retry_executor.submit(analyze_single_ticker, sym)] = sym
+                            if i < len(retry_symbols) - 1:
+                                time.sleep(random.uniform(1, 10))
+                        for future in as_completed(retry_futures):
+                            if app_state._stop_event.is_set():
+                                break
+                            sym = retry_futures[future]
+                            try:
+                                s, success, error = future.result()
+                                if success:
+                                    print(f"[RETRY] {s} succeeded on retry")
+                                    succeeded.append(s)
+                                else:
+                                    print(f"[RETRY] {s} failed again: {error}")
+                                    failed.append((s, error))
+                            except Exception as e:
+                                print(f"[RETRY] {sym} raised exception on retry: {e}")
+                                failed.append((sym, str(e)))
+
+                # Pipeline completion summary
+                failed_syms = {s for s, _ in failed}
+                skipped = [s for s in symbols if s not in succeeded and s not in failed_syms]
+                print(f"[PARALLEL] === Pipeline Summary ===")
+                print(f"[PARALLEL] Total: {len(symbols)} | Succeeded: {len(succeeded)} | Failed: {len(failed)} | Skipped: {len(skipped)}")
+                if failed:
+                    for sym, err in failed:
+                        print(f"[PARALLEL]   FAILED: {sym} - {err}")
+                if skipped:
+                    print(f"[PARALLEL]   SKIPPED (never started): {', '.join(skipped)}")
 
                 # Auto-save analysis after single run completes
                 try:
@@ -1017,9 +1084,21 @@ def register_control_callbacks(app):
 
             app_state.analysis_running = False
 
+        def safe_analysis_thread():
+            """Wrapper that guarantees analysis_running is reset and errors are logged."""
+            try:
+                analysis_thread()
+            except Exception as e:
+                print(f"[THREAD] analysis_thread crashed with unhandled exception: {type(e).__name__}: {e}")
+                import traceback
+                traceback.print_exc()
+            finally:
+                app_state.analysis_running = False
+                print("[THREAD] analysis_thread exited, analysis_running set to False")
+
         if not app_state.analysis_running:
             app_state.analysis_running = True
-            thread = threading.Thread(target=analysis_thread)
+            thread = threading.Thread(target=safe_analysis_thread)
             thread.start()
         
         if market_hour_enabled:

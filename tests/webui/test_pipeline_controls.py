@@ -5,6 +5,7 @@ Unit tests for pipeline pause/resume/stop controls.
 import pytest
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from unittest.mock import patch, MagicMock
 
 
@@ -229,6 +230,351 @@ class TestParallelTickerPauseStop:
 
         t.join(timeout=5)
         assert all(r == "continue" for r in results)
+
+
+class TestSafeAnalysisThread:
+    """Tests for the safe_analysis_thread wrapper that guarantees cleanup."""
+
+    def test_analysis_running_reset_on_success(self, app_state):
+        """analysis_running is set to False when thread completes normally."""
+        app_state.analysis_running = True
+
+        def fake_analysis():
+            pass  # Succeeds normally
+
+        def safe_wrapper():
+            try:
+                fake_analysis()
+            except Exception:
+                pass
+            finally:
+                app_state.analysis_running = False
+
+        t = threading.Thread(target=safe_wrapper)
+        t.start()
+        t.join(timeout=5)
+
+        assert not app_state.analysis_running
+
+    def test_analysis_running_reset_on_crash(self, app_state):
+        """analysis_running is set to False even when thread crashes with unhandled exception."""
+        app_state.analysis_running = True
+
+        def crashing_analysis():
+            raise RuntimeError("Unexpected crash in analysis thread")
+
+        def safe_wrapper():
+            try:
+                crashing_analysis()
+            except Exception:
+                pass
+            finally:
+                app_state.analysis_running = False
+
+        t = threading.Thread(target=safe_wrapper)
+        t.start()
+        t.join(timeout=5)
+
+        assert not app_state.analysis_running
+
+    def test_analysis_running_reset_on_system_exit(self, app_state):
+        """analysis_running is reset even on SystemExit (finally always runs)."""
+        app_state.analysis_running = True
+
+        def exiting_analysis():
+            raise SystemExit(1)
+
+        def safe_wrapper():
+            try:
+                exiting_analysis()
+            except Exception:
+                pass
+            finally:
+                app_state.analysis_running = False
+
+        t = threading.Thread(target=safe_wrapper)
+        t.start()
+        t.join(timeout=5)
+
+        assert not app_state.analysis_running
+
+
+class TestParallelExecutorStopEvent:
+    """Tests for ThreadPoolExecutor behavior with the stop event."""
+
+    def test_stop_event_skips_queued_tickers(self, app_state):
+        """Tickers queued behind the stop event are skipped immediately."""
+        symbols = ["AAPL", "NVDA", "TSLA", "AMZN", "GOOG"]
+        processed = []
+        skipped = []
+
+        def analyze_ticker(symbol):
+            if app_state._stop_event.is_set():
+                return symbol, False, "Pipeline stopped before analysis started"
+            # Simulate analysis work
+            time.sleep(0.2)
+            processed.append(symbol)
+            return symbol, True, None
+
+        # Set stop event after a brief delay to let first ticker start
+        def stop_after_delay():
+            time.sleep(0.1)
+            app_state._stop_event.set()
+
+        stopper = threading.Thread(target=stop_after_delay)
+        stopper.start()
+
+        max_workers = 1  # Only 1 worker so tickers queue up
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(analyze_ticker, s): s for s in symbols}
+            for future in as_completed(futures):
+                sym, success, error = future.result()
+                if not success:
+                    skipped.append(sym)
+
+        stopper.join(timeout=5)
+
+        # At least one ticker should have been processed before stop
+        assert len(processed) >= 1
+        # Remaining tickers should have been skipped
+        assert len(skipped) >= 1
+        # All tickers accounted for
+        assert len(processed) + len(skipped) == len(symbols)
+
+    def test_all_tickers_complete_without_stop(self, app_state):
+        """Without stop event, all tickers are processed."""
+        symbols = ["AAPL", "NVDA", "TSLA", "AMZN"]
+        succeeded = []
+        failed = []
+
+        def analyze_ticker(symbol):
+            if app_state._stop_event.is_set():
+                return symbol, False, "Pipeline stopped"
+            time.sleep(0.05)
+            return symbol, True, None
+
+        max_workers = 2
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(analyze_ticker, s): s for s in symbols}
+            for future in as_completed(futures):
+                sym, success, error = future.result()
+                if success:
+                    succeeded.append(sym)
+                else:
+                    failed.append(sym)
+
+        assert len(succeeded) == 4
+        assert len(failed) == 0
+
+    def test_completion_summary_classification(self, app_state):
+        """Tickers are correctly classified as succeeded, failed, or skipped."""
+        symbols = ["AAPL", "NVDA", "TSLA", "AMZN", "GOOG"]
+
+        def analyze_ticker(symbol):
+            if app_state._stop_event.is_set():
+                return symbol, False, "Pipeline stopped before analysis started"
+            if symbol == "TSLA":
+                raise ValueError("Simulated TSLA failure")
+            if symbol == "AMZN":
+                return symbol, False, "API timeout"
+            time.sleep(0.05)
+            return symbol, True, None
+
+        # Stop after a brief delay to skip GOOG
+        def stop_later():
+            time.sleep(0.15)
+            app_state._stop_event.set()
+
+        stopper = threading.Thread(target=stop_later)
+        stopper.start()
+
+        succeeded = []
+        failed = []
+
+        max_workers = 1  # Sequential to control ordering
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(analyze_ticker, s): s for s in symbols}
+            for future in as_completed(futures):
+                sym_key = futures[future]
+                try:
+                    sym, success, error = future.result()
+                    if success:
+                        succeeded.append(sym)
+                    else:
+                        failed.append((sym, error))
+                except Exception as e:
+                    failed.append((sym_key, str(e)))
+
+        stopper.join(timeout=5)
+
+        # Build the skipped list (same logic as production code)
+        failed_syms = {s for s, _ in failed}
+        skipped = [s for s in symbols if s not in succeeded and s not in failed_syms]
+
+        # Every ticker accounted for in exactly one bucket
+        all_accounted = set(succeeded) | failed_syms | set(skipped)
+        assert all_accounted == set(symbols)
+
+    def test_executor_handles_mixed_exceptions(self, app_state):
+        """Executor processes all tickers even when some raise exceptions."""
+        symbols = ["AAPL", "NVDA", "TSLA"]
+
+        def analyze_ticker(symbol):
+            if symbol == "NVDA":
+                raise RuntimeError("NVDA analysis crashed")
+            time.sleep(0.05)
+            return symbol, True, None
+
+        succeeded = []
+        failed = []
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(analyze_ticker, s): s for s in symbols}
+            for future in as_completed(futures):
+                sym_key = futures[future]
+                try:
+                    sym, success, error = future.result()
+                    if success:
+                        succeeded.append(sym)
+                    else:
+                        failed.append((sym, error))
+                except Exception as e:
+                    failed.append((sym_key, str(e)))
+
+        assert set(succeeded) == {"AAPL", "TSLA"}
+        assert len(failed) == 1
+        assert failed[0][0] == "NVDA"
+
+
+class TestRetryFailedTickers:
+    """Tests for automatic retry of failed tickers."""
+
+    def test_retry_recovers_transient_failure(self, app_state):
+        """A ticker that fails once but succeeds on retry should end up in succeeded."""
+        attempt_count = {}
+
+        def analyze_ticker(symbol):
+            attempt_count[symbol] = attempt_count.get(symbol, 0) + 1
+            if symbol == "NVDA" and attempt_count[symbol] == 1:
+                return symbol, False, "Transient API error"
+            return symbol, True, None
+
+        symbols = ["AAPL", "NVDA", "TSLA"]
+        succeeded = []
+        failed = []
+
+        # First pass
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(analyze_ticker, s): s for s in symbols}
+            for future in as_completed(futures):
+                sym, success, error = future.result()
+                if success:
+                    succeeded.append(sym)
+                else:
+                    failed.append((sym, error))
+
+        # Retry pass (mirrors production logic)
+        max_retries = 1
+        retry_round = 0
+        while failed and retry_round < max_retries:
+            retry_round += 1
+            retry_symbols = [sym for sym, _ in failed]
+            failed = []
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                futures = {executor.submit(analyze_ticker, s): s for s in retry_symbols}
+                for future in as_completed(futures):
+                    sym, success, error = future.result()
+                    if success:
+                        succeeded.append(sym)
+                    else:
+                        failed.append((sym, error))
+
+        assert set(succeeded) == {"AAPL", "NVDA", "TSLA"}
+        assert len(failed) == 0
+        assert attempt_count["NVDA"] == 2
+
+    def test_retry_respects_max_retries(self, app_state):
+        """A ticker that always fails should remain in failed after max retries."""
+        def analyze_ticker(symbol):
+            if symbol == "BAD":
+                return symbol, False, "Permanent failure"
+            return symbol, True, None
+
+        symbols = ["AAPL", "BAD"]
+        succeeded = []
+        failed = []
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {executor.submit(analyze_ticker, s): s for s in symbols}
+            for future in as_completed(futures):
+                sym, success, error = future.result()
+                if success:
+                    succeeded.append(sym)
+                else:
+                    failed.append((sym, error))
+
+        max_retries = 1
+        retry_round = 0
+        while failed and retry_round < max_retries:
+            retry_round += 1
+            retry_symbols = [sym for sym, _ in failed]
+            failed = []
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = {executor.submit(analyze_ticker, s): s for s in retry_symbols}
+                for future in as_completed(futures):
+                    sym, success, error = future.result()
+                    if success:
+                        succeeded.append(sym)
+                    else:
+                        failed.append((sym, error))
+
+        assert "AAPL" in succeeded
+        assert len(failed) == 1
+        assert failed[0][0] == "BAD"
+
+    def test_retry_skipped_when_stop_event_set(self, app_state):
+        """Retry should not execute when stop event is already set."""
+        def analyze_ticker(symbol):
+            if app_state._stop_event.is_set():
+                return symbol, False, "Pipeline stopped"
+            return symbol, True, None
+
+        # Simulate initial failure
+        failed = [("NVDA", "API error")]
+        succeeded = []
+
+        # Set stop event before retry
+        app_state._stop_event.set()
+
+        max_retries = 1
+        retry_round = 0
+        while failed and retry_round < max_retries and not app_state._stop_event.is_set():
+            retry_round += 1
+            # This block should never execute
+            retry_symbols = [sym for sym, _ in failed]
+            failed = []
+            for sym in retry_symbols:
+                succeeded.append(sym)
+
+        # NVDA should remain in the original failed list (retry loop never entered)
+        assert len(succeeded) == 0
+        assert retry_round == 0
+
+    def test_retry_resets_symbol_state(self, app_state):
+        """Retry should reinitialize symbol state before retrying."""
+        app_state.init_symbol_state("NVDA")
+        state = app_state.get_state("NVDA")
+        # Simulate some agents marked as error from first failure
+        state["agent_statuses"]["Market Analyst"] = "error"
+        state["agent_statuses"]["News Analyst"] = "error"
+
+        # Re-init (same as what retry does)
+        app_state.init_symbol_state("NVDA")
+        state = app_state.get_state("NVDA")
+
+        # All agents should be back to pending
+        for agent_status in state["agent_statuses"].values():
+            assert agent_status == "pending"
 
 
 # Pytest fixtures

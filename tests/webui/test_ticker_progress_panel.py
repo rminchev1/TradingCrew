@@ -6,6 +6,175 @@ import pytest
 import time
 from datetime import datetime
 from unittest.mock import patch, MagicMock
+from dash import html
+import dash_bootstrap_components as dbc
+
+from webui.components.ticker_progress_panel import (
+    render_agent_badge,
+    render_ticker_progress_row,
+    render_all_ticker_progress,
+    calculate_progress,
+    get_overall_status,
+    AGENT_ABBREVIATIONS,
+    ANALYST_AGENTS,
+)
+
+
+class TestRenderAgentBadgeIcons:
+    """Tests for render_agent_badge() icon rendering."""
+
+    def test_completed_badge_has_check_icon(self):
+        """Completed badge should contain a fa-check icon."""
+        badge = render_agent_badge("MA", "completed")
+        inner_badge = badge.children  # dbc.Badge
+        badge_content = inner_badge.children  # html.Span with [I, text]
+        icon_element = badge_content.children[0]
+        assert isinstance(icon_element, html.I)
+        assert "fa-check" in icon_element.className
+
+    def test_in_progress_badge_has_spinner_icon(self):
+        """In-progress badge should contain an animated spinner icon."""
+        badge = render_agent_badge("NA", "in_progress")
+        inner_badge = badge.children
+        badge_content = inner_badge.children
+        icon_element = badge_content.children[0]
+        assert isinstance(icon_element, html.I)
+        assert "fa-spinner" in icon_element.className
+        assert "fa-spin" in icon_element.className
+
+    def test_pending_badge_has_circle_icon(self):
+        """Pending badge should contain a circle icon."""
+        badge = render_agent_badge("TR", "pending")
+        inner_badge = badge.children
+        badge_content = inner_badge.children
+        icon_element = badge_content.children[0]
+        assert isinstance(icon_element, html.I)
+        assert "fa-circle" in icon_element.className
+
+    def test_badge_shows_abbreviation_text(self):
+        """Badge should display the agent abbreviation text."""
+        badge = render_agent_badge("FA", "completed")
+        inner_badge = badge.children
+        badge_content = inner_badge.children
+        abbrev_text = badge_content.children[1]
+        assert abbrev_text == "FA"
+
+    def test_badge_tooltip_contains_agent_name(self):
+        """Badge wrapper should have a tooltip title with agent name."""
+        badge = render_agent_badge("MA", "completed")
+        assert "Market Analyst" in badge.title
+        assert "completed" in badge.title
+
+    def test_badge_color_matches_status(self):
+        """Badge color should correspond to the status."""
+        completed = render_agent_badge("MA", "completed")
+        in_progress = render_agent_badge("MA", "in_progress")
+        pending = render_agent_badge("MA", "pending")
+
+        assert completed.children.color == "success"
+        assert in_progress.children.color == "warning"
+        assert pending.children.color == "secondary"
+
+    def test_all_abbreviations_render_all_statuses(self):
+        """Every abbreviation/status combination should render without error."""
+        for abbrev in AGENT_ABBREVIATIONS:
+            for status in ["completed", "in_progress", "pending"]:
+                badge = render_agent_badge(abbrev, status)
+                assert badge is not None
+                # Verify icon element exists
+                inner = badge.children.children
+                assert isinstance(inner.children[0], html.I)
+
+
+class TestTickerRowStatusIcons:
+    """Tests for Font Awesome icons in render_ticker_progress_row()."""
+
+    def _make_statuses(self, status="pending"):
+        return {name: status for name in AGENT_ABBREVIATIONS.values()}
+
+    def test_analyzing_ticker_shows_fa_spinner(self):
+        """Analyzing tickers should show a Font Awesome spinner icon."""
+        statuses = self._make_statuses("in_progress")
+        row = render_ticker_progress_row("AAPL", statuses, is_analyzing=True)
+        header_row = row.children[0]
+        symbol_col = header_row.children[0]
+        icon = symbol_col.children[1]
+        assert isinstance(icon, html.I)
+        assert "fa-spinner" in icon.className
+        assert "fa-spin" in icon.className
+
+    def test_completed_analyzing_ticker_shows_fa_check(self):
+        """Completed analyzing tickers should show a Font Awesome check icon."""
+        statuses = self._make_statuses("completed")
+        row = render_ticker_progress_row("AAPL", statuses, is_analyzing=True)
+        header_row = row.children[0]
+        symbol_col = header_row.children[0]
+        icon = symbol_col.children[1]
+        assert isinstance(icon, html.I)
+        assert "fa-circle-check" in icon.className
+
+    def test_not_analyzing_has_no_icon(self):
+        """Non-analyzing tickers should have no icon."""
+        statuses = self._make_statuses("pending")
+        row = render_ticker_progress_row("AAPL", statuses, is_analyzing=False)
+        header_row = row.children[0]
+        symbol_col = header_row.children[0]
+        assert symbol_col.children[1] is None
+
+    def test_icons_use_font_awesome_not_bootstrap(self):
+        """Status icons should use fa-* classes, not bi-* classes."""
+        for status_value in ["completed", "in_progress", "pending"]:
+            statuses = self._make_statuses(status_value)
+            row = render_ticker_progress_row("X", statuses, is_analyzing=True)
+            header_row = row.children[0]
+            symbol_col = header_row.children[0]
+            icon = symbol_col.children[1]
+            assert isinstance(icon, html.I)
+            assert "fa-" in icon.className
+            assert "bi-" not in icon.className
+
+
+class TestCalculateProgressFunc:
+    """Tests for calculate_progress()."""
+
+    def test_empty_returns_zero(self):
+        assert calculate_progress({}) == 0
+
+    def test_none_returns_zero(self):
+        assert calculate_progress(None) == 0
+
+    def test_all_completed_returns_100(self):
+        assert calculate_progress({"A": "completed", "B": "completed"}) == 100
+
+    def test_all_pending_returns_0(self):
+        assert calculate_progress({"A": "pending", "B": "pending"}) == 0
+
+    def test_mixed_returns_correct_percentage(self):
+        statuses = {"A": "completed", "B": "in_progress", "C": "pending", "D": "completed"}
+        assert calculate_progress(statuses) == 50
+
+
+class TestGetOverallStatusFunc:
+    """Tests for get_overall_status()."""
+
+    def test_empty_returns_pending(self):
+        status, _, _ = get_overall_status({})
+        assert status == "pending"
+
+    def test_all_completed(self):
+        status, _, color = get_overall_status({"A": "completed", "B": "completed"})
+        assert status == "completed"
+        assert color == "success"
+
+    def test_any_in_progress(self):
+        status, _, color = get_overall_status({"A": "completed", "B": "in_progress"})
+        assert status == "in_progress"
+        assert color == "warning"
+
+    def test_all_pending(self):
+        status, _, color = get_overall_status({"A": "pending", "B": "pending"})
+        assert status == "pending"
+        assert color == "secondary"
 
 
 class TestFormatTimestampEST:
@@ -266,3 +435,115 @@ class TestAppStateAnalysisCompletedTime:
         # Completed time should be cleared
         symbol_state = state.get_state("TEST")
         assert symbol_state["analysis_completed_time"] is None
+
+
+class TestErrorState:
+    """Tests for the error status in progress panel components."""
+
+    def test_error_badge_has_xmark_icon(self):
+        """Error badge should contain a fa-xmark icon."""
+        badge = render_agent_badge("MA", "error")
+        inner_badge = badge.children  # dbc.Badge
+        badge_content = inner_badge.children  # html.Span with [I, text]
+        icon_element = badge_content.children[0]
+        assert isinstance(icon_element, html.I)
+        assert "fa-xmark" in icon_element.className
+
+    def test_error_badge_color_is_danger(self):
+        """Error badge should use the 'danger' color."""
+        badge = render_agent_badge("MA", "error")
+        assert badge.children.color == "danger"
+
+    def test_error_badge_tooltip_shows_error(self):
+        """Error badge tooltip should mention error status."""
+        badge = render_agent_badge("MA", "error")
+        assert "error" in badge.title
+
+    def test_get_overall_status_returns_error_when_any_error(self):
+        """Overall status should be 'error' when any agent has error status."""
+        statuses = {"A": "completed", "B": "error", "C": "pending"}
+        status, text, color = get_overall_status(statuses)
+        assert status == "error"
+        assert text == "Failed"
+        assert color == "danger"
+
+    def test_get_overall_status_error_takes_priority_over_in_progress(self):
+        """Error status should take priority over in_progress."""
+        statuses = {"A": "in_progress", "B": "error"}
+        status, text, color = get_overall_status(statuses)
+        assert status == "error"
+        assert color == "danger"
+
+    def test_calculate_progress_counts_only_completed(self):
+        """calculate_progress should only count 'completed', not 'error'."""
+        statuses = {"A": "completed", "B": "error", "C": "error", "D": "completed"}
+        assert calculate_progress(statuses) == 50
+
+    def test_render_ticker_row_with_error_status(self):
+        """Ticker row with error agents should show 'Failed' status."""
+        statuses = {name: "error" for name in AGENT_ABBREVIATIONS.values()}
+        row = render_ticker_progress_row("FAIL", statuses, is_analyzing=True)
+        result_str = str(row)
+        assert "Failed" in result_str
+
+    def test_render_ticker_row_error_icon(self):
+        """Error ticker should show circle-xmark icon."""
+        statuses = {name: "error" for name in AGENT_ABBREVIATIONS.values()}
+        row = render_ticker_progress_row("FAIL", statuses, is_analyzing=True)
+        header_row = row.children[0]
+        symbol_col = header_row.children[0]
+        icon = symbol_col.children[1]
+        assert isinstance(icon, html.I)
+        assert "fa-circle-xmark" in icon.className
+
+    def test_render_all_shows_failed_count(self):
+        """Summary header should show Failed count when errors exist."""
+        symbol_states = {
+            "FAIL": {
+                "agent_statuses": {name: "error" for name in AGENT_ABBREVIATIONS.values()},
+            },
+            "OK": {
+                "agent_statuses": {name: "completed" for name in AGENT_ABBREVIATIONS.values()},
+            }
+        }
+        result = render_all_ticker_progress(symbol_states, analyzing_symbols=set())
+        result_str = str(result)
+        assert "Failed" in result_str
+
+    def test_render_all_no_failed_badge_when_no_errors(self):
+        """Summary header should NOT show Failed count when no errors exist."""
+        symbol_states = {
+            "OK": {
+                "agent_statuses": {name: "completed" for name in AGENT_ABBREVIATIONS.values()},
+            }
+        }
+        result = render_all_ticker_progress(symbol_states, analyzing_symbols=set())
+        result_str = str(result)
+        assert "Failed" not in result_str
+
+
+class TestUpdateAgentStatusAcceptsError:
+    """Tests that AppState.update_agent_status accepts 'error' status."""
+
+    def test_update_agent_status_accepts_error(self):
+        """update_agent_status should accept 'error' as a valid status."""
+        from webui.utils.state import AppState
+
+        state = AppState()
+        state.init_symbol_state("TEST")
+        state.update_agent_status("Market Analyst", "error", symbol="TEST")
+
+        symbol_state = state.get_state("TEST")
+        assert symbol_state["agent_statuses"]["Market Analyst"] == "error"
+
+    def test_update_agent_status_still_rejects_invalid(self):
+        """update_agent_status should still reject truly invalid statuses."""
+        from webui.utils.state import AppState
+
+        state = AppState()
+        state.init_symbol_state("TEST")
+        state.update_agent_status("Market Analyst", "bogus_status", symbol="TEST")
+
+        symbol_state = state.get_state("TEST")
+        # Should have been defaulted to "pending"
+        assert symbol_state["agent_statuses"]["Market Analyst"] == "pending"

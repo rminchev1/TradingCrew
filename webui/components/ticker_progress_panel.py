@@ -71,26 +71,35 @@ def create_ticker_progress_panel():
 
 
 def render_agent_badge(abbrev, status):
-    """Render a single agent badge with status color and tooltip."""
+    """Render a single agent badge with status icon, color, and tooltip."""
     colors = {
         "completed": "success",
         "in_progress": "warning",
-        "pending": "secondary"
+        "pending": "secondary",
+        "error": "danger",
     }
 
-    status_icons = {
-        "completed": "✓",
-        "in_progress": "●",
-        "pending": "○"
+    # Font Awesome icon classes for each status
+    status_icon_classes = {
+        "completed": "fa-solid fa-check",
+        "in_progress": "fa-solid fa-spinner fa-spin",
+        "pending": "fa-regular fa-circle",
+        "error": "fa-solid fa-xmark",
     }
 
     agent_name = AGENT_ABBREVIATIONS.get(abbrev, abbrev)
-    icon = status_icons.get(status, "")
+    icon_class = status_icon_classes.get(status, "fa-regular fa-circle")
+
+    # Badge content: icon + abbreviation
+    badge_content = html.Span([
+        html.I(className=f"{icon_class} me-1"),
+        abbrev,
+    ])
 
     # Wrap badge in span with title for tooltip
     return html.Span(
         dbc.Badge(
-            abbrev,
+            badge_content,
             color=colors.get(status, "secondary"),
             className="agent-badge",
         ),
@@ -116,7 +125,9 @@ def get_overall_status(agent_statuses):
     if not agent_statuses:
         return "pending", "Pending", "secondary"
 
-    if all(s == "completed" for s in agent_statuses.values()):
+    if any(s == "error" for s in agent_statuses.values()):
+        return "error", "Failed", "danger"
+    elif all(s == "completed" for s in agent_statuses.values()):
         return "completed", "Complete", "success"
     elif any(s == "in_progress" for s in agent_statuses.values()):
         return "in_progress", "In Progress", "warning"
@@ -156,13 +167,14 @@ def render_ticker_progress_row(symbol, agent_statuses, is_analyzing=False, activ
     percent = calculate_progress(visible_statuses)
     status, status_text, progress_color = get_overall_status(visible_statuses)
 
-    # Status icon
+    # Status icon (Font Awesome)
     status_icons = {
-        "completed": "bi-check-circle-fill",
-        "in_progress": "bi-arrow-repeat",
-        "pending": "bi-clock"
+        "completed": "fa-solid fa-circle-check",
+        "in_progress": "fa-solid fa-spinner fa-spin",
+        "pending": "fa-regular fa-clock",
+        "error": "fa-solid fa-circle-xmark",
     }
-    status_icon = status_icons.get(status, "bi-clock")
+    status_icon = status_icons.get(status, "fa-regular fa-clock")
 
     # Build agent badges grouped by phase
     def make_badge_group(agents_dict, label, filter_active=False):
@@ -192,7 +204,7 @@ def render_ticker_progress_row(symbol, agent_statuses, is_analyzing=False, activ
         dbc.Row([
             dbc.Col([
                 html.Strong(symbol, className="ticker-symbol"),
-                html.I(className=f"bi {status_icon} ms-2 text-{progress_color}") if is_analyzing else None,
+                html.I(className=f"{status_icon} ms-2 text-{progress_color}") if is_analyzing else None,
             ], width=2, className="d-flex align-items-center"),
             dbc.Col([
                 dbc.Progress(
@@ -270,24 +282,37 @@ def render_all_ticker_progress(symbol_states, analyzing_symbols=None, active_ana
         1 for state in symbol_states.values()
         if all(s == "completed" for s in state.get("agent_statuses", {}).values())
     )
+    failed = sum(
+        1 for state in symbol_states.values()
+        if any(s == "error" for s in state.get("agent_statuses", {}).values())
+    )
     in_progress = len(analyzing_symbols)
+
+    header_badges = [
+        html.Small([
+            dbc.Badge(f"{total}", color="primary", className="me-1"),
+            " Total",
+        ], className="me-3"),
+        html.Small([
+            dbc.Badge(f"{in_progress}", color="warning", className="me-1"),
+            " Active",
+        ], className="me-3"),
+        html.Small([
+            dbc.Badge(f"{completed}", color="success", className="me-1"),
+            " Complete",
+        ], className="me-3"),
+    ]
+    if failed > 0:
+        header_badges.append(
+            html.Small([
+                dbc.Badge(f"{failed}", color="danger", className="me-1"),
+                " Failed",
+            ], className="me-3"),
+        )
 
     header = html.Div([
         dbc.Row([
-            dbc.Col([
-                html.Small([
-                    dbc.Badge(f"{total}", color="primary", className="me-1"),
-                    " Total",
-                ], className="me-3"),
-                html.Small([
-                    dbc.Badge(f"{in_progress}", color="warning", className="me-1"),
-                    " Active",
-                ], className="me-3"),
-                html.Small([
-                    dbc.Badge(f"{completed}", color="success", className="me-1"),
-                    " Complete",
-                ]),
-            ]),
+            dbc.Col(header_badges),
         ], className="mb-3"),
     ])
 
