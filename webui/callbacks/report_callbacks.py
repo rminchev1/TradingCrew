@@ -185,6 +185,10 @@ def register_report_callbacks(app):
     )
     def update_researcher_debate(active_page, n_intervals):
         """Update the researcher debate tab with Dash components and prompt buttons"""
+        # Skip updates when viewing historical data - let history callbacks handle it
+        if app_state.viewing_history:
+            return no_update
+
         if not app_state.symbol_states or not active_page:
             return create_markdown_content("", "No researcher debate available yet.")
 
@@ -364,6 +368,10 @@ def register_report_callbacks(app):
     )
     def update_risk_debate(active_page, n_intervals):
         """Update the risk debate tab with Dash components and prompt buttons"""
+        # Skip updates when viewing historical data - let history callbacks handle it
+        if app_state.viewing_history:
+            return no_update
+
         if not app_state.symbol_states or not active_page:
             return create_markdown_content("", "No risk debate available yet.")
 
@@ -722,96 +730,6 @@ def register_report_callbacks(app):
             create_markdown_content(trader_report, "No trader report available yet.", "trader_investment_plan"),
             create_markdown_content(portfolio_report, "No final decision available yet.", "final_trade_decision")
         )
-
-    @app.callback(
-        Output("decision-summary", "children"),
-        [Input("report-pagination", "active_page"),
-         Input("medium-refresh-interval", "n_intervals")]
-    )
-    def update_decision_summary(active_page, n_intervals):
-        """Update the decision summary"""
-        if not app_state.symbol_states or not active_page:
-            return "Analysis not complete yet."
-
-        # Safeguard against accessing invalid page index (e.g., after page refresh)
-        symbols_list = list(app_state.symbol_states.keys())
-        if active_page > len(symbols_list):
-            return "Page index out of range. Please refresh or restart analysis."
-
-        symbol = symbols_list[active_page - 1]
-        state = app_state.get_state(symbol)
-
-        if not state:
-            return "No data for this symbol."
-
-        reports = state["current_reports"]
-        final_report_content = reports.get("final_trade_decision")
-
-        # A race condition can occur where the final report is generated but the analysis_complete flag is not yet set.
-        # We should only show the final decision when the state is confirmed as complete.
-        if state.get("analysis_complete") and final_report_content is not None:
-            if state["analysis_results"]:
-                decision_text = f"## Final Decision for {state['ticker_symbol']}\n\n"
-                decision_text += f"**Trade Action:** {state['analysis_results'].get('decision', 'No decision')}\n\n"
-                decision_text += "**Date:** " + state['analysis_results'].get("date", "N/A")
-            else:
-                # Show the recommended action if available
-                decision_text = f"## Final Decision for {state['ticker_symbol']}\n\n"
-                
-                # Display the extracted recommendation prominently
-                if "recommended_action" in state and state["recommended_action"]:
-                    decision_text += f"**📈 RECOMMENDED ACTION: {state['recommended_action']}**\n\n"
-                
-                decision_text += "**Full Analysis:**\n"
-                decision_text += final_report_content
-        else:
-            # Show partial decision summary based on available reports
-            available_reports = []
-            if state["current_reports"].get("market_report"):
-                available_reports.append("Market Analysis")
-            if state["current_reports"].get("sentiment_report"):
-                available_reports.append("Social Media Sentiment")
-            if state["current_reports"].get("news_report"):
-                available_reports.append("News Analysis")
-            if state["current_reports"].get("fundamentals_report"):
-                available_reports.append("Fundamentals Analysis")
-            if state["current_reports"].get("macro_report"):
-                available_reports.append("Macro Analysis")
-            if state["current_reports"].get("research_manager_report"):
-                available_reports.append("Research Manager Decision")
-            if state["current_reports"].get("trader_investment_plan"):
-                available_reports.append("Trader Investment Plan")
-            if state.get("risk_debate_state", {}).get("history"):
-                available_reports.append("Risk Debate")
-            if final_report_content is not None:
-                available_reports.append("Portfolio Manager Final Decision")
-            
-            if available_reports:
-                decision_text = f"## Partial Analysis for {state['ticker_symbol']}\n\n"
-                decision_text += "**Completed Reports:** " + ", ".join(available_reports) + "\n\n"
-                
-                # Show the latest available decision as "Current Decision"
-                risk_debate_latest = ""
-                if state.get("risk_debate_state", {}).get("history"):
-                    # Get the last message from risk debate
-                    risk_history = state["risk_debate_state"]["history"]
-                    if risk_history:
-                        risk_debate_latest = risk_history.split('\n')[-1] if risk_history else ""
-                
-                current_decision = (
-                    final_report_content or
-                    risk_debate_latest or
-                    state["current_reports"].get("trader_investment_plan") or
-                    state["current_reports"].get("research_manager_report")
-                )
-                
-                if current_decision:
-                    decision_text += "**Current Decision:** Based on completed analysis\n\n"
-                    decision_text += current_decision
-            else:
-                decision_text = "Analysis not complete yet."
-        
-        return decision_text
 
     @app.callback(
         Output("current-symbol-report-display", "children", allow_duplicate=True),

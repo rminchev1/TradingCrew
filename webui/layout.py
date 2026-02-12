@@ -10,7 +10,7 @@ from webui.components.header import create_header
 from webui.components.config_panel import create_trading_control_panel
 from webui.components.status_panel import create_status_panel
 from webui.components.chart_panel import create_chart_panel
-from webui.components.decision_panel import create_compact_decision_panel
+# Removed: create_compact_decision_panel (Trading Signal panel removed)
 from webui.components.reports_panel import create_reports_panel
 from webui.components.alpaca_account import render_compact_account_bar, render_positions_orders_section, render_options_section
 from webui.components.scanner_panel import create_scanner_panel
@@ -152,17 +152,6 @@ def create_trading_content():
 
                 # Compact trading controls
                 create_trading_control_panel(),
-
-                html.Hr(className="my-3"),
-
-                # Decision/Signal display
-                html.Div([
-                    html.H6([
-                        html.I(className="fas fa-bullseye me-2"),
-                        "Trading Signal"
-                    ], className="mb-2 text-muted"),
-                    create_compact_decision_panel(),
-                ]),
             ], className="p-3")
         ], className="trading-panel-card h-100")
     ], className="trading-panel-section")
