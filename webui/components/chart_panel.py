@@ -1,22 +1,11 @@
 """
-webui/components/chart_panel.py - Chart panel with symbol-based pagination and technical indicators
+webui/components/chart_panel.py - Chart panel with symbol dropdown and technical indicators
 
 Uses TradingView lightweight-charts for professional charting experience.
 """
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-
-
-def create_symbol_pagination(pagination_id, max_symbols=1):
-    """Create a custom pagination component using symbol names instead of page numbers"""
-    return html.Div(id=f"{pagination_id}-container",
-                   children=[
-                       html.Div("No symbols available",
-                               className="text-muted text-center",
-                               style={"padding": "10px"})
-                   ],
-                   className="symbol-pagination-container")
 
 
 def create_timeframe_buttons():
@@ -63,38 +52,44 @@ def create_indicator_checklist():
 
 
 def create_chart_panel():
-    """Create the chart panel for the web UI with symbol-based pagination and technical indicators."""
+    """Create the chart panel for the web UI with symbol dropdown and technical indicators."""
     return dbc.Card(
         dbc.CardBody([
-            html.H4("Stock Chart & Technical Analysis", className="mb-3"),
-            html.Hr(),
-            # Symbol pagination and refresh button
+            # Symbol select, timeframe, indicators, and controls — single compact row
             dbc.Row([
                 dbc.Col([
-                    create_symbol_pagination("chart-pagination")
-                ], width=8),
-                dbc.Col([
-                    dbc.Button("⛶", id="chart-fullscreen-btn", color="outline-secondary", size="sm", className="float-end ms-2", title="Toggle Fullscreen"),
-                    dbc.Button(
-                        [html.Span(className="live-dot"), " LIVE"],
-                        id="chart-live-btn", color="outline-success", size="sm",
-                        className="float-end ms-2 chart-live-btn", title="Toggle Live Updates"
-                    ),
-                    dbc.Button("🔄", id="manual-chart-refresh", color="outline-secondary", size="sm", className="float-end", title="Refresh Chart"),
-                ], width=4)
-            ], className="mb-2"),
-            # Current symbol display and last updated
-            html.Div(id="current-symbol-display", className="text-center my-2"),
-            html.Div(id="chart-last-updated", className="text-muted text-center small mb-2"),
-            # Timeframe buttons and indicator dropdown
-            dbc.Row([
+                    dbc.Select(
+                        id="chart-symbol-select",
+                        options=[],
+                        placeholder="Select symbol...",
+                        size="sm",
+                        className="symbol-select"
+                    )
+                ], width="auto", style={"minWidth": "160px"}),
                 dbc.Col([
                     create_timeframe_buttons()
                 ], width="auto", className="flex-grow-1"),
                 dbc.Col([
                     create_indicator_checklist()
+                ], width="auto"),
+                dbc.Col([
+                    html.Span(id="chart-last-updated", className="text-muted small me-2",
+                              style={"fontSize": "0.7rem", "opacity": "0.7"}),
+                ], width="auto", className="d-flex align-items-center"),
+                dbc.Col([
+                    dbc.ButtonGroup([
+                        dbc.Button("🔄", id="manual-chart-refresh", color="outline-secondary", size="sm", title="Refresh Chart"),
+                        dbc.Button(
+                            [html.Span(className="live-dot"), " LIVE"],
+                            id="chart-live-btn", color="outline-success", size="sm",
+                            className="chart-live-btn", title="Toggle Live Updates"
+                        ),
+                        dbc.Button("⛶", id="chart-fullscreen-btn", color="outline-secondary", size="sm", title="Toggle Fullscreen"),
+                    ], size="sm")
                 ], width="auto")
-            ], className="mb-3 align-items-center"),
+            ], className="mb-2 align-items-center g-2"),
+            # Hidden — kept for callback compatibility (Output target)
+            html.Div(id="current-symbol-display", style={"display": "none"}),
             # Chart wrapper for fullscreen support
             html.Div(
                 id="chart-fullscreen-wrapper",

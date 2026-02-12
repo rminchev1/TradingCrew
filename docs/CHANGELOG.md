@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.3.0] - 2025-02-12
+
 ### Added
+- **Symbol Select Dropdowns**: Replaced button grid with clean `dbc.Select` dropdowns for symbol selection in both Chart and Reports panels
+  - Synced across panels via hidden pagination components
+  - History mode shows folder-prefixed labels for historical runs
+  - Dropdown auto-populates from `app_state.symbol_states` on each refresh
 - **Stop-Loss and Take-Profit Orders**: Automatic protective orders for stock positions
   - Configure in Settings > System Settings > Risk Management (SL/TP)
   - Enable/disable stop-loss and take-profit independently
@@ -21,10 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `place_stop_order()` - Standalone stop order
   - `place_limit_order()` - Standalone limit order
   - `extract_sl_tp_from_analysis()` - AI extraction from markdown tables
+- **CLAUDE.md Self-Update Requirement**: New mandatory rule to keep CLAUDE.md in sync with code changes
 
 ### Changed
 - `execute_trading_action()` now accepts optional `sl_tp_config` and `analysis_text` parameters
 - Trading execution flow integrates SL/TP placement automatically when enabled
+- Removed redundant centered symbol display from chart panel (dropdown already shows selected symbol)
+- Moved chart "Last updated" timestamp to a discrete inline position next to control buttons
+- Removed ~300 lines of button-grid CSS and replaced with compact dropdown styles
 
 ---
 

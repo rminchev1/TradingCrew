@@ -208,49 +208,63 @@ class TestDeleteAnalysisRun:
         assert result is False
 
 
-class TestCreateSymbolButtons:
-    """Tests for create_symbol_buttons function used in history view"""
+class TestSymbolSelectDropdown:
+    """Tests for symbol Select dropdown used in chart and report panels"""
 
-    def test_create_symbol_buttons_basic(self, tmp_storage):
-        """Test creating symbol buttons with basic input"""
-        from webui.callbacks.history_callbacks import create_symbol_buttons
+    def test_chart_panel_has_symbol_select(self, tmp_storage):
+        """Test that chart panel contains a symbol-select dropdown"""
+        from webui.components.chart_panel import create_chart_panel
 
-        buttons = create_symbol_buttons(["AAPL", "NVDA"], active_index=0)
+        panel = create_chart_panel()
+        # Flatten the component tree and find the select
+        found = _find_component_by_id(panel, "chart-symbol-select")
+        assert found is not None
 
-        # Should be a ButtonGroup
-        assert buttons is not None
-        # First button should have AAPL and be active (primary color)
-        assert len(buttons.children) == 2
+    def test_reports_panel_has_symbol_select(self, tmp_storage):
+        """Test that reports panel contains a symbol-select dropdown"""
+        from webui.components.reports_panel import create_reports_panel
 
-    def test_create_symbol_buttons_active_state(self, tmp_storage):
-        """Test that active button is correctly marked"""
-        from webui.callbacks.history_callbacks import create_symbol_buttons
+        panel = create_reports_panel()
+        found = _find_component_by_id(panel, "report-symbol-select")
+        assert found is not None
 
-        buttons = create_symbol_buttons(["A", "B", "C"], active_index=1)
+    def test_chart_symbol_select_has_correct_props(self, tmp_storage):
+        """Test that chart symbol select has correct initial properties"""
+        from webui.components.chart_panel import create_chart_panel
 
-        # Second button (index 1) should be active
-        assert buttons.children[0].color == "outline-primary"  # Not active
-        assert buttons.children[1].color == "primary"  # Active
-        assert buttons.children[2].color == "outline-primary"  # Not active
+        panel = create_chart_panel()
+        select = _find_component_by_id(panel, "chart-symbol-select")
+        assert select is not None
+        assert select.options == []
+        assert select.placeholder == "Select symbol..."
 
-    def test_create_symbol_buttons_history_mode(self, tmp_storage):
-        """Test symbol buttons in history mode include folder icon"""
-        from webui.callbacks.history_callbacks import create_symbol_buttons
+    def test_report_symbol_select_has_correct_props(self, tmp_storage):
+        """Test that report symbol select has correct initial properties"""
+        from webui.components.reports_panel import create_reports_panel
 
-        buttons = create_symbol_buttons(["AAPL"], active_index=0, is_history=True)
+        panel = create_reports_panel()
+        select = _find_component_by_id(panel, "report-symbol-select")
+        assert select is not None
+        assert select.options == []
+        assert select.placeholder == "Select symbol..."
 
-        # History mode should prefix with folder icon
-        assert "📁" in buttons.children[0].children
 
-    def test_create_symbol_buttons_button_ids(self, tmp_storage):
-        """Test that buttons have correct pattern-matching IDs"""
-        from webui.callbacks.history_callbacks import create_symbol_buttons
-
-        buttons = create_symbol_buttons(["A", "B"], active_index=0)
-
-        # Check IDs are pattern-matching dicts with correct type
-        assert buttons.children[0].id == {"type": "report-symbol-btn", "index": 0}
-        assert buttons.children[1].id == {"type": "report-symbol-btn", "index": 1}
+def _find_component_by_id(component, target_id):
+    """Recursively search for a component with a given ID."""
+    if hasattr(component, 'id') and component.id == target_id:
+        return component
+    children = getattr(component, 'children', None)
+    if children is None:
+        return None
+    if not isinstance(children, (list, tuple)):
+        children = [children]
+    for child in children:
+        if child is None:
+            continue
+        result = _find_component_by_id(child, target_id)
+        if result is not None:
+            return result
+    return None
 
 
 class TestHistoryDebateReports:
