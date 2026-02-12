@@ -353,6 +353,10 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         if current_state:
             current_state["current_reports"]["error"] = f"Analysis failed: {type(e).__name__}: {str(e)}"
             current_state["analysis_complete"] = True  # Mark complete so UI updates
+            # Mark all non-completed agents as "error" so the UI shows failure
+            for agent, status in current_state["agent_statuses"].items():
+                if status != "completed":
+                    app_state.update_agent_status(agent, "error", symbol=ticker)
         if progress is not None:
             progress(1.0)  # Complete the progress bar
     finally:

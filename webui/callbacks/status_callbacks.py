@@ -53,28 +53,36 @@ def register_status_callbacks(app):
                 status = current_state["agent_statuses"].get(agent, "pending")
                 
                 # Set status icon and color
-                if status == "completed":
-                    status_icon = "✅"
+                if status == "error":
+                    status_icon_class = "fa-solid fa-circle-xmark"
+                    status_text = "FAILED"
+                    status_color = COLORS["error"]
+                elif status == "completed":
+                    status_icon_class = "fa-solid fa-circle-check"
                     status_text = "COMPLETED"
                     status_color = COLORS["completed"]
                 elif status == "in_progress" and app_state.pipeline_paused:
-                    status_icon = "⏸️"
+                    status_icon_class = "fa-solid fa-pause"
                     status_text = "PAUSED"
                     status_color = COLORS["in_progress"]
                 elif status == "in_progress":
-                    status_icon = "🔄"
+                    status_icon_class = "fa-solid fa-spinner fa-spin"
                     status_text = "IN PROGRESS"
                     status_color = COLORS["in_progress"]
                 else:
-                    status_icon = "⏸️"
+                    status_icon_class = "fa-regular fa-clock"
                     status_text = "PENDING"
                     status_color = COLORS["pending"]
-                
-                # Create a row
+
+                # Create a row with Font Awesome icon
+                status_display = html.Span([
+                    html.I(className=status_icon_class, style={"marginRight": "6px"}),
+                    status_text
+                ], style={"color": status_color})
                 row = html.Tr([
                     html.Td(team_name),
                     html.Td(agent),
-                    html.Td(html.Span(f"{status_icon} {status_text}", style={"color": status_color}))
+                    html.Td(status_display)
                 ])
                 rows.append(row)
         
