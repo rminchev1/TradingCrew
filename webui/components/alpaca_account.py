@@ -35,48 +35,156 @@ def _render_not_configured_message(section_name="Alpaca"):
     ], className="enhanced-table-container")
 
 
-def render_positions_table():
-    """Render the enhanced positions table with liquidate buttons"""
-    # Check if Alpaca is configured
+def _get_pl_color(pl_str: str) -> str:
+    """Return the appropriate Bootstrap text class for a P/L value string."""
+    try:
+        value = float(pl_str.replace("$", "").replace(",", ""))
+    except ValueError:
+        return "text-muted"
+    if value > 0:
+        return "text-success"
+    elif value < 0:
+        return "text-danger"
+    return "text-muted"
+
+
+def _pl_bar(pl_pct_raw):
+    """Return a small colored bar proportional to P/L %."""
+    color_class = "positive" if pl_pct_raw >= 0 else "negative"
+    width = min(abs(pl_pct_raw), 100)
+    return html.Div(
+        html.Div(
+            className=f"pl-bar {color_class}",
+            style={"width": f"{max(width, 2)}%"}
+        ),
+        className="pl-bar-container"
+    )
+
+
+def render_portfolio_summary(positions_data=None, account_info=None):
+    """Render portfolio summary bar: total value, total P/L, position count, best/worst."""
+    if not _is_alpaca_configured():
+        return html.Div()
+
+    try:
+        if positions_data is None:
+            positions_data = AlpacaUtils.get_positions_data()
+        if account_info is None:
+            account_info = AlpacaUtils.get_account_info()
+
+        if not positions_data:
+            return html.Div()
+
+        total_market_value = sum(p.get("market_value_raw", 0) for p in positions_data)
+        total_cost_basis = sum(p.get("cost_basis_raw", 0) for p in positions_data)
+        total_unrealized_pl = sum(p.get("total_pl_dollars_raw", 0) for p in positions_data)
+        total_pl_pct = (total_unrealized_pl / total_cost_basis * 100) if total_cost_basis != 0 else 0
+        num_positions = len(positions_data)
+
+        # Best and worst performer
+        best = max(positions_data, key=lambda p: p.get("total_pl_percent_raw", 0))
+        worst = min(positions_data, key=lambda p: p.get("total_pl_percent_raw", 0))
+
+        pl_color = "positive" if total_unrealized_pl >= 0 else "negative"
+        pl_sign = "+" if total_unrealized_pl >= 0 else ""
+
+        return html.Div([
+            dbc.Row([
+                dbc.Col(html.Div([
+                    html.Div("Total Value", className="stat-label"),
+                    html.Div(f"${total_market_value:,.2f}", className="stat-value")
+                ], className="portfolio-stat"), width=6, md=3),
+                dbc.Col(html.Div([
+                    html.Div("Unrealized P/L", className="stat-label"),
+                    html.Div(
+                        f"{pl_sign}${abs(total_unrealized_pl):,.2f} ({pl_sign}{abs(total_pl_pct):.2f}%)",
+                        className=f"stat-value {pl_color}"
+                    )
+                ], className="portfolio-stat"), width=6, md=3),
+                dbc.Col(html.Div([
+                    html.Div("Positions", className="stat-label"),
+                    html.Div(str(num_positions), className="stat-value")
+                ], className="portfolio-stat"), width=6, md=3),
+                dbc.Col(html.Div([
+                    html.Div("Best / Worst", className="stat-label"),
+                    html.Div([
+                        html.Span(
+                            f"{best['Symbol']} {best.get('total_pl_percent_raw', 0):+.1f}%",
+                            className="text-success small fw-bold"
+                        ),
+                        html.Span(" / ", className="text-muted"),
+                        html.Span(
+                            f"{worst['Symbol']} {worst.get('total_pl_percent_raw', 0):+.1f}%",
+                            className="text-danger small fw-bold"
+                        ),
+                    ])
+                ], className="portfolio-stat"), width=6, md=3),
+            ], className="g-0")
+        ], className="portfolio-summary-bar")
+
+    except Exception as e:
+        print(f"Error rendering portfolio summary: {e}")
+        return html.Div()
+
+
+def render_positions_table(sort_key="symbol", sort_direction="asc", search_filter="", equity=0):
+    """Render the enhanced positions table with sort/filter toolbar, new columns, and partial close."""
     if not _is_alpaca_configured():
         return _render_not_configured_message("Positions")
 
     try:
         positions_data = AlpacaUtils.get_positions_data()
-        
+
+        pos_sort_val = f"{sort_key}-{sort_direction}"
+
         if not positions_data:
             return html.Div([
+                # Toolbar (always shown so sort/filter controls exist in DOM)
+                _render_positions_toolbar(shown=0, total=0, sort_value=pos_sort_val, search_value=search_filter),
                 html.Div([
-                    html.I(className="fas fa-chart-line fa-2x mb-3"),
-                    html.H5("No Open Positions", className="text-muted"),
-                    html.P("Your portfolio is currently empty", className="text-muted small")
+                    html.I(className="fas fa-inbox fa-3x mb-3 text-muted", style={"opacity": "0.3"}),
+                    html.H5("No Open Positions", className="text-muted mb-2"),
+                    html.P("Start trading to see your positions here", className="text-muted small mb-0"),
                 ], className="text-center p-5")
             ], className="enhanced-table-container")
-        
-        # Create enhanced table rows with liquidate buttons
+
+        # Compute portfolio weight for each position
+        total_equity = equity if equity > 0 else sum(p.get("market_value_raw", 0) for p in positions_data)
+        for p in positions_data:
+            p["weight"] = (p.get("market_value_raw", 0) / total_equity * 100) if total_equity > 0 else 0
+
+        # Track total count before filtering
+        total_count = len(positions_data)
+
+        # Filter
+        if search_filter:
+            positions_data = [p for p in positions_data if search_filter.upper() in p["Symbol"].upper()]
+
+        shown_count = len(positions_data)
+
+        # Sort
+        sort_map = {
+            "symbol": lambda p: p["Symbol"].lower(),
+            "market_value": lambda p: p.get("market_value_raw", 0),
+            "today_pl": lambda p: p.get("today_pl_dollars_raw", 0),
+            "total_pl": lambda p: p.get("total_pl_dollars_raw", 0),
+            "weight": lambda p: p.get("weight", 0),
+            "current_price": lambda p: p.get("current_price", 0),
+        }
+        key_fn = sort_map.get(sort_key, sort_map["symbol"])
+        positions_data.sort(key=key_fn, reverse=(sort_direction == "desc"))
+
+        # Build table rows
         table_rows = []
         for position in positions_data:
-            # Helper to decide colour based on the numeric value (sign) rather than the raw string.
-            def _get_pl_color(pl_str: str) -> str:
-                """Return the appropriate Bootstrap text class for a P/L value string."""
-                try:
-                    # Remove $ signs and commas then convert to float
-                    value = float(pl_str.replace("$", "").replace(",", ""))
-                except ValueError:
-                    # Fallback to neutral colour if parsing fails
-                    return "text-muted"
-
-                if value > 0:
-                    return "text-success"
-                elif value < 0:
-                    return "text-danger"
-                else:
-                    return "text-muted"
-
             today_pl_color = _get_pl_color(position["Today's P/L ($)"])
             total_pl_color = _get_pl_color(position["Total P/L ($)"])
-            
+            side = position.get("side", "long")
+            side_badge_class = "long" if side == "long" else "short"
+            weight = position.get("weight", 0)
+
             row = html.Tr([
+                # Position: Symbol + Qty + Side badge
                 html.Td([
                     html.Div([
                         html.A(
@@ -86,65 +194,110 @@ def render_positions_table():
                             className="symbol-link",
                             title=f"Click to view {position['Symbol']} chart"
                         ),
+                        html.Span(
+                            side.upper(),
+                            className=f"side-badge {side_badge_class} ms-2"
+                        ),
                         html.Br(),
                         html.Small(f"{position['Qty']} shares", className="text-muted")
                     ])
                 ], className="symbol-cell"),
+                # Current Price
+                html.Td([
+                    html.Div([
+                        html.Div(position.get("Current Price", "-"), className="fw-bold"),
+                        html.Small(f"Entry: {position['Avg Entry']}", className="text-muted")
+                    ])
+                ], className="price-cell"),
+                # Market Value + Cost Basis
                 html.Td([
                     html.Div([
                         html.Div(position["Market Value"], className="fw-bold"),
-                        html.Small(f"Entry: {position['Avg Entry']}", className="text-muted")
+                        html.Small(f"Cost: {position['Cost Basis']}", className="text-muted")
                     ])
                 ], className="value-cell"),
+                # Today's P/L with mini bar
                 html.Td([
                     html.Div([
                         html.Div(position["Today's P/L ($)"], className=f"fw-bold {today_pl_color}"),
-                        html.Small(position["Today's P/L (%)"], className=f"{today_pl_color}")
+                        html.Small(position["Today's P/L (%)"], className=f"{today_pl_color}"),
+                        _pl_bar(position.get("today_pl_percent_raw", 0))
                     ])
                 ], className="pnl-cell"),
+                # Total P/L with mini bar
                 html.Td([
                     html.Div([
                         html.Div(position["Total P/L ($)"], className=f"fw-bold {total_pl_color}"),
-                        html.Small(position["Total P/L (%)"], className=f"{total_pl_color}")
+                        html.Small(position["Total P/L (%)"], className=f"{total_pl_color}"),
+                        _pl_bar(position.get("total_pl_percent_raw", 0))
                     ])
                 ], className="pnl-cell"),
+                # Weight %
                 html.Td([
-                    dbc.Button([
-                        html.I(className="fas fa-times-circle me-1"),
-                        "Liquidate"
-                    ], 
-                    id={"type": "liquidate-btn", "index": position["Symbol"]},
-                    color="danger",
+                    html.Div([
+                        html.Div(f"{weight:.1f}%", className="fw-bold"),
+                    ])
+                ], className="weight-cell"),
+                # Actions: Partial close dropdown
+                html.Td([
+                    dbc.DropdownMenu([
+                        dbc.DropdownMenuItem(
+                            "Close 25%",
+                            id={"type": "partial-close-btn", "symbol": position["Symbol"], "pct": "25"}
+                        ),
+                        dbc.DropdownMenuItem(
+                            "Close 50%",
+                            id={"type": "partial-close-btn", "symbol": position["Symbol"], "pct": "50"}
+                        ),
+                        dbc.DropdownMenuItem(
+                            "Close 75%",
+                            id={"type": "partial-close-btn", "symbol": position["Symbol"], "pct": "75"}
+                        ),
+                        dbc.DropdownMenuItem(divider=True),
+                        dbc.DropdownMenuItem(
+                            [html.I(className="fas fa-times-circle me-1"), "Liquidate"],
+                            id={"type": "partial-close-btn", "symbol": position["Symbol"], "pct": "100"},
+                            className="text-danger"
+                        ),
+                    ],
+                    label="Close",
                     size="sm",
-                    outline=True,
-                    className="liquidate-btn"
+                    color="danger",
+                    toggle_class_name="liquidate-btn",
+                    align_end=True
                     )
                 ], className="action-cell")
             ], className="table-row-hover", id=f"position-row-{position['Symbol']}")
-            
+
             table_rows.append(row)
-        
-        # Create enhanced table
+
+        # Build table with toolbar and scrollable body
         table = html.Div([
-            html.Table([
-                html.Thead([
-                    html.Tr([
-                        html.Th("Position", className="table-header"),
-                        html.Th("Market Value", className="table-header"),
-                        html.Th("Today's P/L", className="table-header"),
-                        html.Th("Total P/L", className="table-header"),
-                        html.Th("Actions", className="table-header text-center")
-                    ])
-                ]),
-                html.Tbody(table_rows)
-            ], className="enhanced-table")
+            _render_positions_toolbar(shown=shown_count, total=total_count, sort_value=pos_sort_val, search_value=search_filter),
+            html.Div([
+                html.Table([
+                    html.Thead([
+                        html.Tr([
+                            html.Th("Position", className="table-header"),
+                            html.Th("Price", className="table-header"),
+                            html.Th("Value", className="table-header"),
+                            html.Th("Today P/L", className="table-header"),
+                            html.Th("Total P/L", className="table-header"),
+                            html.Th("Wt%", className="table-header"),
+                            html.Th("Actions", className="table-header text-center")
+                        ])
+                    ]),
+                    html.Tbody(table_rows)
+                ], className="enhanced-table enhanced-positions")
+            ], className="positions-scroll-container")
         ], className="enhanced-table-container")
-        
+
         return table
-        
+
     except Exception as e:
         print(f"Error rendering positions table: {e}")
         return html.Div([
+            _render_positions_toolbar(shown=0, total=0, sort_value=f"{sort_key}-{sort_direction}", search_value=search_filter),
             html.Div([
                 html.I(className="fas fa-exclamation-triangle fa-2x mb-3 text-warning"),
                 html.H5("Unable to Load Positions", className="text-warning"),
@@ -153,61 +306,130 @@ def render_positions_table():
             ], className="text-center p-4")
         ], className="enhanced-table-container error-state")
 
-def render_orders_table(page=1, page_size=7):
-    """Render the enhanced recent orders table"""
-    # Check if Alpaca is configured
+
+def _render_positions_toolbar(shown=0, total=0, sort_value="symbol-asc", search_value=""):
+    """Render the search/sort/export toolbar above the positions table."""
+    # Build count badge text: "3/16" when filtered, "16" when showing all
+    if total > 0 and shown != total:
+        count_text = f"{shown}/{total}"
+    else:
+        count_text = str(total)
+
+    return html.Div([
+        # Position count badge
+        html.Span(
+            count_text,
+            className="positions-count-badge",
+            title=f"Showing {shown} of {total} positions"
+        ),
+        # Search input
+        dbc.Input(
+            id="positions-search-input",
+            type="text",
+            placeholder="Search symbol...",
+            className="search-input",
+            size="sm",
+            debounce=True,
+            value=search_value or "",
+        ),
+        # Sort dropdown
+        dbc.Select(
+            id="positions-sort-select",
+            options=[
+                {"label": "Symbol A-Z", "value": "symbol-asc"},
+                {"label": "Symbol Z-A", "value": "symbol-desc"},
+                {"label": "Value (High)", "value": "market_value-desc"},
+                {"label": "Value (Low)", "value": "market_value-asc"},
+                {"label": "Today P/L (Best)", "value": "today_pl-desc"},
+                {"label": "Today P/L (Worst)", "value": "today_pl-asc"},
+                {"label": "Total P/L (Best)", "value": "total_pl-desc"},
+                {"label": "Total P/L (Worst)", "value": "total_pl-asc"},
+                {"label": "Weight (High)", "value": "weight-desc"},
+                {"label": "Weight (Low)", "value": "weight-asc"},
+            ],
+            value=sort_value,
+            className="sort-select",
+            size="sm",
+        ),
+        # CSV Export button
+        dbc.Button([
+            html.I(className="fas fa-download me-1"),
+            "CSV"
+        ],
+        id="positions-export-csv-btn",
+        color="secondary",
+        size="sm",
+        outline=True,
+        className="export-btn ms-auto"
+        ),
+    ], className="positions-toolbar")
+
+def render_orders_table(page=1, page_size=12, sort_key="date", sort_direction="desc", search_filter=""):
+    """Render the enhanced recent orders table with sort/filter toolbar and scroll container.
+
+    Returns:
+        tuple: (html_content, total_pages) - the table HTML and total page count.
+    """
     if not _is_alpaca_configured():
-        return _render_not_configured_message("Orders")
+        return _render_not_configured_message("Orders"), 1
 
     try:
-        orders_data, total_count = AlpacaUtils.get_recent_orders(page=page, page_size=page_size, return_total=True)
-        total_pages = max(1, (total_count + page_size - 1) // page_size)  # Ceiling division
+        # Fetch all orders at once (up to 100); pagination is handled locally after filter/sort
+        orders_data, total_count = AlpacaUtils.get_recent_orders(page=1, page_size=100, return_total=True)
+        ord_sort_val = f"{sort_key}-{sort_direction}"
 
         if not orders_data:
             return html.Div([
+                _render_orders_toolbar(shown=0, total=0, sort_value=ord_sort_val, search_value=search_filter),
                 html.Div([
-                    html.I(className="fas fa-history fa-2x mb-3"),
-                    html.H5("No Recent Orders", className="text-muted"),
-                    html.P("No trading activity found", className="text-muted small")
+                    html.I(className="fas fa-history fa-3x mb-3 text-muted", style={"opacity": "0.3"}),
+                    html.H5("No Recent Orders", className="text-muted mb-2"),
+                    html.P("No trading activity found", className="text-muted small mb-0")
                 ], className="text-center p-5"),
-                html.Div([
-                    dbc.Pagination(
-                        id="orders-pagination",
-                        max_value=1,
-                        active_page=1,
-                        size="sm",
-                        className="mt-3",
-                        style={"display": "none"}  # Hide pagination when no orders
-                    )
-                ], className="d-flex justify-content-end")
-            ], className="enhanced-table-container")
-        
-        # Create enhanced table rows
+            ], className="enhanced-table-container"), 1
+
+        # Filter
+        all_count = len(orders_data)
+        if search_filter:
+            orders_data = [o for o in orders_data if search_filter.upper() in o["Asset"].upper()]
+        shown_count = len(orders_data)
+
+        # Sort
+        sort_map = {
+            "date": lambda o: o.get("Date", ""),
+            "symbol": lambda o: o.get("Asset", "").lower(),
+            "side": lambda o: str(o.get("Side", "")).lower(),
+            "status": lambda o: str(o.get("Status", "")).lower(),
+            "qty": lambda o: o.get("Qty", 0),
+            "filled": lambda o: o.get("Filled Qty", 0),
+        }
+        key_fn = sort_map.get(sort_key, sort_map["date"])
+        orders_data.sort(key=key_fn, reverse=(sort_direction == "desc"))
+
+        # Paginate after filter/sort
+        start = (page - 1) * page_size
+        page_data = orders_data[start:start + page_size]
+        total_pages = max(1, (len(orders_data) + page_size - 1) // page_size)
+
+        # Build table rows
         table_rows = []
-        for idx, order in enumerate(orders_data):
-            # Status color coding
+        for idx, order in enumerate(page_data):
+            status_str = str(order.get("Status", "")).lower()
             status_color = {
                 "filled": "text-success",
-                "canceled": "text-danger", 
+                "canceled": "text-danger",
                 "pending_new": "text-warning",
                 "accepted": "text-info",
-                "rejected": "text-danger"
-            }.get(order.get("Status", "").lower(), "text-muted")
-            
-            # Side color coding
-            side_color = "text-success" if order.get("Side", "").lower() == "buy" else "text-danger"
-            
+                "rejected": "text-danger",
+                "partially_filled": "text-warning",
+                "new": "text-info",
+            }.get(status_str, "text-muted")
+
+            side_str = str(order.get("Side", "")).lower()
+            side_badge_class = "buy" if side_str == "buy" else "sell"
+
             row = html.Tr([
-                html.Td([
-                    html.Div([
-                        html.Small(order.get("Date", "-"), className="text-muted")
-                    ])
-                ], className="date-cell"),
-                html.Td([
-                    html.Div([
-                        html.Code(order.get("Order ID Short", "-"), className="small"),
-                    ], title=order.get("Order ID", ""))
-                ], className="id-cell"),
+                # Symbol + Order Type + Date
                 html.Td([
                     html.Div([
                         html.A(
@@ -217,90 +439,120 @@ def render_orders_table(page=1, page_size=7):
                             className="symbol-link",
                             title=f"Click to view {order['Asset']} chart"
                         ),
+                        html.Span(
+                            side_str.upper(),
+                            className=f"side-badge {side_badge_class} ms-2"
+                        ),
                         html.Br(),
-                        html.Small(order["Order Type"], className="text-muted")
+                        html.Small(str(order["Order Type"]).replace("OrderType.", "").upper(), className="text-muted")
                     ])
                 ], className="symbol-cell"),
+                # Date
                 html.Td([
                     html.Div([
-                        html.Span(order["Side"], className=f"fw-bold {side_color}"),
-                        html.Br(),
-                        html.Small(f"{order['Qty']} shares", className="text-muted")
+                        html.Div(order.get("Date", "-"), className="fw-bold"),
+                        html.Small(
+                            order.get("Order ID Short", "-"),
+                            className="text-muted",
+                            title=order.get("Order ID", "")
+                        )
                     ])
-                ], className="side-cell"),
+                ], className="date-cell"),
+                # Qty + Filled
                 html.Td([
                     html.Div([
-                        html.Div(f"{order['Filled Qty']}", className="fw-bold"),
-                        html.Small("filled", className="text-muted")
+                        html.Div(f"{order['Qty']}", className="fw-bold"),
+                        html.Small(f"{order['Filled Qty']} filled", className="text-muted")
                     ])
-                ], className="filled-cell"),
+                ], className="qty-cell"),
+                # Avg Fill Price
                 html.Td([
                     html.Div([
                         html.Div(order["Avg. Fill Price"], className="fw-bold"),
-                        html.Small("avg price", className="text-muted")
                     ])
                 ], className="price-cell"),
+                # Status badge
                 html.Td([
-                    html.Span([
-                        html.I(className=f"fas fa-circle me-1 {status_color}"),
-                        order["Status"]
-                    ], className=f"status-badge {status_color}")
+                    html.Span(
+                        str(order["Status"]).replace("OrderStatus.", "").replace("_", " ").upper(),
+                        className=f"order-status-badge {status_str}"
+                    )
                 ], className="status-cell")
             ], className="table-row-hover", id=f"order-row-{order.get('Asset', '')}-{page}-{idx}")
-            
+
             table_rows.append(row)
-        
-        # Create enhanced table with pagination
+
+        # Build table with toolbar and scroll container
         table = html.Div([
-            html.Table([
-                html.Thead([
-                    html.Tr([
-                        html.Th("Date", className="table-header"),
-                        html.Th("Order ID", className="table-header"),
-                        html.Th("Asset", className="table-header"),
-                        html.Th("Side & Qty", className="table-header"),
-                        html.Th("Filled", className="table-header"),
-                        html.Th("Avg Price", className="table-header"),
-                        html.Th("Status", className="table-header")
-                    ])
-                ]),
-                html.Tbody(table_rows)
-            ], className="enhanced-table"),
+            _render_orders_toolbar(shown=shown_count, total=all_count, sort_value=ord_sort_val, search_value=search_filter),
             html.Div([
-                html.Small(f"Page {page} of {total_pages} ({total_count} orders)", className="text-muted me-3 align-self-center"),
-                dbc.Pagination(
-                    id="orders-pagination",
-                    max_value=total_pages,
-                    active_page=page,
-                    size="sm",
-                    first_last=True,
-                    previous_next=True
-                )
-            ], className="d-flex justify-content-end align-items-center mt-3")
+                html.Table([
+                    html.Thead([
+                        html.Tr([
+                            html.Th("Symbol", className="table-header"),
+                            html.Th("Date", className="table-header"),
+                            html.Th("Qty", className="table-header"),
+                            html.Th("Fill Price", className="table-header"),
+                            html.Th("Status", className="table-header"),
+                        ])
+                    ]),
+                    html.Tbody(table_rows)
+                ], className="enhanced-table enhanced-orders")
+            ], className="orders-scroll-container"),
         ], className="enhanced-table-container")
-        
-        return table
-        
+
+        return table, total_pages
+
     except Exception as e:
         print(f"Error rendering orders table: {e}")
         return html.Div([
+            _render_orders_toolbar(shown=0, total=0, sort_value=f"{sort_key}-{sort_direction}", search_value=search_filter),
             html.Div([
                 html.I(className="fas fa-exclamation-triangle fa-2x mb-3 text-warning"),
                 html.H5("Unable to Load Orders", className="text-warning"),
                 html.P("Check your Alpaca API keys", className="text-muted"),
                 html.Small(f"Error: {str(e)}", className="text-muted")
             ], className="text-center p-4"),
-            html.Div([
-                dbc.Pagination(
-                    id="orders-pagination",
-                    max_value=1,
-                    active_page=1,
-                    size="sm",
-                    className="mt-3",
-                    style={"display": "none"}  # Hide pagination on error
-                )
-            ], className="d-flex justify-content-end")
-        ], className="enhanced-table-container error-state")
+        ], className="enhanced-table-container error-state"), 1
+
+
+def _render_orders_toolbar(shown=0, total=0, sort_value="date-desc", search_value=""):
+    """Render the search/sort toolbar above the orders table."""
+    if total > 0 and shown != total:
+        count_text = f"{shown}/{total}"
+    else:
+        count_text = str(total)
+
+    return html.Div([
+        html.Span(
+            count_text,
+            className="positions-count-badge",
+            title=f"Showing {shown} of {total} orders"
+        ),
+        dbc.Input(
+            id="orders-search-input",
+            type="text",
+            placeholder="Search symbol...",
+            className="search-input",
+            size="sm",
+            debounce=True,
+            value=search_value or "",
+        ),
+        dbc.Select(
+            id="orders-sort-select",
+            options=[
+                {"label": "Newest First", "value": "date-desc"},
+                {"label": "Oldest First", "value": "date-asc"},
+                {"label": "Symbol A-Z", "value": "symbol-asc"},
+                {"label": "Symbol Z-A", "value": "symbol-desc"},
+                {"label": "Side", "value": "side-asc"},
+                {"label": "Status", "value": "status-asc"},
+            ],
+            value=sort_value,
+            className="sort-select",
+            size="sm",
+        ),
+    ], className="positions-toolbar")
 
 def render_account_summary():
     """Render account summary information"""
@@ -883,8 +1135,11 @@ def render_options_section():
 
 
 def render_positions_orders_section():
-    """Render positions and orders side by side in a compact layout."""
+    """Render positions and orders side by side with portfolio summary above."""
+    initial_orders, initial_total_pages = render_orders_table()
     return html.Div([
+        # Portfolio summary (full width, above the two columns)
+        html.Div(id="portfolio-summary-container", children=render_portfolio_summary()),
         dbc.Row([
             # Positions column
             dbc.Col([
@@ -903,16 +1158,31 @@ def render_positions_orders_section():
                         html.I(className="fas fa-history me-2"),
                         "Recent Orders"
                     ], className="mb-2 d-flex align-items-center"),
-                    html.Div(id="orders-table-container", children=render_orders_table())
+                    html.Div(id="orders-table-container", children=initial_orders),
+                    # Pagination lives OUTSIDE orders-table-container so it persists across re-renders
+                    html.Div([
+                        html.Small(id="orders-page-info",
+                                   children=f"Page 1 of {initial_total_pages}",
+                                   className="text-muted me-3 align-self-center"),
+                        dbc.Pagination(
+                            id="orders-pagination",
+                            max_value=initial_total_pages,
+                            active_page=1,
+                            size="sm",
+                            first_last=True,
+                            previous_next=True,
+                        )
+                    ], className="d-flex justify-content-end align-items-center mt-3",
+                       style={"display": "none"} if initial_total_pages <= 1 else {})
                 ])
             ], lg=6)
         ]),
-        # Hidden div for liquidation confirmations
-        dcc.ConfirmDialog(
-            id='liquidate-confirm',
-            message='',
-        ),
-        html.Div(id="liquidation-status", className="mt-2")
+        # Hidden div for liquidation confirmations (kept for backward compat)
+        dcc.ConfirmDialog(id='liquidate-confirm', message=''),
+        html.Div(id="liquidation-status", className="mt-2"),
+        # Partial close confirmation
+        dcc.ConfirmDialog(id='partial-close-confirm', message=''),
+        html.Div(id="partial-close-status", className="mt-2"),
     ])
 
 

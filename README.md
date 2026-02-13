@@ -36,7 +36,9 @@
 - **Crypto**: BTC/USD, ETH/USD with DeFi Llama data and crypto-specific news
 - **Mixed Portfolios**: Analyze `NVDA, ETH/USD, AAPL` in a single session
 
-### 🌐 Production-Ready Web Interface
+### 🌐 Production-Ready Interface
+- **Desktop App**: Native desktop application for macOS, Windows, and Linux (Electron)
+- **Web UI**: Full-featured web interface accessible via browser
 - **Watchlist Management**: Add symbols, drag-and-drop reorder, one-click analysis
 - **Run Queue**: Queue multiple symbols for batch analysis
 - **Market Scanner**: Pre-built scanners for gainers, losers, volume spikes, news movers
@@ -120,7 +122,17 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-### Web Interface (Recommended)
+### Desktop App (Easiest)
+
+```bash
+cd electron
+npm install
+npm start
+```
+
+The desktop app will launch automatically with a native window and system tray integration.
+
+### Web Interface
 
 ```bash
 # If installed as package
@@ -163,6 +175,43 @@ print(decision)
 _, decision = ta.propagate("ETH/USD", "2024-05-10")
 print(decision)
 ```
+
+---
+
+## Desktop Application
+
+TradingCrew is available as a **native desktop application** for macOS, Windows, and Linux using Electron.
+
+### Features
+- **Native Desktop Experience**: Runs as a standalone app with system tray integration
+- **Cross-Platform**: Single build for all major operating systems
+- **Offline-Capable**: No internet required for local operation (except API calls)
+- **Auto-Start**: Python server launches automatically on app startup
+- **System Tray**: Minimize to tray for background operation
+
+### Download & Installation
+
+See the [Electron Desktop App Guide](electron/README.md) for:
+- Pre-built installers (coming soon)
+- Building from source
+- Development instructions
+
+### Quick Build
+
+```bash
+cd electron
+npm install
+npm start  # Development mode
+
+# Or build installers:
+./build.sh  # macOS/Linux
+build.bat   # Windows
+```
+
+**Output**: Installers in `dist/` directory
+- macOS: `.dmg` and `.zip`
+- Windows: `.exe` installer + portable
+- Linux: `.AppImage`, `.deb`, `.rpm`
 
 ---
 
@@ -330,6 +379,10 @@ TradingCrew/
 │   ├── components/          # UI components
 │   ├── callbacks/           # Dash callbacks
 │   └── assets/              # CSS, JS assets
+├── electron/                # Desktop application (Electron wrapper)
+│   ├── main.js              # Main process
+│   ├── renderer.html        # Loading screen
+│   └── assets/              # App icons
 ├── cli/                     # Command-line interface
 ├── tests/                   # Unit tests
 ├── pyproject.toml           # Package configuration

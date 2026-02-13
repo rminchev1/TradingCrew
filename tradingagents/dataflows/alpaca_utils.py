@@ -374,16 +374,34 @@ class AlpacaUtils:
                 today_pl_percent = (today_pl_dollars / cost_basis) * 100 if cost_basis != 0 else 0
                 total_pl_percent = (total_pl_dollars / cost_basis) * 100 if cost_basis != 0 else 0
                 
+                # Get side and asset class
+                side = str(getattr(position, 'side', 'long')).lower()
+                asset_class = str(getattr(position, 'asset_class', 'us_equity'))
+                change_today_val = float(position.change_today) if getattr(position, 'change_today', None) is not None else 0.0
+
                 positions_data.append({
                     "Symbol": position.symbol,
                     "Qty": qty,
-                    "Market Value": f"${market_value:.2f}",
-                    "Avg Entry": f"${avg_entry_price:.2f}",
-                    "Cost Basis": f"${cost_basis:.2f}",
+                    "Market Value": f"${market_value:,.2f}",
+                    "Avg Entry": f"${avg_entry_price:,.2f}",
+                    "Cost Basis": f"${cost_basis:,.2f}",
+                    "Current Price": f"${current_price:,.2f}",
                     "Today's P/L (%)": f"{today_pl_percent:.2f}%",
-                    "Today's P/L ($)": f"${today_pl_dollars:.2f}",
+                    "Today's P/L ($)": f"${today_pl_dollars:,.2f}",
                     "Total P/L (%)": f"{total_pl_percent:.2f}%",
-                    "Total P/L ($)": f"${total_pl_dollars:.2f}"
+                    "Total P/L ($)": f"${total_pl_dollars:,.2f}",
+                    # Raw numeric values for sorting/computation
+                    "current_price": current_price,
+                    "market_value_raw": market_value,
+                    "cost_basis_raw": cost_basis,
+                    "avg_entry_raw": avg_entry_price,
+                    "today_pl_dollars_raw": today_pl_dollars,
+                    "total_pl_dollars_raw": total_pl_dollars,
+                    "today_pl_percent_raw": today_pl_percent,
+                    "total_pl_percent_raw": total_pl_percent,
+                    "side": side,
+                    "asset_class": asset_class,
+                    "change_today": change_today_val,
                 })
             
             return positions_data
@@ -632,6 +650,8 @@ class AlpacaUtils:
             return {
                 "buying_power": buying_power,
                 "cash": cash,
+                "equity": equity,
+                "last_equity": last_equity,
                 "daily_change_dollars": daily_change_dollars,
                 "daily_change_percent": daily_change_percent
             }
@@ -644,6 +664,8 @@ class AlpacaUtils:
             return {
                 "buying_power": 0,
                 "cash": 0,
+                "equity": 0,
+                "last_equity": 0,
                 "daily_change_dollars": 0,
                 "daily_change_percent": 0
             } 
