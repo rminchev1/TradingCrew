@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingCrew - Loading...</title>
+    <link rel="stylesheet" href="renderer.css">
+</head>
+<body>
+    <div class="loading-container">
+        <div class="logo-container">
+            <svg width="120" height="120" viewBox="0 0 120 120" class="logo-icon">
+                <circle cx="60" cy="60" r="55" fill="none" stroke="#3B82F6" stroke-width="3"/>
+                <path d="M40 70 L60 50 L80 70" fill="none" stroke="#10B981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M40 60 L80 60" fill="none" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <h1 class="app-title">TradingCrew</h1>
+            <p class="app-subtitle">AI-Powered Trading Analysis</p>
+        </div>
+
+        <div class="loading-bar-container">
+            <div class="loading-bar"></div>
+        </div>
+
+        <p class="loading-text">Starting analysis engine...</p>
+
+        <div class="status-indicators">
+            <div class="status-item">
+                <div class="status-dot loading"></div>
+                <span>Initializing Python environment</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span>Loading AI models</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span>Connecting to data sources</span>
+            </div>
+        </div>
+
+        <div class="version-info">
+            <p>Version 0.3.0</p>
+        </div>
+    </div>
+
+    <script>
+        // Simulate loading progress
+        let currentStep = 0;
+        const statusDots = document.querySelectorAll('.status-dot');
+        const loadingTexts = [
+            'Starting analysis engine...',
+            'Loading AI models...',
+            'Connecting to data sources...',
+            'Almost ready...'
+        ];
+
+        function updateLoadingStatus() {
+            if (currentStep < statusDots.length) {
+                statusDots[currentStep].classList.remove('loading');
+                statusDots[currentStep].classList.add('complete');
+
+                if (currentStep + 1 < statusDots.length) {
+                    statusDots[currentStep + 1].classList.add('loading');
+                }
+
+                document.querySelector('.loading-text').textContent = loadingTexts[currentStep];
+
+                currentStep++;
+                setTimeout(updateLoadingStatus, 1500);
+            }
+        }
+
+        setTimeout(updateLoadingStatus, 1000);
+    </script>
+</body>
+</html>
