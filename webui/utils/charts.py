@@ -34,7 +34,7 @@ def get_yahoo_data(symbol: str, period: str = "1d") -> pd.DataFrame:
         "30m": {"period": "5d", "interval": "15m"},
         "1h": {"period": "1y", "interval": "30m"},
         "4h": {"period": "2y", "interval": "1h"},
-        "1d": {"period": "2y", "interval": "1d"},
+        "1d": {"days_back": 244, "interval": "1d"},  # ~8 months of daily bars
         "1w": {"period": "2y", "interval": "1d"},
         "1mo": {"period": "2y", "interval": "1d"},
         "1y": {"period": "2y", "interval": "1d"},
@@ -44,7 +44,13 @@ def get_yahoo_data(symbol: str, period: str = "1d") -> pd.DataFrame:
 
     try:
         ticker = yf.Ticker(symbol)
-        df = ticker.history(period=params["period"], interval=params["interval"])
+        if "days_back" in params:
+            from datetime import date
+            end_dt = date.today()
+            start_dt = end_dt - timedelta(days=params["days_back"])
+            df = ticker.history(start=start_dt.isoformat(), end=end_dt.isoformat(), interval=params["interval"])
+        else:
+            df = ticker.history(period=params["period"], interval=params["interval"])
 
         if df.empty:
             print(f"[YAHOO] No data returned for {symbol}")

@@ -17,6 +17,43 @@ from webui.utils.chart_data import prepare_chart_data
 def register_chart_callbacks(app):
     """Register all chart-related callbacks including symbol dropdown"""
 
+    # Track whether we've already attempted to auto-load portfolio symbols
+    _auto_load_state = {"attempted": False}
+
+    @app.callback(
+        [Output("chart-symbol-select", "options", allow_duplicate=True),
+         Output("chart-symbol-select", "value", allow_duplicate=True),
+         Output("chart-store", "data", allow_duplicate=True)],
+        Input("clock-interval", "n_intervals"),
+        State("chart-store", "data"),
+        prevent_initial_call=True
+    )
+    def auto_load_portfolio_chart(n_intervals, chart_store_data):
+        """Auto-load portfolio symbols into chart dropdown on initial app load."""
+        if _auto_load_state["attempted"]:
+            raise dash.exceptions.PreventUpdate
+
+        _auto_load_state["attempted"] = True
+
+        # Don't override if a symbol is already selected
+        if chart_store_data and chart_store_data.get("last_symbol"):
+            raise dash.exceptions.PreventUpdate
+
+        try:
+            from webui.utils.local_storage import get_watchlist
+            watchlist = get_watchlist()
+            symbols = watchlist.get("symbols", [])
+            if symbols:
+                app_state.portfolio_symbols = symbols
+                options = [{"label": s, "value": str(i + 1)} for i, s in enumerate(symbols)]
+                first_symbol = symbols[0]
+                store_data = {"last_symbol": first_symbol, "selected_period": "1d"}
+                return options, "1", store_data
+        except Exception as e:
+            print(f"[CHART] Auto-load watchlist symbols failed: {e}")
+
+        raise dash.exceptions.PreventUpdate
+
     @app.callback(
         [Output("chart-symbol-select", "options"),
          Output("chart-symbol-select", "value")],
@@ -26,11 +63,16 @@ def register_chart_callbacks(app):
         prevent_initial_call=True
     )
     def update_chart_symbol_select(store_data, n_intervals, current_value):
-        """Update the symbol dropdown options for charts"""
-        if not app_state.symbol_states:
-            return [], None
+        """Update the symbol dropdown options for charts.
+        Uses analysis symbols when available, falls back to portfolio positions."""
+        # Prefer analysis symbols, fall back to portfolio positions
+        if app_state.symbol_states:
+            symbols = list(app_state.symbol_states.keys())
+        elif app_state.portfolio_symbols:
+            symbols = app_state.portfolio_symbols
+        else:
+            return dash.no_update, dash.no_update
 
-        symbols = list(app_state.symbol_states.keys())
         options = [{"label": s, "value": str(i + 1)} for i, s in enumerate(symbols)]
 
         current_symbol = app_state.current_symbol
@@ -44,25 +86,37 @@ def register_chart_callbacks(app):
 
         return options, new_value
 
+    def _get_chart_symbols():
+        """Get the current symbol list: analysis symbols first, then portfolio."""
+        if app_state.symbol_states:
+            return list(app_state.symbol_states.keys())
+        return app_state.portfolio_symbols or []
+
     @app.callback(
         [Output("chart-pagination", "active_page", allow_duplicate=True),
-         Output("report-pagination", "active_page", allow_duplicate=True)],
+         Output("report-pagination", "active_page", allow_duplicate=True),
+         Output("chart-store", "data", allow_duplicate=True)],
         [Input("chart-symbol-select", "value")],
+        [State("chart-store", "data")],
         prevent_initial_call=True
     )
-    def handle_chart_symbol_select(value):
+    def handle_chart_symbol_select(value, chart_store_data):
         """Handle symbol dropdown selection for charts"""
         if not value:
-            return dash.no_update, dash.no_update
+            return dash.no_update, dash.no_update, dash.no_update
 
         page = int(value)
-        symbols = list(app_state.symbol_states.keys())
+        symbols = _get_chart_symbols()
         if 0 < page <= len(symbols):
             new_symbol = symbols[page - 1]
             if new_symbol == app_state.current_symbol:
-                return dash.no_update, dash.no_update
+                return dash.no_update, dash.no_update, dash.no_update
             app_state.current_symbol = new_symbol
-        return page, page
+            # Update chart-store so chart loads even without symbol_states
+            updated_store = chart_store_data or {}
+            updated_store["last_symbol"] = new_symbol
+            return page, page, updated_store
+        return page, page, dash.no_update
 
     @app.callback(
         [Output("tv-chart-data-store", "data"),
@@ -99,9 +153,9 @@ def register_chart_callbacks(app):
                 symbol = quick_symbol.upper()
             else:
                 return dash.no_update, dash.no_update, dash.no_update
-        elif app_state.symbol_states and active_page:
-            # Use pagination-based symbol selection
-            symbols_list = list(app_state.symbol_states.keys())
+        elif active_page and _get_chart_symbols():
+            # Use pagination-based symbol selection (analysis or portfolio symbols)
+            symbols_list = _get_chart_symbols()
             if active_page > len(symbols_list):
                 return None, "Page index out of range", chart_store_data
             symbol = symbols_list[active_page - 1]

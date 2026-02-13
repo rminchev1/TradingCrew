@@ -34,6 +34,7 @@ class AppState:
         self.analyzing_symbol = None  # Symbol currently being analyzed (backend) - kept for backward compatibility
         self.analyzing_symbols = set()  # Track multiple concurrent analyses
         self.analysis_running = False
+        self.portfolio_symbols = []  # Symbols from Alpaca positions (for chart dropdown before analysis)
         self.analysis_trace = []
         self.tool_calls_count = 0
         self.llm_calls_count = 0

@@ -441,6 +441,381 @@ body.theme-bw .form-control:focus {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   PORTFOLIO SUMMARY BAR
+   ═══════════════════════════════════════════════════════════════ */
+.portfolio-summary-bar {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 12px 20px;
+    margin-bottom: 12px;
+}
+
+.portfolio-stat {
+    text-align: center;
+    padding: 4px 8px;
+}
+
+.portfolio-stat .stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94A3B8;
+    margin-bottom: 2px;
+}
+
+.portfolio-stat .stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #F1F5F9;
+}
+
+.portfolio-stat .stat-value.positive { color: #10B981; }
+.portfolio-stat .stat-value.negative { color: #EF4444; }
+
+/* ═══════════════════════════════════════════════════════════════
+   POSITIONS TOOLBAR (search, sort, export)
+   ═══════════════════════════════════════════════════════════════ */
+.positions-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 0 4px;
+}
+
+.positions-toolbar .search-input {
+    background: #0F172A;
+    border: 1px solid #334155;
+    color: #F1F5F9;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    max-width: 150px;
+}
+
+.positions-toolbar .search-input:focus {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.positions-toolbar .sort-select {
+    background: #0F172A;
+    border: 1px solid #334155;
+    color: #F1F5F9;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    max-width: 165px;
+    padding: 4px 8px;
+}
+
+.positions-toolbar .export-btn {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   P/L MINI BARS
+   ═══════════════════════════════════════════════════════════════ */
+.pl-bar-container {
+    margin-top: 3px;
+    height: 3px;
+    background: rgba(51, 65, 85, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.pl-bar {
+    height: 3px;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.pl-bar.positive { background-color: #10B981; }
+.pl-bar.negative { background-color: #EF4444; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDE BADGE (LONG / SHORT)
+   ═══════════════════════════════════════════════════════════════ */
+.side-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+}
+
+.side-badge.long {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.side-badge.short {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENHANCED POSITIONS TABLE (compact 7-column layout)
+   ═══════════════════════════════════════════════════════════════ */
+.enhanced-positions .symbol-cell { width: 18%; }
+.enhanced-positions .price-cell  { width: 12%; }
+.enhanced-positions .value-cell  { width: 14%; }
+.enhanced-positions .pnl-cell    { width: 16%; }
+.enhanced-positions .weight-cell { width: 8%; }
+.enhanced-positions .action-cell { width: 10%; }
+
+.enhanced-positions .table-header {
+    padding: 10px 8px;
+    font-size: 0.75rem;
+}
+
+.enhanced-positions .table-row-hover td {
+    padding: 10px 8px;
+}
+
+/* Weight cell styling */
+.weight-cell {
+    text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   POSITIONS SCROLL CONTAINER & COUNT BADGE
+   ═══════════════════════════════════════════════════════════════ */
+.positions-scroll-container {
+    max-height: 960px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #475569 transparent;
+}
+
+.positions-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.positions-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.positions-scroll-container::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 3px;
+}
+
+.positions-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #64748B;
+}
+
+/* Sticky header inside scroll container */
+.positions-scroll-container .enhanced-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.positions-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.15);
+    color: #93C5FD;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    min-width: 32px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ORDERS TABLE ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════════ */
+.orders-scroll-container {
+    max-height: 960px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #475569 transparent;
+}
+
+.orders-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.orders-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.orders-scroll-container::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 3px;
+}
+
+.orders-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #64748B;
+}
+
+.orders-scroll-container .enhanced-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* Enhanced orders column widths */
+.enhanced-orders .symbol-cell { width: 25%; }
+.enhanced-orders .date-cell   { width: 22%; }
+.enhanced-orders .qty-cell    { width: 15%; }
+.enhanced-orders .price-cell  { width: 18%; }
+.enhanced-orders .status-cell { width: 20%; }
+
+.enhanced-orders .table-header {
+    padding: 10px 8px;
+    font-size: 0.75rem;
+}
+
+.enhanced-orders .table-row-hover td {
+    padding: 10px 8px;
+}
+
+/* Buy / Sell side badges (matching long/short style) */
+.side-badge.buy {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.side-badge.sell {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Order status badges */
+.order-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.order-status-badge.filled {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.order-status-badge.canceled {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.order-status-badge.rejected {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.order-status-badge.pending_new,
+.order-status-badge.partially_filled {
+    background: rgba(245, 158, 11, 0.15);
+    color: #F59E0B;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.order-status-badge.new,
+.order-status-badge.accepted {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93C5FD;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT THEME OVERRIDES
+   ═══════════════════════════════════════════════════════════════ */
+body.theme-bw .portfolio-summary-bar {
+    background: linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%);
+    border-color: #E2E8F0;
+}
+
+body.theme-bw .portfolio-stat .stat-label { color: #64748B; }
+body.theme-bw .portfolio-stat .stat-value { color: #1E293B; }
+
+body.theme-bw .positions-toolbar .search-input,
+body.theme-bw .positions-toolbar .sort-select {
+    background: #FFFFFF;
+    border-color: #CBD5E1;
+    color: #1E293B;
+}
+
+body.theme-bw .side-badge.long {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+body.theme-bw .side-badge.short {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+body.theme-bw .pl-bar-container {
+    background: rgba(203, 213, 225, 0.3);
+}
+
+body.theme-bw .positions-count-badge {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563EB;
+    border-color: rgba(59, 130, 246, 0.25);
+}
+
+body.theme-bw .positions-scroll-container {
+    scrollbar-color: #CBD5E1 transparent;
+}
+
+body.theme-bw .positions-scroll-container::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+}
+
+body.theme-bw .positions-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+body.theme-bw .orders-scroll-container {
+    scrollbar-color: #CBD5E1 transparent;
+}
+
+body.theme-bw .orders-scroll-container::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+}
+
+body.theme-bw .orders-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+body.theme-bw .side-badge.buy {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+body.theme-bw .side-badge.sell {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+body.theme-bw .order-status-badge.new,
+body.theme-bw .order-status-badge.accepted {
+    color: #2563EB;
+}
+
 /* Markdown Table Styling - ChatGPT-like appearance */
 .dash-markdown table {
     width: 100%;

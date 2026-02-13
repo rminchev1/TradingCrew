@@ -89,6 +89,14 @@ def create_stores():
         dcc.Store(id="log-last-index", data=0),
         # Live chart price data store
         dcc.Store(id="tv-chart-live-store", data=None),
+        # Positions panel stores (relocated for hide/show support)
+        dcc.Store(id="positions-sort-store", data={"key": "symbol", "direction": "asc"}),
+        dcc.Store(id="positions-filter-store", data={"search": ""}),
+        dcc.Store(id="positions-pending-close-store", data={}),
+        dcc.Download(id="positions-csv-download"),
+        # Orders panel stores (relocated for hide/show support)
+        dcc.Store(id="orders-sort-store", data={"key": "date", "direction": "desc"}),
+        dcc.Store(id="orders-filter-store", data={"search": ""}),
     ]
 
 
