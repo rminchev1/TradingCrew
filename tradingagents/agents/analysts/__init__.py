@@ -1,4 +1,4 @@
-"""Analyst agents for market, news, social, fundamentals, macro, and options analysis."""
+"""Analyst agents for market, news, social, fundamentals, macro, options, and sector analysis."""
 
 from tradingagents.agents.analysts.market_analyst import create_market_analyst
 from tradingagents.agents.analysts.news_analyst import create_news_analyst
@@ -6,6 +6,7 @@ from tradingagents.agents.analysts.social_media_analyst import create_social_med
 from tradingagents.agents.analysts.fundamentals_analyst import create_fundamentals_analyst
 from tradingagents.agents.analysts.macro_analyst import create_macro_analyst
 from tradingagents.agents.analysts.options_analyst import create_options_analyst
+from tradingagents.agents.analysts.sector_correlation_analyst import create_sector_correlation_analyst
 
 __all__ = [
     "create_market_analyst",
@@ -14,4 +15,5 @@ __all__ = [
     "create_fundamentals_analyst",
     "create_macro_analyst",
     "create_options_analyst",
+    "create_sector_correlation_analyst",
 ]

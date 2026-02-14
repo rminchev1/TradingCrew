@@ -530,6 +530,7 @@ def register_control_callbacks(app):
         [Input("control-btn", "n_clicks"),
          Input("control-btn", "children")],
         [State("run-watchlist-store", "data"),
+         State("run-symbol-selector", "value"),
          State("analyst-checklist", "value"),
          State("analyst-checklist-2", "value"),
          State("research-depth", "value"),
@@ -544,7 +545,8 @@ def register_control_callbacks(app):
          State("market-hours-input", "value")],
         prevent_initial_call=True
     )
-    def on_control_button_click(n_clicks, button_children, run_watchlist_data, analyst_checklist_1, analyst_checklist_2,
+    def on_control_button_click(n_clicks, button_children, run_watchlist_data, selected_symbols_value,
+                               analyst_checklist_1, analyst_checklist_2,
                                research_depth, quick_llm, deep_llm,
                                allow_shorts, loop_enabled, loop_interval, trade_enabled, trade_amount,
                                market_hour_enabled, market_hours_input):
@@ -559,6 +561,7 @@ def register_control_callbacks(app):
         analysts_news = "news" in analyst_checklist_2
         analysts_fundamentals = "fundamentals" in analyst_checklist_2
         analysts_macro = "macro" in analyst_checklist_2
+        analysts_sector = "sector" in analyst_checklist_2
         """Handle control button clicks"""
         # Detect which property triggered this callback
         triggered_prop = None
@@ -613,10 +616,19 @@ def register_control_callbacks(app):
         if not symbols:
             return "No symbols in Portfolio. Add symbols from the Watchlist tab.", {}, 1, 1, 1, 1
 
+        # Filter symbols based on selection (if not "All Symbols")
+        selected_symbols_value = selected_symbols_value or ["__ALL__"]
+        if "__ALL__" not in selected_symbols_value:
+            # Filter to only selected symbols that exist in portfolio
+            symbols = [s for s in symbols if s in selected_symbols_value]
+            print(f"[CONTROL] Filtered to selected symbols: {symbols}")
+            if not symbols:
+                return "No valid symbols selected. Select symbols from the dropdown.", {}, 1, 1, 1, 1
+
         if not app_state.analysis_running:
             app_state.reset()
 
-        # Store selected analysts for the status table (order matches UI: Market, Options, Social, News, Fundamentals, Macro)
+        # Store selected analysts for the status table (order matches UI: Market, Options, Social, News, Fundamentals, Macro, Sector)
         app_state.active_analysts = []
         if analysts_market: app_state.active_analysts.append("Market Analyst")
         if analysts_options: app_state.active_analysts.append("Options Analyst")
@@ -624,6 +636,7 @@ def register_control_callbacks(app):
         if analysts_news: app_state.active_analysts.append("News Analyst")
         if analysts_fundamentals: app_state.active_analysts.append("Fundamentals Analyst")
         if analysts_macro: app_state.active_analysts.append("Macro Analyst")
+        if analysts_sector: app_state.active_analysts.append("Sector Analyst")
 
         # Set loop configuration
         app_state.loop_interval_minutes = loop_interval if loop_interval and loop_interval > 0 else 60
@@ -655,6 +668,7 @@ def register_control_callbacks(app):
                     'analysts_fundamentals': analysts_fundamentals,
                     'analysts_macro': analysts_macro,
                     'analysts_options': analysts_options,
+                    'analysts_sector': analysts_sector,
                     'research_depth': research_depth,
                     'allow_shorts': allow_shorts,
                     'quick_llm': quick_llm,
@@ -815,7 +829,7 @@ def register_control_callbacks(app):
                             start_analysis(
                                 symbol,
                                 analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                                research_depth, allow_shorts, quick_llm, deep_llm, analysts_options
+                                research_depth, allow_shorts, quick_llm, deep_llm, analysts_options, analysts_sector
                             )
                             print(f"[MARKET_HOUR-PARALLEL] Completed analysis for {symbol}")
                             return symbol, True, None
@@ -825,15 +839,17 @@ def register_control_callbacks(app):
                         finally:
                             app_state.stop_analyzing_symbol(symbol)
 
-                    # Run analysis for all symbols in parallel (staggered 2s apart)
-                    print(f"[MARKET_HOUR] Starting parallel analysis at {h}:{m:02d} (1-10s random stagger)")
+                    # Run analysis for all symbols in parallel (staggered 1-30s apart)
+                    print(f"[MARKET_HOUR] Starting parallel analysis at {h}:{m:02d} (1-30s random stagger)")
                     max_workers = min(get_max_parallel_tickers(), len(symbols))
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
                         futures = {}
                         for i, symbol in enumerate(symbols):
                             futures[executor.submit(analyze_single_ticker_market_hour, symbol, next_time)] = symbol
                             if i < len(symbols) - 1:
-                                time.sleep(random.uniform(1, 10))
+                                stagger_delay = random.uniform(1, 30)
+                                print(f"[MARKET_HOUR] Stagger delay before next symbol: {stagger_delay:.1f}s")
+                                time.sleep(stagger_delay)
 
                         for future in as_completed(futures):
                             if app_state.stop_market_hour:
@@ -868,6 +884,7 @@ def register_control_callbacks(app):
                     'analysts_fundamentals': analysts_fundamentals,
                     'analysts_macro': analysts_macro,
                     'analysts_options': analysts_options,
+                    'analysts_sector': analysts_sector,
                     'research_depth': research_depth,
                     'allow_shorts': allow_shorts,
                     'quick_llm': quick_llm,
@@ -887,7 +904,7 @@ def register_control_callbacks(app):
                         start_analysis(
                             symbol,
                             analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                            research_depth, allow_shorts, quick_llm, deep_llm, analysts_options
+                            research_depth, allow_shorts, quick_llm, deep_llm, analysts_options, analysts_sector
                         )
                         print(f"[LOOP-PARALLEL] Completed analysis for {symbol}")
                         return symbol, True, None
@@ -901,14 +918,17 @@ def register_control_callbacks(app):
                 while not app_state.stop_loop:
                     print(f"[LOOP] Starting iteration {loop_iteration} with parallel execution")
 
-                    # Run analysis for all symbols in parallel (staggered 2s apart)
+                    # Run analysis for all symbols in parallel (staggered 1-30s apart)
                     max_workers = min(get_max_parallel_tickers(), len(symbols))
+                    print(f"[LOOP] Submitting {len(symbols)} symbols with 1-30s random stagger")
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
                         futures = {}
                         for i, symbol in enumerate(symbols):
                             futures[executor.submit(analyze_single_ticker_loop, symbol)] = symbol
                             if i < len(symbols) - 1:
-                                time.sleep(random.uniform(1, 10))
+                                stagger_delay = random.uniform(1, 30)
+                                print(f"[LOOP] Stagger delay before next symbol: {stagger_delay:.1f}s")
+                                time.sleep(stagger_delay)
 
                         for future in as_completed(futures):
                             if app_state.stop_loop:
@@ -980,7 +1000,7 @@ def register_control_callbacks(app):
                         start_analysis(
                             symbol,
                             analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                            research_depth, allow_shorts, quick_llm, deep_llm, analysts_options
+                            research_depth, allow_shorts, quick_llm, deep_llm, analysts_options, analysts_sector
                         )
                         print(f"[PARALLEL] Completed analysis for {symbol} on {thread_id}")
                         return symbol, True, None
@@ -994,15 +1014,17 @@ def register_control_callbacks(app):
                         app_state.stop_analyzing_symbol(symbol)
 
                 # Execute all tickers in parallel with limited concurrency
-                # Stagger submissions by 2s to avoid overwhelming API/LLM on startup
+                # Stagger submissions by 1-30s to avoid overwhelming API/LLM on startup
                 max_workers = min(get_max_parallel_tickers(), len(symbols))
-                print(f"[PARALLEL] Submitting {len(symbols)} symbols to executor with {max_workers} workers (1-10s random stagger)")
+                print(f"[PARALLEL] Submitting {len(symbols)} symbols to executor with {max_workers} workers (1-30s random stagger)")
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     futures = {}
                     for i, symbol in enumerate(symbols):
                         futures[executor.submit(analyze_single_ticker, symbol)] = symbol
                         if i < len(symbols) - 1:
-                            time.sleep(random.uniform(1, 10))
+                            stagger_delay = random.uniform(1, 30)
+                            print(f"[PARALLEL] Stagger delay before next symbol: {stagger_delay:.1f}s")
+                            time.sleep(stagger_delay)
                     print(f"[PARALLEL] All {len(futures)} futures submitted: {list(futures.values())}")
 
                     completed_count = 0
@@ -1177,5 +1199,58 @@ def register_control_callbacks(app):
         
         if symbols:
             return f"📄 Page refreshed - Analysis data for {', '.join(symbols)} has been restored ({mode}{interval_text}). All symbol pages should now be available."
-        
-        return "" 
+
+        return ""
+
+    # =========================================================================
+    # SYMBOL SELECTOR DROPDOWN CALLBACKS
+    # =========================================================================
+
+    @app.callback(
+        Output("run-symbol-selector", "options"),
+        [Input("run-watchlist-store", "data")],
+        prevent_initial_call=False
+    )
+    def update_symbol_selector_options(run_watchlist_data):
+        """Update the symbol selector dropdown options based on portfolio."""
+        run_store = run_watchlist_data or {"symbols": []}
+        symbols = run_store.get("symbols", [])
+
+        # Always include "All Symbols" as first option
+        options = [{"label": "✓ All Symbols", "value": "__ALL__"}]
+
+        # Add individual symbols
+        for symbol in symbols:
+            options.append({"label": symbol, "value": symbol})
+
+        return options
+
+    @app.callback(
+        Output("run-symbol-selector", "value"),
+        [Input("run-symbol-selector", "options")],
+        [State("run-symbol-selector", "value")],
+        prevent_initial_call=True
+    )
+    def handle_symbol_selector_all_toggle(options, current_value):
+        """Handle the 'All Symbols' toggle behavior."""
+        if not current_value:
+            return ["__ALL__"]
+
+        # Get list of available symbols (excluding __ALL__)
+        available_symbols = [opt["value"] for opt in options if opt["value"] != "__ALL__"]
+
+        # If __ALL__ was just selected, clear other selections
+        if "__ALL__" in current_value and len(current_value) > 1:
+            # Check if __ALL__ was added last
+            if current_value[-1] == "__ALL__":
+                return ["__ALL__"]
+            else:
+                # User selected a specific symbol while __ALL__ was selected
+                # Remove __ALL__ and keep only the specific selections
+                return [v for v in current_value if v != "__ALL__"]
+
+        # If no selection, default to __ALL__
+        if not current_value:
+            return ["__ALL__"]
+
+        return current_value

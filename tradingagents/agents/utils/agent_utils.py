@@ -372,7 +372,7 @@ class Toolkit:
         symbol: Annotated[str, "ticker symbol (stocks: AAPL, TSM; crypto: ETH/USD, BTC/USD)"],
         start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
         end_date: Annotated[str, "End date in yyyy-mm-dd format"],
-        timeframe: Annotated[str, "Timeframe for data: 1Min, 5Min, 15Min, 1Hour, 1Day"] = "1Day",
+        timeframe: Annotated[str, "Timeframe for data: 1Hour, 4Hour, 1Day"] = "1Day",
     ) -> str:
         """
         Retrieve stock and cryptocurrency price data from Alpaca.
@@ -382,7 +382,7 @@ class Toolkit:
             symbol (str): Ticker symbol - stocks: AAPL, TSM; crypto: ETH/USD, BTC/USD
             start_date (str): Start date in yyyy-mm-dd format
             end_date (str): End date in yyyy-mm-dd format
-            timeframe (str): Timeframe for data (1Min, 5Min, 15Min, 1Hour, 1Day)
+            timeframe (str): Timeframe for data (1Hour, 4Hour, 1Day)
         Returns:
             str: A formatted dataframe containing the price data for the specified ticker symbol in the specified date range.
         """
@@ -643,7 +643,7 @@ class Toolkit:
 
     @staticmethod
     @tool
-    @timing_wrapper("SOCIAL")
+    @timing_wrapper("SOCIAL", timeout_seconds=300)  # Extended timeout for web search + reasoning
     def get_stock_news_openai(
         ticker: Annotated[str, "the company's ticker"],
         curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
@@ -663,7 +663,7 @@ class Toolkit:
 
     @staticmethod
     @tool
-    @timing_wrapper("FUNDAMENTALS")
+    @timing_wrapper("FUNDAMENTALS", timeout_seconds=300)  # Extended timeout for web search + reasoning
     def get_fundamentals_openai(
         ticker: Annotated[str, "the company's ticker"],
         curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
@@ -682,6 +682,26 @@ class Toolkit:
         )
 
         return openai_fundamentals_results
+
+    @staticmethod
+    @tool
+    @timing_wrapper("FUNDAMENTALS")
+    def get_fundamentals_yfinance(
+        ticker: Annotated[str, "the company's ticker symbol"],
+        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+    ):
+        """
+        Retrieve comprehensive fundamental data for a stock using Yahoo Finance.
+        Includes valuation metrics (P/E, P/B, EV/EBITDA), profitability (margins, ROE, ROA),
+        growth rates, financial health (debt, cash flow), dividends, and analyst estimates.
+
+        Args:
+            ticker (str): Ticker of a company. e.g. AAPL, NVDA, MSFT
+            curr_date (str): Current date in yyyy-mm-dd format
+        Returns:
+            str: A formatted fundamental analysis report with key metrics and assessments.
+        """
+        return interface.get_fundamentals_yfinance(ticker, curr_date)
 
     @staticmethod
     @tool
@@ -743,15 +763,15 @@ class Toolkit:
     @timing_wrapper("MACRO")
     def get_macro_analysis(
         curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
-        lookback_days: Annotated[int, "Number of days to look back for data"] = 90,
+        lookback_days: Annotated[int, "Number of days to look back for data"] = 365,
     ) -> str:
         """
         Retrieve comprehensive macro economic analysis including Fed funds, CPI, PPI, NFP, GDP, PMI, Treasury curve, VIX.
         Provides economic indicators, yield curve analysis, and Fed policy updates with trading implications.
-        
+
         Args:
             curr_date (str): Current date in yyyy-mm-dd format
-            lookback_days (int): Number of days to look back for data (default 90)
+            lookback_days (int): Number of days to look back for data (default 365 = 12 months)
             
         Returns:
             str: Comprehensive macro economic analysis with trading implications
@@ -767,14 +787,14 @@ class Toolkit:
     @tool
     def get_economic_indicators(
         curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
-        lookback_days: Annotated[int, "Number of days to look back for data"] = 90,
+        lookback_days: Annotated[int, "Number of days to look back for data"] = 365,
     ) -> str:
         """
         Retrieve key economic indicators report including Fed funds, CPI, PPI, unemployment, NFP, GDP, PMI, VIX.
-        
+
         Args:
             curr_date (str): Current date in yyyy-mm-dd format
-            lookback_days (int): Number of days to look back for data (default 90)
+            lookback_days (int): Number of days to look back for data (default 365 = 12 months)
             
         Returns:
             str: Economic indicators report with analysis and interpretations
@@ -869,7 +889,7 @@ class Toolkit:
         symbol: Annotated[str, "ticker symbol of the company"],
         curr_date: Annotated[str, "Start date in yyyy-mm-dd format"],
         look_back_days: Annotated[int, "how many days to look back"],
-        timeframe: Annotated[str, "Timeframe for data: 1Min, 5Min, 15Min, 1Hour, 1Day"] = "1Day",
+        timeframe: Annotated[str, "Timeframe for data: 1Hour, 4Hour, 1Day"] = "1Day",
     ) -> str:
         """
         Retrieve Alpaca data for a given ticker symbol.
@@ -877,7 +897,7 @@ class Toolkit:
             symbol (str): Ticker symbol of the company, e.g. AAPL, TSM
             curr_date (str): The current trading date in YYYY-mm-dd format
             look_back_days (int): How many days to look back
-            timeframe (str): Timeframe for data (1Min, 5Min, 15Min, 1Hour, 1Day)
+            timeframe (str): Timeframe for data (1Hour, 4Hour, 1Day)
         Returns:
             str: A formatted dataframe containing the Alpaca data for the specified ticker symbol.
         """
@@ -894,18 +914,18 @@ class Toolkit:
     def get_stock_data_table(
         symbol: Annotated[str, "ticker symbol of the company"],
         curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
-        look_back_days: Annotated[int, "how many days to look back"] = 90,
-        timeframe: Annotated[str, "Timeframe for data: 1Min, 5Min, 15Min, 1Hour, 1Day"] = "1Day",
+        look_back_days: Annotated[int, "how many days to look back"] = 365,
+        timeframe: Annotated[str, "Timeframe for data: 1Hour, 4Hour, 1Day"] = "1Day",
     ) -> str:
         """
         Retrieve comprehensive stock data table for a given ticker symbol over a lookback period.
         Returns a clean table with Date, Open, High, Low, Close, Volume, VWAP columns for EOD trading analysis.
-        
+
         Args:
             symbol (str): Ticker symbol of the company, e.g. AAPL, NVDA
             curr_date (str): The current trading date in YYYY-mm-dd format
-            look_back_days (int): How many days to look back (default 60)
-            timeframe (str): Timeframe for data (1Min, 5Min, 15Min, 1Hour, 1Day)
+            look_back_days (int): How many days to look back (default 365 = 12 months)
+            timeframe (str): Timeframe for data (1Hour, 4Hour, 1Day)
             
         Returns:
             str: A comprehensive table containing Date, OHLCV, VWAP data for the lookback period
@@ -949,20 +969,20 @@ class Toolkit:
     def get_indicators_table(
         symbol: Annotated[str, "ticker symbol (stocks: AAPL, NVDA; crypto: ETH/USD, BTC/USD)"],
         curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
-        look_back_days: Annotated[int, "how many days to look back"] = 90,
+        look_back_days: Annotated[int, "how many days to look back"] = 365,
     ) -> str:
         """
         Retrieve comprehensive technical indicators table for stocks and crypto over a lookback period.
         Returns a full table with Date and all key technical indicators calculated over the specified time window.
         Includes: EMAs, SMAs, RSI, MACD, Bollinger Bands, Stochastic, Williams %R, OBV, MFI, ATR.
-        
+
         For crypto symbols, use format with slash: ETH/USD, BTC/USD, SOL/USD
         For stock symbols, use standard format: AAPL, NVDA, TSLA
-        
+
         Args:
             symbol (str): Ticker symbol - stocks: AAPL, NVDA; crypto: ETH/USD, BTC/USD
             curr_date (str): The current trading date in YYYY-mm-dd format
-            look_back_days (int): How many days to look back (default 90)
+            look_back_days (int): How many days to look back (default 365 = 12 months)
             
         Returns:
             str: A comprehensive table containing Date and all technical indicators for the lookback period
@@ -1093,24 +1113,19 @@ class Toolkit:
                     elif indicator == 'atr_14':
                         indicator_data[indicator] = stock_stats['atr_14']
                     elif indicator == 'obv':
-                        # OBV calculation - handle the parsing issue
-                        try:
-                            indicator_data[indicator] = stock_stats['obv']
-                        except Exception as obv_error:
-                            print(f"[INDICATORS] OBV calculation failed, using manual method: {obv_error}")
-                            # Manual OBV calculation
-                            obv_values = []
-                            obv = 0
-                            for i in range(len(stock_data)):
-                                if i == 0:
-                                    obv_values.append(stock_data['volume'].iloc[i])
-                                else:
-                                    if stock_data['close'].iloc[i] > stock_data['close'].iloc[i-1]:
-                                        obv += stock_data['volume'].iloc[i]
-                                    elif stock_data['close'].iloc[i] < stock_data['close'].iloc[i-1]:
-                                        obv -= stock_data['volume'].iloc[i]
-                                    obv_values.append(obv)
-                            indicator_data[indicator] = pd.Series(obv_values, index=stock_data.index)
+                        # Manual OBV calculation (stockstats has parsing issues with 'obv')
+                        obv_values = []
+                        obv = 0
+                        for i in range(len(stock_data)):
+                            if i == 0:
+                                obv_values.append(stock_data['volume'].iloc[i])
+                            else:
+                                if stock_data['close'].iloc[i] > stock_data['close'].iloc[i-1]:
+                                    obv += stock_data['volume'].iloc[i]
+                                elif stock_data['close'].iloc[i] < stock_data['close'].iloc[i-1]:
+                                    obv -= stock_data['volume'].iloc[i]
+                                obv_values.append(obv)
+                        indicator_data[indicator] = pd.Series(obv_values, index=stock_data.index)
                     else:
                         indicator_data[indicator] = None
                 except Exception as e:
@@ -1367,5 +1382,558 @@ class Toolkit:
             total_pl += p['unrealized_pl']
 
         result += f"\n**Total Options P/L:** ${total_pl:.2f}"
+
+        return result
+
+    # =========================================================================
+    # Sector/Correlation Analysis Tools
+    # =========================================================================
+
+    @staticmethod
+    @tool
+    @timing_wrapper("SECTOR")
+    def get_sector_peers(
+        ticker: Annotated[str, "Stock ticker symbol (e.g., AAPL, NVDA)"],
+        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+    ) -> str:
+        """
+        Identify the sector, sector ETF, and peer stocks for a given ticker.
+
+        Use this tool to understand where a stock fits in the market ecosystem.
+        Returns the stock's sector classification, corresponding sector ETF for
+        benchmarking, and a list of peer stocks in the same sector.
+
+        Args:
+            ticker: Stock ticker symbol
+            curr_date: Current date (used for context)
+
+        Returns:
+            str: Sector information including sector name, ETF, and list of peers
+        """
+        from tradingagents.dataflows.sector_utils import identify_sector, get_sector_classification
+
+        info = identify_sector(ticker)
+
+        sector = info["sector"]
+        industry = info.get("industry", "Unknown")
+        sector_etf = info["sector_etf"]
+        peers = info["peers"]
+        all_sectors = info["all_sectors"]
+        business_summary = info.get("business_summary", "")
+        company_name = info.get("company_name", ticker)
+
+        if sector == "Unknown":
+            return f"""# Sector Analysis: {ticker} ({company_name})
+
+**Sector:** Unknown (not in data provider)
+**Benchmark:** SPY (S&P 500)
+**Peers:** Unable to identify - sector data unavailable
+
+**Business Summary:** {business_summary if business_summary else 'Not available'}
+
+**Note:** For stocks without sector data, use SPY as the benchmark. Based on the business summary above,
+you should determine what sector this company actually belongs to and identify appropriate peers manually.
+"""
+
+        # Get sector classification
+        sector_class = get_sector_classification(sector_etf)
+
+        result = f"""# Sector Analysis: {ticker} ({company_name})
+
+## Sector Classification (from data provider)
+| Attribute | Value |
+|-----------|-------|
+| **Primary Sector** | {sector} |
+| **Industry** | {industry} |
+| **Sector ETF** | {sector_etf} |
+| **Sector Type** | {sector_class.title()} |
+
+## Business Summary
+{business_summary if business_summary else 'Not available'}
+
+## Peer Stocks ({len(peers)} peers from curated list)
+{', '.join(peers[:15]) if peers else 'No curated peers available for this sector'}
+
+## IMPORTANT: Sector Validation Required
+**You must validate if the sector classification above makes sense for this company.**
+
+Based on the business summary:
+1. Does "{sector}" accurately describe what this company does?
+2. Are the listed peers actually comparable companies?
+3. Is {sector_etf} an appropriate benchmark?
+
+**Common misclassifications to watch for:**
+- Bitcoin/crypto miners often classified as "Financial Services" - should use crypto peers (MARA, RIOT, CLSK)
+- SPACs may have wrong legacy sector - look at actual business
+- Holding companies may be misclassified - check what they actually own
+
+**If the sector is WRONG:** State the correct sector, identify appropriate peers from your knowledge,
+and use a more appropriate benchmark ETF in your analysis.
+
+## Default Analysis Notes (if sector is correct)
+- Use **{sector_etf}** as the primary benchmark for relative strength calculations
+- Compare performance against peers to determine if {ticker} is a sector leader or laggard
+- Sector type "{sector_class}" indicates {'risk-on behavior in bull markets' if sector_class == 'offensive' else 'safe-haven during market stress' if sector_class == 'defensive' else 'sensitivity to economic cycles'}
+"""
+
+        return result
+
+    @staticmethod
+    @tool
+    @timing_wrapper("SECTOR")
+    def get_peer_comparison(
+        ticker: Annotated[str, "Stock ticker symbol (e.g., AAPL, NVDA)"],
+        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+        look_back_days: Annotated[int, "Number of days to look back for comparison"] = 365,
+    ) -> str:
+        """
+        Compare a stock's performance against its sector peers.
+
+        Calculates and ranks performance (1D, 5D, 10D, 30D returns) for the ticker
+        and all its sector peers. Helps identify if the stock is leading or lagging
+        its sector.
+
+        Args:
+            ticker: Stock ticker symbol
+            curr_date: Current date in yyyy-mm-dd format
+            look_back_days: Number of days to analyze (default 365 = 12 months)
+
+        Returns:
+            str: Performance comparison table with peer rankings
+        """
+        from tradingagents.dataflows.sector_utils import identify_sector
+        from tradingagents.dataflows.alpaca_utils import AlpacaUtils
+        import pandas as pd
+        from datetime import datetime, timedelta
+
+        info = identify_sector(ticker)
+        sector = info["sector"]
+        peers = info["peers"]
+
+        if sector == "unknown":
+            return f"""# Peer Comparison: {ticker}
+
+**Error:** Unable to identify sector peers for {ticker}.
+Stock not found in sector mapping. Consider using relative strength vs SPY instead.
+"""
+
+        # Include the ticker itself in the comparison
+        all_symbols = [ticker] + peers[:14]  # Limit to 15 total for performance
+
+        # Calculate date range
+        end_date = datetime.strptime(curr_date, "%Y-%m-%d")
+        start_date = end_date - timedelta(days=look_back_days + 10)  # Buffer for weekends
+
+        # Fetch data for all symbols
+        performance_data = []
+
+        for symbol in all_symbols:
+            try:
+                df = AlpacaUtils.get_stock_data(
+                    symbol=symbol,
+                    start_date=start_date.strftime("%Y-%m-%d"),
+                    end_date=curr_date,
+                    timeframe="1Day"
+                )
+
+                if df.empty or len(df) < 5:
+                    continue
+
+                # Calculate returns
+                close_col = 'close' if 'close' in df.columns else 'Close'
+                closes = df[close_col].values
+
+                current_price = closes[-1]
+
+                # Calculate various period returns
+                ret_1d = ((closes[-1] / closes[-2]) - 1) * 100 if len(closes) >= 2 else 0
+                ret_5d = ((closes[-1] / closes[-6]) - 1) * 100 if len(closes) >= 6 else 0
+                ret_10d = ((closes[-1] / closes[-11]) - 1) * 100 if len(closes) >= 11 else 0
+                ret_30d = ((closes[-1] / closes[0]) - 1) * 100 if len(closes) >= 2 else 0
+
+                performance_data.append({
+                    "symbol": symbol,
+                    "price": current_price,
+                    "1d_return": ret_1d,
+                    "5d_return": ret_5d,
+                    "10d_return": ret_10d,
+                    "30d_return": ret_30d,
+                    "is_target": symbol == ticker,
+                })
+
+            except Exception as e:
+                print(f"[SECTOR] Error fetching {symbol}: {e}")
+                continue
+
+        if not performance_data:
+            return f"""# Peer Comparison: {ticker}
+
+**Error:** Unable to fetch performance data for {ticker} or its peers.
+"""
+
+        # Sort by 30-day return and assign ranks
+        performance_data.sort(key=lambda x: x["30d_return"], reverse=True)
+        for i, item in enumerate(performance_data):
+            item["rank"] = i + 1
+
+        # Find target stock's data
+        target_data = next((p for p in performance_data if p["is_target"]), None)
+
+        # Build result
+        result = f"""# Peer Comparison: {ticker}
+
+## Sector: {sector.replace('_', ' ').title()}
+**Analysis Date:** {curr_date}
+**Peers Analyzed:** {len(performance_data)}
+
+## Performance Rankings (by 30D Return)
+
+| Rank | Symbol | Price | 1D | 5D | 10D | 30D |
+|------|--------|-------|-----|-----|------|------|
+"""
+
+        for item in performance_data:
+            marker = " **" if item["is_target"] else ""
+            end_marker = "**" if item["is_target"] else ""
+            result += f"| {item['rank']} | {marker}{item['symbol']}{end_marker} | ${item['price']:.2f} | {item['1d_return']:+.1f}% | {item['5d_return']:+.1f}% | {item['10d_return']:+.1f}% | {item['30d_return']:+.1f}% |\n"
+
+        # Add summary for target stock
+        if target_data:
+            total_peers = len(performance_data)
+            rank = target_data["rank"]
+            percentile = ((total_peers - rank + 1) / total_peers) * 100
+
+            if rank <= total_peers * 0.25:
+                position = "SECTOR LEADER"
+                signal = "Bullish"
+            elif rank <= total_peers * 0.5:
+                position = "ABOVE AVERAGE"
+                signal = "Mildly Bullish"
+            elif rank <= total_peers * 0.75:
+                position = "BELOW AVERAGE"
+                signal = "Mildly Bearish"
+            else:
+                position = "SECTOR LAGGARD"
+                signal = "Bearish"
+
+            result += f"""
+## {ticker} Summary
+
+| Metric | Value | Interpretation |
+|--------|-------|----------------|
+| **Sector Rank** | #{rank} of {total_peers} | {position} |
+| **Percentile** | {percentile:.0f}th | {'Outperforming' if percentile >= 50 else 'Underperforming'} most peers |
+| **30D Return** | {target_data['30d_return']:+.1f}% | {'Positive' if target_data['30d_return'] > 0 else 'Negative'} momentum |
+| **EOD Signal** | {signal} | {'Consider long' if 'Bullish' in signal else 'Consider caution'} |
+"""
+
+        return result
+
+    @staticmethod
+    @tool
+    @timing_wrapper("SECTOR")
+    def get_relative_strength(
+        ticker: Annotated[str, "Stock ticker symbol (e.g., AAPL, NVDA)"],
+        benchmark: Annotated[str, "Benchmark symbol (sector ETF or SPY)"],
+        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+        look_back_days: Annotated[int, "Number of days to look back"] = 365,
+    ) -> str:
+        """
+        Calculate relative strength of a stock vs a benchmark (sector ETF or SPY).
+
+        Computes the RS ratio (stock cumulative return / benchmark cumulative return),
+        identifies the RS trend (rising/falling), calculates correlation, and
+        detects divergences that may signal trading opportunities.
+
+        Args:
+            ticker: Stock ticker symbol
+            benchmark: Benchmark symbol (e.g., XLK, SPY)
+            curr_date: Current date in yyyy-mm-dd format
+            look_back_days: Number of days for analysis (default 365 = 12 months)
+
+        Returns:
+            str: Relative strength analysis with trend and divergence signals
+        """
+        from tradingagents.dataflows.alpaca_utils import AlpacaUtils
+        import pandas as pd
+        import numpy as np
+        from datetime import datetime, timedelta
+
+        # Calculate date range
+        end_date = datetime.strptime(curr_date, "%Y-%m-%d")
+        start_date = end_date - timedelta(days=look_back_days + 10)
+
+        try:
+            # Fetch data for both ticker and benchmark
+            ticker_df = AlpacaUtils.get_stock_data(
+                symbol=ticker,
+                start_date=start_date.strftime("%Y-%m-%d"),
+                end_date=curr_date,
+                timeframe="1Day"
+            )
+
+            benchmark_df = AlpacaUtils.get_stock_data(
+                symbol=benchmark,
+                start_date=start_date.strftime("%Y-%m-%d"),
+                end_date=curr_date,
+                timeframe="1Day"
+            )
+
+            if ticker_df.empty or benchmark_df.empty:
+                return f"""# Relative Strength: {ticker} vs {benchmark}
+
+**Error:** Unable to fetch data for {ticker} or {benchmark}.
+"""
+
+            # Get close prices
+            close_col = 'close' if 'close' in ticker_df.columns else 'Close'
+
+            ticker_closes = ticker_df[close_col].values
+            benchmark_closes = benchmark_df[close_col].values
+
+            # Align lengths
+            min_len = min(len(ticker_closes), len(benchmark_closes))
+            ticker_closes = ticker_closes[-min_len:]
+            benchmark_closes = benchmark_closes[-min_len:]
+
+            if min_len < 5:
+                return f"""# Relative Strength: {ticker} vs {benchmark}
+
+**Error:** Insufficient data points for analysis (need at least 5 days).
+"""
+
+            # Calculate cumulative returns
+            ticker_cum_ret = (ticker_closes / ticker_closes[0] - 1) * 100
+            benchmark_cum_ret = (benchmark_closes / benchmark_closes[0] - 1) * 100
+
+            # Calculate RS ratio series
+            # RS = (1 + ticker_return) / (1 + benchmark_return)
+            rs_ratio = (ticker_closes / ticker_closes[0]) / (benchmark_closes / benchmark_closes[0])
+
+            # Current values
+            current_ticker_ret = ticker_cum_ret[-1]
+            current_benchmark_ret = benchmark_cum_ret[-1]
+            current_rs = rs_ratio[-1]
+
+            # RS trend (compare current RS to RS from 10 days ago)
+            rs_10d_ago = rs_ratio[-11] if len(rs_ratio) >= 11 else rs_ratio[0]
+            rs_change = ((current_rs / rs_10d_ago) - 1) * 100
+            rs_trend = "Rising" if rs_change > 1 else "Falling" if rs_change < -1 else "Flat"
+
+            # Calculate correlation
+            correlation = np.corrcoef(ticker_closes, benchmark_closes)[0, 1]
+
+            # Detect divergences
+            # Bullish divergence: Price down, RS up
+            # Bearish divergence: Price up, RS down
+            price_direction = "up" if ticker_closes[-1] > ticker_closes[-11] else "down"
+            rs_direction = "up" if current_rs > rs_10d_ago else "down"
+
+            divergence = "None"
+            divergence_signal = "Neutral"
+            if price_direction == "down" and rs_direction == "up":
+                divergence = "Bullish Divergence"
+                divergence_signal = "Potential reversal - consider long"
+            elif price_direction == "up" and rs_direction == "down":
+                divergence = "Bearish Divergence"
+                divergence_signal = "Potential reversal - consider caution"
+
+            # Determine overall signal
+            if current_rs > 1.0 and rs_trend == "Rising":
+                overall_signal = "Strong Outperformance"
+                overnight_bias = "Bullish"
+            elif current_rs > 1.0 and rs_trend == "Falling":
+                overall_signal = "Weakening Leader"
+                overnight_bias = "Neutral"
+            elif current_rs < 1.0 and rs_trend == "Rising":
+                overall_signal = "Improving Laggard"
+                overnight_bias = "Mildly Bullish"
+            else:
+                overall_signal = "Underperforming"
+                overnight_bias = "Bearish"
+
+            # Build result
+            result = f"""# Relative Strength Analysis: {ticker} vs {benchmark}
+
+## Performance Comparison
+| Metric | {ticker} | {benchmark} | Difference |
+|--------|----------|-------------|------------|
+| **{look_back_days}D Return** | {current_ticker_ret:+.2f}% | {current_benchmark_ret:+.2f}% | {current_ticker_ret - current_benchmark_ret:+.2f}% |
+| **Current Price** | ${ticker_closes[-1]:.2f} | ${benchmark_closes[-1]:.2f} | - |
+
+## Relative Strength Metrics
+| Metric | Value | Interpretation |
+|--------|-------|----------------|
+| **RS Ratio** | {current_rs:.3f} | {'Outperforming' if current_rs > 1 else 'Underperforming'} benchmark |
+| **RS Trend (10D)** | {rs_trend} ({rs_change:+.1f}%) | {'Strengthening' if rs_trend == 'Rising' else 'Weakening' if rs_trend == 'Falling' else 'Stable'} |
+| **Correlation** | {correlation:.2f} | {'High' if abs(correlation) > 0.8 else 'Moderate' if abs(correlation) > 0.5 else 'Low'} correlation |
+| **Divergence** | {divergence} | {divergence_signal} |
+
+## Trading Signal
+| Signal Type | Value | Overnight Bias |
+|-------------|-------|----------------|
+| **Overall Signal** | {overall_signal} | {overnight_bias} |
+| **RS > 1.0** | {'Yes' if current_rs > 1 else 'No'} | {'Positive' if current_rs > 1 else 'Negative'} |
+| **RS Trending Up** | {'Yes' if rs_trend == 'Rising' else 'No'} | {'Momentum' if rs_trend == 'Rising' else 'Caution'} |
+
+## EOD Trading Implications
+- **RS Ratio {current_rs:.3f}**: {ticker} is {'outperforming' if current_rs > 1 else 'underperforming'} {benchmark} by {abs(current_rs - 1) * 100:.1f}%
+- **Trend**: RS is {rs_trend.lower()}, suggesting {'continued strength' if rs_trend == 'Rising' else 'potential weakness' if rs_trend == 'Falling' else 'consolidation'}
+- **Correlation {correlation:.2f}**: {'Moves closely with' if correlation > 0.7 else 'Partially independent from'} the benchmark
+{f'- **DIVERGENCE ALERT**: {divergence} detected - {divergence_signal}' if divergence != 'None' else ''}
+"""
+
+            return result
+
+        except Exception as e:
+            return f"""# Relative Strength: {ticker} vs {benchmark}
+
+**Error:** Failed to calculate relative strength: {str(e)}
+"""
+
+    @staticmethod
+    @tool
+    @timing_wrapper("SECTOR")
+    def get_sector_rotation(
+        curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
+        look_back_days: Annotated[int, "Number of days to look back"] = 365,
+    ) -> str:
+        """
+        Analyze sector rotation by ranking all 11 sector ETFs by momentum.
+
+        Calculates performance rankings for all major sector ETFs and identifies
+        whether money is flowing into offensive (risk-on) or defensive (risk-off)
+        sectors. Helps determine market regime and optimal sector positioning.
+
+        Args:
+            curr_date: Current date in yyyy-mm-dd format
+            look_back_days: Number of days for momentum calculation (default 365 = 12 months)
+
+        Returns:
+            str: Sector rotation analysis with rankings and flow signals
+        """
+        from tradingagents.dataflows.sector_utils import get_all_sector_etfs, get_sector_classification
+        from tradingagents.dataflows.alpaca_utils import AlpacaUtils
+        from datetime import datetime, timedelta
+
+        sector_etfs = get_all_sector_etfs()
+
+        # Calculate date range
+        end_date = datetime.strptime(curr_date, "%Y-%m-%d")
+        start_date = end_date - timedelta(days=look_back_days + 10)
+
+        sector_data = []
+
+        for etf in sector_etfs:
+            try:
+                df = AlpacaUtils.get_stock_data(
+                    symbol=etf,
+                    start_date=start_date.strftime("%Y-%m-%d"),
+                    end_date=curr_date,
+                    timeframe="1Day"
+                )
+
+                if df.empty or len(df) < 5:
+                    continue
+
+                close_col = 'close' if 'close' in df.columns else 'Close'
+                closes = df[close_col].values
+
+                # Calculate returns
+                ret_5d = ((closes[-1] / closes[-6]) - 1) * 100 if len(closes) >= 6 else 0
+                ret_10d = ((closes[-1] / closes[-11]) - 1) * 100 if len(closes) >= 11 else 0
+                ret_30d = ((closes[-1] / closes[0]) - 1) * 100 if len(closes) >= 2 else 0
+
+                classification = get_sector_classification(etf)
+
+                sector_data.append({
+                    "etf": etf,
+                    "classification": classification,
+                    "5d_return": ret_5d,
+                    "10d_return": ret_10d,
+                    "30d_return": ret_30d,
+                    "price": closes[-1],
+                })
+
+            except Exception as e:
+                print(f"[SECTOR] Error fetching {etf}: {e}")
+                continue
+
+        if not sector_data:
+            return f"""# Sector Rotation Analysis
+
+**Error:** Unable to fetch sector ETF data.
+"""
+
+        # Sort by 30-day return
+        sector_data.sort(key=lambda x: x["30d_return"], reverse=True)
+
+        # Assign ranks
+        for i, item in enumerate(sector_data):
+            item["rank"] = i + 1
+
+        # Calculate offensive vs defensive performance
+        offensive_returns = [s["30d_return"] for s in sector_data if s["classification"] == "offensive"]
+        defensive_returns = [s["30d_return"] for s in sector_data if s["classification"] == "defensive"]
+
+        avg_offensive = sum(offensive_returns) / len(offensive_returns) if offensive_returns else 0
+        avg_defensive = sum(defensive_returns) / len(defensive_returns) if defensive_returns else 0
+
+        # Determine market regime
+        if avg_offensive > avg_defensive + 2:
+            market_regime = "RISK-ON"
+            regime_signal = "Offensive sectors outperforming - favor growth/cyclicals"
+        elif avg_defensive > avg_offensive + 2:
+            market_regime = "RISK-OFF"
+            regime_signal = "Defensive sectors outperforming - favor safety/yield"
+        else:
+            market_regime = "NEUTRAL"
+            regime_signal = "Mixed sector performance - no clear direction"
+
+        # Build result
+        result = f"""# Sector Rotation Analysis
+
+**Analysis Date:** {curr_date}
+**Lookback Period:** {look_back_days} days
+
+## Sector Performance Rankings
+
+| Rank | Sector ETF | Type | 5D | 10D | 30D |
+|------|------------|------|-----|------|------|
+"""
+
+        for item in sector_data:
+            type_emoji = "⚡" if item["classification"] == "offensive" else "🛡️" if item["classification"] == "defensive" else "🔄"
+            result += f"| {item['rank']} | {item['etf']} | {type_emoji} {item['classification'].title()} | {item['5d_return']:+.1f}% | {item['10d_return']:+.1f}% | {item['30d_return']:+.1f}% |\n"
+
+        result += f"""
+## Market Regime Analysis
+
+| Metric | Value | Signal |
+|--------|-------|--------|
+| **Market Regime** | {market_regime} | {regime_signal} |
+| **Avg Offensive Return** | {avg_offensive:+.1f}% | {'Positive' if avg_offensive > 0 else 'Negative'} momentum |
+| **Avg Defensive Return** | {avg_defensive:+.1f}% | {'Positive' if avg_defensive > 0 else 'Negative'} momentum |
+| **Risk Appetite Spread** | {avg_offensive - avg_defensive:+.1f}% | {'Risk-on' if avg_offensive > avg_defensive else 'Risk-off'} bias |
+
+## Top & Bottom Sectors
+
+**Leading Sectors (Money Inflow):**
+"""
+        for item in sector_data[:3]:
+            result += f"- **{item['etf']}** ({item['classification'].title()}): {item['30d_return']:+.1f}%\n"
+
+        result += """
+**Lagging Sectors (Money Outflow):**
+"""
+        for item in sector_data[-3:]:
+            result += f"- **{item['etf']}** ({item['classification'].title()}): {item['30d_return']:+.1f}%\n"
+
+        result += f"""
+## EOD Trading Implications
+- **Regime**: {market_regime} environment suggests {'aggressive positioning in growth stocks' if market_regime == 'RISK-ON' else 'defensive positioning in stable names' if market_regime == 'RISK-OFF' else 'balanced approach'}
+- **Sector Flow**: Money flowing {'into' if sector_data[0]['30d_return'] > 0 else 'out of'} {sector_data[0]['etf']} ({sector_data[0]['30d_return']:+.1f}%)
+- **Avoid**: {sector_data[-1]['etf']} showing weakness ({sector_data[-1]['30d_return']:+.1f}%)
+"""
 
         return result

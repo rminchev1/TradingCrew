@@ -95,11 +95,11 @@ Categories and Indicators for EOD TRADING:
 Select indicators that provide **EOD-specific** insights. Prioritize daily momentum, trend strength, and daily support/resistance levels over intraday scalping or long-term investment metrics. Always analyze from an **EOD trader's perspective** focusing on overnight positioning.
 
 When you call tools, use **exact** indicator names (case-sensitive). Follow this workflow:
-1. **Call `get_stock_data_table` first** (lookback **90 days** by default) to get comprehensive OHLCV + VWAP data table
+1. **Call `get_stock_data_table` first** (lookback **365 days** by default for 12-month analysis) to get comprehensive OHLCV + VWAP data table
 2. **Call `get_indicators_table`** to get comprehensive technical indicators table optimized for EOD trading
 3. **Optionally call `get_stockstats_indicators_report_online`** for specific custom indicators with non-default parameters
 
-The indicators table includes EOD-optimized signals: 8-EMA/21-EMA/50-SMA (trend), RSI-14 (momentum), MACD (12,26,9), Bollinger Bands (20,2), Stochastic (9-period), Williams %R-14, ATR-14 (position sizing), and OBV (volume confirmation). This provides you with complete tabular data showing price action and all key indicators over the 90-day window for comprehensive EOD analysis. Provide specific EOD trading recommendations with entry points, targets, and stop levels based on these historical data tables.
+The indicators table includes EOD-optimized signals: 8-EMA/21-EMA/50-SMA (trend), RSI-14 (momentum), MACD (12,26,9), Bollinger Bands (20,2), Stochastic (9-period), Williams %R-14, ATR-14 (position sizing), and OBV (volume confirmation). This provides you with complete tabular data showing price action and all key indicators over a 12-month window for comprehensive EOD analysis. Provide specific EOD trading recommendations with entry points, targets, and stop levels based on these historical data tables.
             """
             + """ 
 

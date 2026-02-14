@@ -91,6 +91,7 @@ def create_reports_panel():
                     dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-news", children="📰 News")], id="nav-tab-news", className="report-nav-pill")),
                     dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-fundamentals", children="📈 Fundamentals")], id="nav-tab-fundamentals", className="report-nav-pill")),
                     dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-macro", children="🌍 Macro")], id="nav-tab-macro", className="report-nav-pill")),
+                    dbc.NavItem(dbc.NavLink([html.Span(id="nav-label-sector", children="🔗 Sector")], id="nav-tab-sector", className="report-nav-pill")),
                 ], pills=True, className="nav-pills-group")
             ], className="nav-group"),
 
@@ -155,6 +156,12 @@ def create_reports_panel():
                 label="Macro", tab_id="macro-analysis"
             ),
             dbc.Tab(
+                html.Div(id="sector-analysis-tab-content", children=[
+                    dcc.Markdown("🔗 **Loading Sector Analysis...**", className='enhanced-markdown-content')
+                ]),
+                label="Sector", tab_id="sector-analysis"
+            ),
+            dbc.Tab(
                 html.Div(id="researcher-debate-tab-content", className="debate-content-wrapper", children=[
                     html.P("🔍 Loading Researcher Debate...", className="loading-message")
                 ]),
@@ -198,6 +205,7 @@ def create_reports_panel():
         html.Div(id="fundamentals-analysis-tab", style={"display": "none"}),
         html.Div(id="macro-analysis-tab", style={"display": "none"}),
         html.Div(id="options-analysis-tab", style={"display": "none"}),
+        html.Div(id="sector-analysis-tab", style={"display": "none"}),
         html.Div(id="researcher-debate-tab", style={"display": "none"}),
         html.Div(id="research-manager-tab", style={"display": "none"}),
         html.Div(id="trader-plan-tab", style={"display": "none"}),

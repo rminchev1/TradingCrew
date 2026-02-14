@@ -1013,6 +1013,267 @@ def get_global_news_openai(curr_date, ticker_context=None):
         return f"Error fetching global news analysis: {str(e)}"
 
 
+def get_fundamentals_yfinance(ticker: str, curr_date: str) -> str:
+    """
+    Fetch comprehensive fundamental data for a stock using Yahoo Finance.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'NVDA')
+        curr_date: Current date in yyyy-mm-dd format
+
+    Returns:
+        Formatted string with fundamental analysis data
+    """
+    import yfinance as yf
+
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+
+        if not info or info.get('regularMarketPrice') is None:
+            return f"Error: Unable to fetch data for {ticker}. The ticker may be invalid or delisted."
+
+        # Build the report
+        sections = []
+
+        # === COMPANY OVERVIEW ===
+        company_name = info.get('shortName', info.get('longName', ticker))
+        sector = info.get('sector', 'N/A')
+        industry = info.get('industry', 'N/A')
+
+        sections.append(f"""## Company Overview: {company_name} ({ticker})
+| Field | Value |
+|-------|-------|
+| Sector | {sector} |
+| Industry | {industry} |
+| Market Cap | ${info.get('marketCap', 0):,.0f} |
+| Enterprise Value | ${info.get('enterpriseValue', 0):,.0f} |
+| Employees | {info.get('fullTimeEmployees', 'N/A'):,} |
+| Country | {info.get('country', 'N/A')} |
+""")
+
+        # === VALUATION METRICS ===
+        pe_trailing = info.get('trailingPE', 'N/A')
+        pe_forward = info.get('forwardPE', 'N/A')
+        peg = info.get('pegRatio', 'N/A')
+        ps = info.get('priceToSalesTrailing12Months', 'N/A')
+        pb = info.get('priceToBook', 'N/A')
+        ev_ebitda = info.get('enterpriseToEbitda', 'N/A')
+        ev_revenue = info.get('enterpriseToRevenue', 'N/A')
+
+        # Format values
+        def fmt(val, decimals=2):
+            if val == 'N/A' or val is None:
+                return 'N/A'
+            try:
+                return f"{float(val):.{decimals}f}"
+            except:
+                return str(val)
+
+        sections.append(f"""## Valuation Metrics
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| P/E (Trailing) | {fmt(pe_trailing)} | {"High" if pe_trailing and pe_trailing != 'N/A' and float(pe_trailing) > 25 else "Moderate" if pe_trailing and pe_trailing != 'N/A' and float(pe_trailing) > 15 else "Low" if pe_trailing and pe_trailing != 'N/A' else "N/A"} |
+| P/E (Forward) | {fmt(pe_forward)} | {"Expanding" if pe_forward and pe_trailing and pe_forward != 'N/A' and pe_trailing != 'N/A' and float(pe_forward) > float(pe_trailing) else "Contracting" if pe_forward and pe_trailing and pe_forward != 'N/A' and pe_trailing != 'N/A' else "N/A"} |
+| PEG Ratio | {fmt(peg)} | {"Overvalued" if peg and peg != 'N/A' and float(peg) > 2 else "Fair" if peg and peg != 'N/A' and float(peg) > 1 else "Undervalued" if peg and peg != 'N/A' else "N/A"} |
+| P/S Ratio | {fmt(ps)} | - |
+| P/B Ratio | {fmt(pb)} | - |
+| EV/EBITDA | {fmt(ev_ebitda)} | - |
+| EV/Revenue | {fmt(ev_revenue)} | - |
+""")
+
+        # === PROFITABILITY METRICS ===
+        profit_margin = info.get('profitMargins', 'N/A')
+        operating_margin = info.get('operatingMargins', 'N/A')
+        gross_margin = info.get('grossMargins', 'N/A')
+        roe = info.get('returnOnEquity', 'N/A')
+        roa = info.get('returnOnAssets', 'N/A')
+
+        def pct(val):
+            if val == 'N/A' or val is None:
+                return 'N/A'
+            try:
+                return f"{float(val) * 100:.1f}%"
+            except:
+                return str(val)
+
+        sections.append(f"""## Profitability
+| Metric | Value |
+|--------|-------|
+| Gross Margin | {pct(gross_margin)} |
+| Operating Margin | {pct(operating_margin)} |
+| Net Profit Margin | {pct(profit_margin)} |
+| Return on Equity (ROE) | {pct(roe)} |
+| Return on Assets (ROA) | {pct(roa)} |
+""")
+
+        # === GROWTH METRICS ===
+        revenue_growth = info.get('revenueGrowth', 'N/A')
+        earnings_growth = info.get('earningsGrowth', 'N/A')
+        earnings_quarterly_growth = info.get('earningsQuarterlyGrowth', 'N/A')
+
+        sections.append(f"""## Growth
+| Metric | Value |
+|--------|-------|
+| Revenue Growth (YoY) | {pct(revenue_growth)} |
+| Earnings Growth (YoY) | {pct(earnings_growth)} |
+| Earnings Growth (QoQ) | {pct(earnings_quarterly_growth)} |
+""")
+
+        # === FINANCIAL HEALTH ===
+        total_cash = info.get('totalCash', 0)
+        total_debt = info.get('totalDebt', 0)
+        current_ratio = info.get('currentRatio', 'N/A')
+        quick_ratio = info.get('quickRatio', 'N/A')
+        debt_to_equity = info.get('debtToEquity', 'N/A')
+        free_cash_flow = info.get('freeCashflow', 0)
+        operating_cash_flow = info.get('operatingCashflow', 0)
+
+        sections.append(f"""## Financial Health
+| Metric | Value |
+|--------|-------|
+| Total Cash | ${total_cash:,.0f} |
+| Total Debt | ${total_debt:,.0f} |
+| Net Cash Position | ${(total_cash - total_debt):,.0f} |
+| Current Ratio | {fmt(current_ratio)} |
+| Quick Ratio | {fmt(quick_ratio)} |
+| Debt/Equity | {fmt(debt_to_equity)} |
+| Free Cash Flow | ${free_cash_flow:,.0f} |
+| Operating Cash Flow | ${operating_cash_flow:,.0f} |
+""")
+
+        # === DIVIDEND INFO ===
+        dividend_yield = info.get('dividendYield', 'N/A')
+        dividend_rate = info.get('dividendRate', 'N/A')
+        payout_ratio = info.get('payoutRatio', 'N/A')
+        ex_dividend_date = info.get('exDividendDate', 'N/A')
+
+        if dividend_yield and dividend_yield != 'N/A':
+            sections.append(f"""## Dividends
+| Metric | Value |
+|--------|-------|
+| Dividend Yield | {pct(dividend_yield)} |
+| Dividend Rate | ${fmt(dividend_rate)} |
+| Payout Ratio | {pct(payout_ratio)} |
+""")
+
+        # === ANALYST RECOMMENDATIONS ===
+        target_high = info.get('targetHighPrice', 'N/A')
+        target_low = info.get('targetLowPrice', 'N/A')
+        target_mean = info.get('targetMeanPrice', 'N/A')
+        target_median = info.get('targetMedianPrice', 'N/A')
+        recommendation = info.get('recommendationKey', 'N/A')
+        num_analysts = info.get('numberOfAnalystOpinions', 'N/A')
+        current_price = info.get('currentPrice', info.get('regularMarketPrice', 'N/A'))
+
+        upside = 'N/A'
+        if target_mean != 'N/A' and current_price != 'N/A':
+            try:
+                upside = f"{((float(target_mean) / float(current_price)) - 1) * 100:.1f}%"
+            except:
+                pass
+
+        sections.append(f"""## Analyst Estimates
+| Metric | Value |
+|--------|-------|
+| Current Price | ${fmt(current_price)} |
+| Target Price (Mean) | ${fmt(target_mean)} |
+| Target Price (Median) | ${fmt(target_median)} |
+| Target High | ${fmt(target_high)} |
+| Target Low | ${fmt(target_low)} |
+| Upside to Mean Target | {upside} |
+| Recommendation | {str(recommendation).upper()} |
+| # of Analysts | {num_analysts} |
+""")
+
+        # === INCOME STATEMENT SUMMARY ===
+        try:
+            income_stmt = stock.financials
+            if income_stmt is not None and not income_stmt.empty:
+                # Get the most recent column (latest fiscal year)
+                latest = income_stmt.iloc[:, 0]
+                revenue = latest.get('Total Revenue', 0)
+                gross_profit = latest.get('Gross Profit', 0)
+                operating_income = latest.get('Operating Income', 0)
+                net_income = latest.get('Net Income', 0)
+
+                sections.append(f"""## Income Statement (Latest Annual)
+| Line Item | Value |
+|-----------|-------|
+| Revenue | ${revenue:,.0f} |
+| Gross Profit | ${gross_profit:,.0f} |
+| Operating Income | ${operating_income:,.0f} |
+| Net Income | ${net_income:,.0f} |
+""")
+        except Exception as e:
+            pass  # Skip if income statement not available
+
+        # === EARNINGS ===
+        trailing_eps = info.get('trailingEps', 'N/A')
+        forward_eps = info.get('forwardEps', 'N/A')
+
+        sections.append(f"""## Earnings
+| Metric | Value |
+|--------|-------|
+| EPS (Trailing) | ${fmt(trailing_eps)} |
+| EPS (Forward) | ${fmt(forward_eps)} |
+""")
+
+        # === SUMMARY ASSESSMENT ===
+        # Generate a quick assessment based on the data
+        assessment_points = []
+
+        # Valuation assessment
+        if pe_trailing and pe_trailing != 'N/A':
+            pe_val = float(pe_trailing)
+            if pe_val < 15:
+                assessment_points.append("✓ Attractively valued (low P/E)")
+            elif pe_val > 30:
+                assessment_points.append("⚠ Premium valuation (high P/E)")
+
+        # Growth assessment
+        if revenue_growth and revenue_growth != 'N/A':
+            rg = float(revenue_growth)
+            if rg > 0.2:
+                assessment_points.append("✓ Strong revenue growth (>20%)")
+            elif rg < 0:
+                assessment_points.append("⚠ Revenue declining")
+
+        # Profitability assessment
+        if profit_margin and profit_margin != 'N/A':
+            pm = float(profit_margin)
+            if pm > 0.2:
+                assessment_points.append("✓ High profit margins (>20%)")
+            elif pm < 0:
+                assessment_points.append("⚠ Currently unprofitable")
+
+        # Balance sheet assessment
+        if total_cash > total_debt:
+            assessment_points.append("✓ Net cash position (strong balance sheet)")
+        elif total_debt > total_cash * 3:
+            assessment_points.append("⚠ High debt levels")
+
+        # Free cash flow
+        if free_cash_flow and free_cash_flow > 0:
+            assessment_points.append("✓ Positive free cash flow")
+        elif free_cash_flow and free_cash_flow < 0:
+            assessment_points.append("⚠ Negative free cash flow")
+
+        if assessment_points:
+            sections.append(f"""## Quick Assessment
+{chr(10).join(assessment_points)}
+""")
+
+        # Combine all sections
+        report = f"# Fundamental Analysis: {ticker}\n**Report Date:** {curr_date}\n\n"
+        report += "\n".join(sections)
+
+        return report
+
+    except Exception as e:
+        return f"Error fetching fundamentals for {ticker}: {str(e)}"
+
+
 def get_fundamentals_openai(ticker, curr_date):
     # Get API key from environment variables or config
     api_key = get_api_key("openai_api_key", "OPENAI_API_KEY")
@@ -1415,15 +1676,15 @@ def get_earnings_surprise_analysis(
 
 def get_macro_analysis(
     curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
-    lookback_days: Annotated[int, "Number of days to look back for data"] = 90,
+    lookback_days: Annotated[int, "Number of days to look back for data"] = 365,
 ) -> str:
     """
     Retrieve comprehensive macro economic analysis including Fed funds, CPI, PPI, NFP, GDP, PMI, Treasury curve, VIX.
     Provides economic indicators, yield curve analysis, Fed policy updates, and trading implications.
-    
+
     Args:
         curr_date (str): Current date in yyyy-mm-dd format
-        lookback_days (int): Number of days to look back for data (default 90)
+        lookback_days (int): Number of days to look back for data (default 365 = 12 months)
         
     Returns:
         str: Comprehensive macro economic analysis with trading implications
@@ -1434,14 +1695,14 @@ def get_macro_analysis(
 
 def get_economic_indicators(
     curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
-    lookback_days: Annotated[int, "Number of days to look back for data"] = 90,
+    lookback_days: Annotated[int, "Number of days to look back for data"] = 365,
 ) -> str:
     """
     Retrieve key economic indicators report including Fed funds, CPI, PPI, unemployment, NFP, GDP, PMI, VIX.
-    
+
     Args:
         curr_date (str): Current date in yyyy-mm-dd format
-        lookback_days (int): Number of days to look back for data (default 90)
+        lookback_days (int): Number of days to look back for data (default 365 = 12 months)
         
     Returns:
         str: Economic indicators report with analysis and interpretations
