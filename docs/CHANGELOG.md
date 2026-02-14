@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2025-02-14
+
+### Added
+- **Sector/Correlation Analyst**: New analyst evaluating relative strength, sector rotation, and peer comparison
+  - Dynamic sector identification using yfinance API
+  - LLM validation to correct data provider misclassifications (e.g., Bitcoin miners as "Financial Services")
+  - Business summary context for accurate sector determination
+  - Analyzes correlation with SPY/QQQ and sector rotation signals
+  - Includes max pain term structure and key OI levels across expirations
+- **Multi-Expiration Options Analysis**: Options Analyst now analyzes next 4 expirations
+  - Aggregate P/C ratios across all expirations
+  - IV term structure (backwardation/contango detection)
+  - Max pain term structure showing price drift expectations
+  - Key OI levels consolidated from all chains
+  - Positioning divergence analysis (near-term vs longer-term)
+- **Electron Desktop Wrapper**: Cross-platform native app wrapper for TradingCrew
+  - macOS, Windows, and Linux builds
+  - System tray integration with quick actions
+  - Auto-starts Python backend on launch
+- **Chart Auto-Load from Watchlist**: Chart now auto-loads first watchlist symbol on startup
+
+### Changed
+- **12-Month Analysis Standardization**: All analysis tools now default to 365-day lookback
+  - Market analyst, sector analyst, macro tools all use 12-month data
+  - Chart panel displays 252 trading days (~12 months)
+  - Consistent historical context across all analysts
+- **Parallel Execution Stagger**: Increased stagger delay to 1-30 seconds between ticker submissions
+  - Prevents API/LLM overload when starting large watchlists
+  - Applies to single run, loop mode, and market hour modes
+
+### Fixed
+- Python 3.10 compatibility for test patch targets in webui module
+
+---
+
 ## [0.3.0] - 2025-02-12
 
 ### Added
