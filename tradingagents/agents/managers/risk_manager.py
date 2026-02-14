@@ -31,6 +31,7 @@ def create_risk_manager(llm, memory, config=None):
         trader_plan = state.get("investment_plan", "")
         macro_report = state.get("macro_report", "")
         options_report = state.get("options_report", "")
+        sector_report = state.get("sector_correlation_report", "")
 
         # Get trading mode from config
         allow_shorts = config.get("allow_shorts", False) if config else False
@@ -98,7 +99,7 @@ def create_risk_manager(llm, memory, config=None):
         decision_format = trading_context["decision_format"]
         final_format = trading_context["final_format"]
 
-        curr_situation = f"{macro_report}\n\n{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
+        curr_situation = f"{macro_report}\n\n{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{sector_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
 
         past_memory_str = ""

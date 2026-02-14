@@ -11,16 +11,29 @@ from datetime import datetime
 def create_trading_control_panel():
     """Create the compact trading control panel for the right sidebar."""
     return html.Div([
-        # Portfolio Status Section (replaces ticker input)
+        # Portfolio Status Section with Symbol Selector
         html.Div([
             html.Div([
                 html.I(className="fas fa-list-check me-2 text-success"),
                 html.Span("Portfolio: ", className="text-muted"),
                 html.Span(id="config-run-queue-count", children="0", className="fw-bold text-success"),
                 html.Span(" symbols", className="text-muted ms-1"),
-            ], className="d-flex align-items-center run-queue-status"),
+            ], className="d-flex align-items-center run-queue-status mb-2"),
+            # Symbol selector dropdown
+            html.Div([
+                html.Small("Run:", className="text-muted me-2"),
+                dcc.Dropdown(
+                    id="run-symbol-selector",
+                    options=[{"label": "All Symbols", "value": "__ALL__"}],
+                    value=["__ALL__"],
+                    multi=True,
+                    placeholder="Select symbols to analyze...",
+                    className="run-symbol-dropdown",
+                    style={"minWidth": "200px", "fontSize": "0.85rem"}
+                ),
+            ], className="d-flex align-items-center"),
             html.Small(
-                "Add symbols via Watchlist > Portfolio tab",
+                "Select specific symbols or run all",
                 className="text-muted d-block mt-1"
             ),
         ], className="mb-3 p-2 run-queue-status-container"),
@@ -88,8 +101,9 @@ def create_trading_control_panel():
                                     {"label": " News", "value": "news"},
                                     {"label": " Fundamentals", "value": "fundamentals"},
                                     {"label": " Macro", "value": "macro"},
+                                    {"label": " Sector", "value": "sector"},
                                 ],
-                                value=["news", "fundamentals", "macro"],
+                                value=["news", "fundamentals", "macro", "sector"],
                                 inline=True,
                             ),
                         ], width=12),
@@ -103,6 +117,7 @@ def create_trading_control_panel():
                         dbc.Checkbox(id="analyst-fundamentals", value=True, style={"display": "none"}),
                         dbc.Checkbox(id="analyst-macro", value=True, style={"display": "none"}),
                         dbc.Checkbox(id="analyst-options", value=True, style={"display": "none"}),
+                        dbc.Checkbox(id="analyst-sector", value=True, style={"display": "none"}),
                     ], style={"display": "none"}),
 
                     html.Hr(className="my-2"),
@@ -271,7 +286,7 @@ def create_trading_control_panel():
             storage_type="local",
             data={
                 "analyst_checklist": ["market", "options", "social"],
-                "analyst_checklist_2": ["news", "fundamentals", "macro"],
+                "analyst_checklist_2": ["news", "fundamentals", "macro", "sector"],
                 "research_depth": "Shallow",
                 "allow_shorts": False,
                 "loop_enabled": False,

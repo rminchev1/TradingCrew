@@ -9,17 +9,11 @@ from dash import dcc, html
 
 
 def create_timeframe_buttons():
-    """Create the timeframe selection buttons"""
+    """Create the timeframe selection buttons - 1H, 4H, 1D only"""
     return dbc.ButtonGroup([
-        dbc.Button("5m", id="period-5m", color="secondary", outline=True, size="sm", className="me-1"),
-        dbc.Button("15m", id="period-15m", color="secondary", outline=True, size="sm", className="me-1"),
-        dbc.Button("30m", id="period-30m", color="secondary", outline=True, size="sm", className="me-1"),
         dbc.Button("1H", id="period-1h", color="secondary", outline=True, size="sm", className="me-1"),
         dbc.Button("4H", id="period-4h", color="secondary", outline=True, size="sm", className="me-1"),
-        dbc.Button("1D", id="period-1d", color="secondary", outline=True, size="sm", className="me-1"),
-        dbc.Button("1W", id="period-1w", color="secondary", outline=True, size="sm", className="me-1"),
-        dbc.Button("1M", id="period-1mo", color="secondary", outline=True, size="sm", className="me-1"),
-        dbc.Button("1Y", id="period-1y", color="secondary", outline=True, size="sm"),
+        dbc.Button("1D", id="period-1d", color="primary", size="sm"),  # Default selected
     ], className="flex-wrap")
 
 

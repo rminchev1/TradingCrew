@@ -372,14 +372,14 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
 
 
 def start_analysis(ticker, analysts_market, analysts_social, analysts_news, analysts_fundamentals, analysts_macro,
-                 research_depth, allow_shorts, quick_llm, deep_llm, analysts_options=False, progress=None):
+                 research_depth, allow_shorts, quick_llm, deep_llm, analysts_options=False, analysts_sector=False, progress=None):
     """Start real-time analysis function for the UI"""
 
     # Debug: Log which analysts are enabled
     print(f"[ANALYSIS] Starting analysis for {ticker}")
-    print(f"[ANALYSIS] Analyst flags: market={analysts_market}, options={analysts_options}, social={analysts_social}, news={analysts_news}, fundamentals={analysts_fundamentals}, macro={analysts_macro}")
+    print(f"[ANALYSIS] Analyst flags: market={analysts_market}, options={analysts_options}, social={analysts_social}, news={analysts_news}, fundamentals={analysts_fundamentals}, macro={analysts_macro}, sector={analysts_sector}")
 
-    # Parse selected analysts - order matches UI layout (Market, Options, Social, News, Fundamentals, Macro)
+    # Parse selected analysts - order matches UI layout (Market, Options, Social, News, Fundamentals, Macro, Sector)
     selected_analysts = []
     if analysts_market:
         selected_analysts.append("market")
@@ -393,6 +393,8 @@ def start_analysis(ticker, analysts_market, analysts_social, analysts_news, anal
         selected_analysts.append("fundamentals")
     if analysts_macro:
         selected_analysts.append("macro")
+    if analysts_sector:
+        selected_analysts.append("sector")
 
     print(f"[ANALYSIS] Selected analysts: {selected_analysts}")
     

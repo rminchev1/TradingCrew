@@ -48,11 +48,11 @@ def create_fundamentals_analyst(llm, toolkit):
                     # print(f"[FUNDAMENTALS] Using online crypto tools: DeFiLlama + Events Calendar")
                 else:
                     tools = [
-                        toolkit.get_fundamentals_openai,
+                        toolkit.get_fundamentals_yfinance,
                         toolkit.get_earnings_calendar,
                         toolkit.get_earnings_surprise_analysis,
                     ]
-                    # print(f"[FUNDAMENTALS] Using online stock tools: OpenAI Fundamentals + Earnings Analysis")
+                    # print(f"[FUNDAMENTALS] Using online stock tools: YFinance Fundamentals + Earnings Analysis")
             else:
                 tools = [
                     toolkit.get_finnhub_company_insider_sentiment,

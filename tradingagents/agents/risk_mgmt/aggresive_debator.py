@@ -26,6 +26,7 @@ def create_risky_debator(llm, config=None):
         fundamentals_report = state.get("fundamentals_report", "")
         macro_report = state.get("macro_report", "")
         options_report = state.get("options_report", "")
+        sector_report = state.get("sector_correlation_report", "")
 
         trader_decision = state["trader_investment_plan"]
         
@@ -71,6 +72,7 @@ Social Media Sentiment Report: {sentiment_report}
 Latest World Affairs Report: {news_report}
 Company Fundamentals Report: {fundamentals_report}
 Options Market Positioning Report: {options_report}
+Sector Correlation Report: {sector_report}
 
 Here is the current conversation history: {history} 
 Here are the last arguments from the conservative analyst: {current_safe_response} 

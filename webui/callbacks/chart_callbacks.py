@@ -122,15 +122,9 @@ def register_chart_callbacks(app):
         [Output("tv-chart-data-store", "data"),
          Output("current-symbol-display", "children"),
          Output("chart-store", "data", allow_duplicate=True)],
-        [Input("period-5m", "n_clicks"),
-         Input("period-15m", "n_clicks"),
-         Input("period-30m", "n_clicks"),
-         Input("period-1h", "n_clicks"),
+        [Input("period-1h", "n_clicks"),
          Input("period-4h", "n_clicks"),
          Input("period-1d", "n_clicks"),
-         Input("period-1w", "n_clicks"),
-         Input("period-1mo", "n_clicks"),
-         Input("period-1y", "n_clicks"),
          Input("chart-pagination", "active_page"),
          Input("manual-chart-refresh", "n_clicks"),
          Input("indicator-checklist", "value"),
@@ -138,7 +132,7 @@ def register_chart_callbacks(app):
         [State("run-watchlist-store", "data")],
         prevent_initial_call=True
     )
-    def update_chart(n_5m, n_15m, n_30m, n_1h, n_4h, n_1d, n_1w, n_1mo, n_1y,
+    def update_chart(n_1h, n_4h, n_1d,
                      active_page, manual_refresh, indicators, chart_store_data, run_watchlist_data):
         """Update the TradingView chart based on period selection, ticker change, or indicator toggle"""
 
@@ -168,17 +162,11 @@ def register_chart_callbacks(app):
         else:
             return None, "", chart_store_data
 
-        # Period mapping for all timeframe buttons
+        # Period mapping for timeframe buttons (1H, 4H, 1D only)
         period_map = {
-            "period-5m.n_clicks": "5m",
-            "period-15m.n_clicks": "15m",
-            "period-30m.n_clicks": "30m",
             "period-1h.n_clicks": "1h",
             "period-4h.n_clicks": "4h",
             "period-1d.n_clicks": "1d",
-            "period-1w.n_clicks": "1w",
-            "period-1mo.n_clicks": "1mo",
-            "period-1y.n_clicks": "1y"
         }
 
         # Determine selected period
@@ -242,39 +230,21 @@ def register_chart_callbacks(app):
             return ""
 
     @app.callback(
-        [Output("period-5m", "active"),
-         Output("period-15m", "active"),
-         Output("period-30m", "active"),
-         Output("period-1h", "active"),
+        [Output("period-1h", "active"),
          Output("period-4h", "active"),
-         Output("period-1d", "active"),
-         Output("period-1w", "active"),
-         Output("period-1mo", "active"),
-         Output("period-1y", "active")],
-        [Input("period-5m", "n_clicks"),
-         Input("period-15m", "n_clicks"),
-         Input("period-30m", "n_clicks"),
-         Input("period-1h", "n_clicks"),
+         Output("period-1d", "active")],
+        [Input("period-1h", "n_clicks"),
          Input("period-4h", "n_clicks"),
-         Input("period-1d", "n_clicks"),
-         Input("period-1w", "n_clicks"),
-         Input("period-1mo", "n_clicks"),
-         Input("period-1y", "n_clicks")]
+         Input("period-1d", "n_clicks")]
     )
-    def update_active_period_button(n_5m, n_15m, n_30m, n_1h, n_4h, n_1d, n_1w, n_1mo, n_1y):
-        """Update which period button is active"""
+    def update_active_period_button(n_1h, n_4h, n_1d):
+        """Update which period button is active (1H, 4H, 1D)"""
         button_id = ctx.triggered_id if ctx.triggered_id else "period-1d"
 
         return (
-            button_id == "period-5m",
-            button_id == "period-15m",
-            button_id == "period-30m",
             button_id == "period-1h",
             button_id == "period-4h",
             button_id == "period-1d",
-            button_id == "period-1w",
-            button_id == "period-1mo",
-            button_id == "period-1y"
         )
 
     # Clientside callback to render TradingView chart

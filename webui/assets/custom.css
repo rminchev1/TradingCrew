@@ -1270,6 +1270,39 @@ body.theme-bw .order-status-badge.accepted {
     padding: 0.5rem;
 }
 
+/* Run Symbol Selector Dropdown */
+.run-symbol-dropdown {
+    flex: 1;
+}
+
+.run-symbol-dropdown .Select-control {
+    background: #1E293B !important;
+    border: 1px solid #334155 !important;
+    border-radius: 6px !important;
+    min-height: 32px !important;
+}
+
+.run-symbol-dropdown .Select-value-label,
+.run-symbol-dropdown .Select-placeholder {
+    color: #E2E8F0 !important;
+    font-size: 0.85rem !important;
+}
+
+.run-symbol-dropdown .Select-menu-outer {
+    background: #1E293B !important;
+    border: 1px solid #334155 !important;
+}
+
+.run-symbol-dropdown .Select-option {
+    background: #1E293B !important;
+    color: #E2E8F0 !important;
+}
+
+.run-symbol-dropdown .Select-option:hover,
+.run-symbol-dropdown .Select-option.is-focused {
+    background: #334155 !important;
+}
+
 /* Enhanced Tabs Styling */
 .enhanced-tabs .nav-tabs {
     border-bottom: 1px solid #334155;
@@ -2446,6 +2479,32 @@ body.theme-bw .symbol-select:focus {
 body.theme-bw .symbol-select option {
     background: #FFFFFF;
     color: #1E293B;
+}
+
+/* Light Theme - Run Symbol Selector */
+body.theme-bw .run-symbol-dropdown .Select-control {
+    background: #F8FAFC !important;
+    border-color: #CBD5E1 !important;
+}
+
+body.theme-bw .run-symbol-dropdown .Select-value-label,
+body.theme-bw .run-symbol-dropdown .Select-placeholder {
+    color: #1E293B !important;
+}
+
+body.theme-bw .run-symbol-dropdown .Select-menu-outer {
+    background: #FFFFFF !important;
+    border-color: #CBD5E1 !important;
+}
+
+body.theme-bw .run-symbol-dropdown .Select-option {
+    background: #FFFFFF !important;
+    color: #1E293B !important;
+}
+
+body.theme-bw .run-symbol-dropdown .Select-option:hover,
+body.theme-bw .run-symbol-dropdown .Select-option.is-focused {
+    background: #F1F5F9 !important;
 }
 
 /* Light Theme - Current Symbol Badge */
