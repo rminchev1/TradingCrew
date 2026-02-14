@@ -506,8 +506,8 @@ def create_demo_chart(
         "30m": 130,  # 5 days of 15-min bars
         "1h": 130,   # 10 days of 30-min bars
         "4h": 180,   # 30 days of 1-hour bars
-        "1d": 90,    # 90 days of daily bars
-        "1w": 180,   # 180 days of daily bars
+        "1d": 252,   # 252 trading days (~12 months)
+        "1w": 252,   # 252 trading days (~12 months)
         "1mo": 252,  # 252 trading days (~1 year)
         "1y": 504    # 504 trading days (~2 years)
     }

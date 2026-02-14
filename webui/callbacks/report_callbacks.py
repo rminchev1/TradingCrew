@@ -557,6 +557,7 @@ def register_report_callbacks(app):
          Output("fundamentals-analysis-tab-content", "children", allow_duplicate=True),
          Output("macro-analysis-tab-content", "children", allow_duplicate=True),
          Output("options-analysis-tab-content", "children"),
+         Output("sector-analysis-tab-content", "children"),
          Output("research-manager-tab-content", "children"),
          Output("trader-plan-tab-content", "children"),
          Output("final-decision-tab-content", "children")],
@@ -568,30 +569,30 @@ def register_report_callbacks(app):
         """Update the content of all tabs with validation to ensure complete reports"""
         # Skip updates when viewing historical data - let history callbacks handle it
         if app_state.viewing_history:
-            return (no_update,) * 9
+            return (no_update,) * 10
 
         # Debug every 10th call to reduce spam
         if n_intervals and n_intervals % 10 == 0:
             print(f"[REPORTS] active_page={active_page}, symbols={list(app_state.symbol_states.keys()) if app_state.symbol_states else 'None'}")
 
         if not app_state.symbol_states or not active_page:
-            return [create_markdown_content("", "No analysis available yet.")] * 9
-        
+            return [create_markdown_content("", "No analysis available yet.")] * 10
+
         # Safeguard against accessing invalid page index (e.g., after page refresh)
         symbols_list = list(app_state.symbol_states.keys())
         if active_page > len(symbols_list):
-            return [create_markdown_content("", "Page index out of range. Please refresh or restart analysis.")] * 9
-        
+            return [create_markdown_content("", "Page index out of range. Please refresh or restart analysis.")] * 10
+
         symbol = symbols_list[active_page - 1]
         # print(f"[REPORTS] Selected symbol: {symbol} (page {active_page})")
         state = app_state.get_state(symbol)
-        
+
         if not state:
-            return [create_markdown_content("", "No data for this symbol.")] * 9
-            
+            return [create_markdown_content("", "No data for this symbol.")] * 10
+
         reports = state["current_reports"]
         agent_statuses = state["agent_statuses"]
-        
+
         # 🛡️ VALIDATION: Only show complete reports in UI
         # For analysts marked as "completed", validate reports are actually complete
         analyst_reports = {
@@ -600,7 +601,8 @@ def register_report_callbacks(app):
             "news_report": reports.get("news_report"),
             "fundamentals_report": reports.get("fundamentals_report"),
             "macro_report": reports.get("macro_report"),
-            "options_report": reports.get("options_report")
+            "options_report": reports.get("options_report"),
+            "sector_correlation_report": reports.get("sector_correlation_report")
         }
 
         # Check which analysts are completed
@@ -610,9 +612,10 @@ def register_report_callbacks(app):
             "news_report": agent_statuses.get("News Analyst"),
             "fundamentals_report": agent_statuses.get("Fundamentals Analyst"),
             "macro_report": agent_statuses.get("Macro Analyst"),
-            "options_report": agent_statuses.get("Options Analyst")
+            "options_report": agent_statuses.get("Options Analyst"),
+            "sector_correlation_report": agent_statuses.get("Sector Analyst")
         }
-        
+
         # 🛡️ PRIORITY: Content takes precedence over status
         # If we have substantial content, show it regardless of status (fixes race condition)
         validated_reports = {}
@@ -649,7 +652,7 @@ def register_report_callbacks(app):
                 validated_reports[report_type] = content
             else:
                 validated_reports[report_type] = f"No {report_type.replace('_', ' ').title()} available yet."
-        
+
         # Get final validated reports or defaults
         market_report = validated_reports.get("market_report", "No market analysis available yet.")
         sentiment_report = validated_reports.get("sentiment_report", "No sentiment analysis available yet.")
@@ -657,6 +660,7 @@ def register_report_callbacks(app):
         fundamentals_report = validated_reports.get("fundamentals_report", "No fundamentals analysis available yet.")
         macro_report = validated_reports.get("macro_report", "No macro analysis available yet.")
         options_report = validated_reports.get("options_report", "No options analysis available yet.")
+        sector_report = validated_reports.get("sector_correlation_report", "No sector analysis available yet.")
 
         # Research team reports (no validation needed - these come as complete chunks)
         research_manager_report = reports.get("research_manager_report") or "No research manager decision available yet."
@@ -672,6 +676,7 @@ def register_report_callbacks(app):
             create_markdown_content(fundamentals_report, "No fundamentals analysis available yet.", "fundamentals_report"),
             create_markdown_content(macro_report, "No macro analysis available yet.", "macro_report"),
             create_markdown_content(options_report, "No options analysis available yet.", "options_report"),
+            create_markdown_content(sector_report, "No sector analysis available yet.", "sector_correlation_report"),
             create_markdown_content(research_manager_report, "No research manager decision available yet.", "research_manager_report"),
             create_markdown_content(trader_report, "No trader report available yet.", "trader_investment_plan"),
             create_markdown_content(portfolio_report, "No final decision available yet.", "final_trade_decision")
@@ -702,6 +707,7 @@ def register_report_callbacks(app):
          Input("nav-tab-fundamentals", "n_clicks"),
          Input("nav-tab-macro", "n_clicks"),
          Input("nav-tab-options", "n_clicks"),
+         Input("nav-tab-sector", "n_clicks"),
          Input("nav-tab-researcher", "n_clicks"),
          Input("nav-tab-research-mgr", "n_clicks"),
          Input("nav-tab-trader", "n_clicks"),
@@ -722,6 +728,7 @@ def register_report_callbacks(app):
             "nav-tab-fundamentals": "fundamentals-analysis",
             "nav-tab-macro": "macro-analysis",
             "nav-tab-options": "options-analysis",
+            "nav-tab-sector": "sector-analysis",
             "nav-tab-researcher": "researcher-debate",
             "nav-tab-research-mgr": "research-manager",
             "nav-tab-trader": "trader-plan",
@@ -738,6 +745,7 @@ def register_report_callbacks(app):
          Output("nav-tab-fundamentals", "active"),
          Output("nav-tab-macro", "active"),
          Output("nav-tab-options", "active"),
+         Output("nav-tab-sector", "active"),
          Output("nav-tab-researcher", "active"),
          Output("nav-tab-research-mgr", "active"),
          Output("nav-tab-trader", "active"),
@@ -755,15 +763,16 @@ def register_report_callbacks(app):
             "fundamentals-analysis": 3,
             "macro-analysis": 4,
             "options-analysis": 5,
-            "researcher-debate": 6,
-            "research-manager": 7,
-            "trader-plan": 8,
-            "risk-debate": 9,
-            "final-decision": 10
+            "sector-analysis": 6,
+            "researcher-debate": 7,
+            "research-manager": 8,
+            "trader-plan": 9,
+            "risk-debate": 10,
+            "final-decision": 11
         }
 
         # Create list of active states (all False initially)
-        active_states = [False] * 11
+        active_states = [False] * 12
 
         # Set the active tab's nav to True
         if active_tab in tab_to_index:
@@ -778,6 +787,7 @@ def register_report_callbacks(app):
          Output("nav-label-news", "children"),
          Output("nav-label-fundamentals", "children"),
          Output("nav-label-macro", "children"),
+         Output("nav-label-sector", "children"),
          Output("nav-label-researcher", "children"),
          Output("nav-label-research-mgr", "children"),
          Output("nav-label-trader", "children"),
@@ -787,7 +797,7 @@ def register_report_callbacks(app):
          Input("report-pagination", "active_page")]
     )
     def update_nav_data_indicators(n_intervals, active_page):
-        """Update navigation labels with ✓ indicator when report has data"""
+        """Update navigation labels with check indicator when report has data"""
         from webui.utils.state import app_state
 
         # Default labels (no data)
@@ -798,6 +808,7 @@ def register_report_callbacks(app):
             "news": "📰 News",
             "fundamentals": "📈 Fundamentals",
             "macro": "🌍 Macro",
+            "sector": "🔗 Sector",
             "researcher": "🔍 Debate",
             "research-mgr": "🎯 Manager",
             "trader": "🧠 Trader",
@@ -813,6 +824,7 @@ def register_report_callbacks(app):
             "news": "news_report",
             "fundamentals": "fundamentals_report",
             "macro": "macro_report",
+            "sector": "sector_correlation_report",
             "researcher": ["bull_report", "bear_report"],  # Has data if either exists
             "research-mgr": "research_manager_report",
             "trader": "trader_investment_plan",
@@ -849,6 +861,7 @@ def register_report_callbacks(app):
             labels["news"],
             labels["fundamentals"],
             labels["macro"],
+            labels["sector"],
             labels["researcher"],
             labels["research-mgr"],
             labels["trader"],
@@ -911,6 +924,7 @@ def register_report_callbacks(app):
                             "fundamentals_report": "Fundamentals Analyst Prompt",
                             "macro_report": "Macro Analyst Prompt",
                             "options_report": "Options Analyst Prompt",
+                            "sector_correlation_report": "Sector/Correlation Analyst Prompt",
                             "bull_report": "Bull Researcher Prompt",
                             "bear_report": "Bear Researcher Prompt",
                             "research_manager_report": "Research Manager Prompt",
@@ -1007,6 +1021,7 @@ def register_report_callbacks(app):
                             "fundamentals_report": "Fundamentals Analyst Tool Outputs",
                             "macro_report": "Macro Analyst Tool Outputs",
                             "options_report": "Options Analyst Tool Outputs",
+                            "sector_correlation_report": "Sector/Correlation Analyst Tool Outputs",
                             "bull_report": "Bull Researcher Tool Outputs",
                             "bear_report": "Bear Researcher Tool Outputs",
                             "research_manager_report": "Research Manager Tool Outputs",

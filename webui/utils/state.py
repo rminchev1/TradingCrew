@@ -264,6 +264,7 @@ class AppState:
                 "News Analyst": "pending",
                 "Fundamentals Analyst": "pending",
                 "Macro Analyst": "pending",
+                "Sector Analyst": "pending",
                 "Bull Researcher": "pending",
                 "Bear Researcher": "pending",
                 "Research Manager": "pending",
@@ -280,6 +281,7 @@ class AppState:
                 "news_report": None,
                 "fundamentals_report": None,
                 "macro_report": None,
+                "sector_correlation_report": None,
                 "bull_report": None,
                 "bear_report": None,
                 "research_manager_report": None,
@@ -298,6 +300,7 @@ class AppState:
                 "news_report": None,
                 "fundamentals_report": None,
                 "macro_report": None,
+                "sector_correlation_report": None,
                 "bull_report": None,
                 "bear_report": None,
                 "research_manager_report": None,
@@ -408,6 +411,7 @@ class AppState:
                         "fundamentals_report": "Fundamentals Analyst",
                         "macro_report": "Macro Analyst",
                         "options_report": "Options Analyst",
+                        "sector_correlation_report": "Sector Analyst",
                         "bull_report": "Bull Researcher",
                         "bear_report": "Bear Researcher",
                         "research_manager_report": "Research Manager",
@@ -522,6 +526,7 @@ class AppState:
             "fundamentals_report": ["fundamentals analyst", "fundamental analyst", "fundamentals"],
             "macro_report": ["macro analyst", "macro", "macroeconomic analyst"],
             "options_report": ["options analyst", "options", "options market analyst"],
+            "sector_correlation_report": ["sector analyst", "sector", "correlation analyst"],
             "bull_report": ["bull researcher", "bull", "optimistic researcher"],
             "bear_report": ["bear researcher", "bear", "pessimistic researcher"],
             "research_manager_report": ["research manager", "manager"],
@@ -570,6 +575,7 @@ class AppState:
                     "news_report": None,
                     "fundamentals_report": None,
                     "macro_report": None,
+                    "sector_correlation_report": None,
                     "bull_report": None,
                     "bear_report": None,
                     "research_manager_report": None,
@@ -587,6 +593,7 @@ class AppState:
                     "news_report": None,
                     "fundamentals_report": None,
                     "macro_report": None,
+                    "sector_correlation_report": None,
                     "bull_report": None,
                     "bear_report": None,
                     "research_manager_report": None,
@@ -604,6 +611,7 @@ class AppState:
                     "News Analyst": "pending",
                     "Fundamentals Analyst": "pending",
                     "Macro Analyst": "pending",
+                    "Sector Analyst": "pending",
                     "Bull Researcher": "pending",
                     "Bear Researcher": "pending",
                     "Research Manager": "pending",
@@ -827,6 +835,7 @@ class AppState:
             "fundamentals_report": "Fundamentals Analyst",
             "macro_report": "Macro Analyst",
             "options_report": "Options Analyst",
+            "sector_correlation_report": "Sector Analyst",
             "bull_report": "Bull Researcher",
             "bear_report": "Bear Researcher",
             "research_manager_report": "Research Manager",
@@ -838,7 +847,7 @@ class AppState:
         }
 
         # Determine the analyst execution sequence based on user selection (if available)
-        # Order matches UI layout: Market, Options, Social, News, Fundamentals, Macro
+        # Order matches UI layout: Market, Options, Social, News, Fundamentals, Macro, Sector
         default_sequence = [
             "Market Analyst",
             "Options Analyst",
@@ -846,6 +855,7 @@ class AppState:
             "News Analyst",
             "Fundamentals Analyst",
             "Macro Analyst",
+            "Sector Analyst",
         ]
         # If the UI has stored the list of active analysts, respect that (and preserve order)
         if hasattr(self, "active_analysts") and self.active_analysts:
@@ -858,7 +868,7 @@ class AppState:
             analyst_sequence = default_sequence
         
         # Update analyst reports and manage status transitions
-        for report_type in ["market_report", "sentiment_report", "news_report", "fundamentals_report", "macro_report", "options_report"]:
+        for report_type in ["market_report", "sentiment_report", "news_report", "fundamentals_report", "macro_report", "options_report", "sector_correlation_report"]:
             if report_type in chunk:
                 new_report = chunk[report_type]
                 # Skip if report content is None or empty/whitespace only

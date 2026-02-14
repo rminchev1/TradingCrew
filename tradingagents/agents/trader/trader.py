@@ -23,6 +23,7 @@ def create_trader(llm, memory, config=None):
         fundamentals_report = state.get("fundamentals_report", "")
         macro_report = state.get("macro_report", "")
         options_report = state.get("options_report", "")
+        sector_report = state.get("sector_correlation_report", "")
         
         # Determine current position from live Alpaca account (fallback to state)
         current_position = AlpacaUtils.get_current_position_state(company_name)
@@ -89,7 +90,7 @@ def create_trader(llm, memory, config=None):
         decision_format = trading_context["decision_format"]
         final_format = trading_context["final_format"]
 
-        curr_situation = f"{macro_report}\n\n{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{options_report}"
+        curr_situation = f"{macro_report}\n\n{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{options_report}\n\n{sector_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
 
         past_memory_str = ""
@@ -166,6 +167,7 @@ News Analysis: {news_report[:300] if news_report else 'Limited data available'}
 Fundamentals: {fundamentals_report[:300] if fundamentals_report else 'Limited data available'}
 Macro Analysis: {macro_report[:300] if macro_report else 'Limited data available'}
 Options Positioning: {options_report[:400] if options_report else 'No options data available'}
+Sector/Correlation: {sector_report[:400] if sector_report else 'No sector analysis available'}
 
 **REQUIRED EOD TRADING PLAN:**
 Provide a detailed analysis covering:

@@ -138,13 +138,13 @@ def get_treasury_yield_curve(curr_date: str) -> str:
     return result
 
 
-def get_economic_indicators_report(curr_date: str, lookback_days: int = 90) -> str:
+def get_economic_indicators_report(curr_date: str, lookback_days: int = 365) -> str:
     """
     Get comprehensive economic indicators report
-    
+
     Args:
         curr_date: Current date in YYYY-MM-DD format
-        lookback_days: How many days to look back for data
+        lookback_days: How many days to look back for data (default 365 = 12 months)
         
     Returns:
         Formatted string with economic indicators

@@ -187,6 +187,7 @@ class TradingAgentsGraph:
             "fundamentals": ToolNode(
                 [
                     # online tools
+                    self.toolkit.get_fundamentals_yfinance,
                     self.toolkit.get_fundamentals_openai,
                     self.toolkit.get_defillama_fundamentals,
                     # offline tools
@@ -209,6 +210,14 @@ class TradingAgentsGraph:
                 ]
             ),
             "options": ToolNode(options_tools),
+            "sector": ToolNode(
+                [
+                    self.toolkit.get_sector_peers,
+                    self.toolkit.get_peer_comparison,
+                    self.toolkit.get_relative_strength,
+                    self.toolkit.get_sector_rotation,
+                ]
+            ),
         }
 
     def propagate(self, company_name, trade_date):

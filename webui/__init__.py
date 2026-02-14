@@ -3,7 +3,12 @@ Trading Agents Framework - Web UI Package
 """
 from webui.app_dash import run_app
 
-__all__ = ["run_app", "main"]
+# Explicitly import submodules for patch compatibility in Python 3.10
+from webui import utils
+from webui import callbacks
+from webui import components
+
+__all__ = ["run_app", "main", "utils", "callbacks", "components"]
 
 
 def main():

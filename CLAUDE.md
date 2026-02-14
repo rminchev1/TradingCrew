@@ -155,7 +155,7 @@ tests/                   # pytest test suite
 
 ### Multi-Agent Flow
 ```
-6 Analyst Agents (sequential*) → Bull/Bear Debate → Research Manager Decision
+7 Analyst Agents (sequential*) → Bull/Bear Debate → Research Manager Decision
                                                             ↓
                                 Trader → Risk Debators (3) → Portfolio Manager → Trade Decision
 ```
@@ -187,6 +187,7 @@ Three execution modes share this pattern:
 | Fundamentals Analyst | `agents/analysts/fundamentals_analyst.py` | `fundamentals_report` |
 | Macro Analyst | `agents/analysts/macro_analyst.py` | `macro_report` |
 | Options Analyst | `agents/analysts/options_analyst.py` | `options_report` |
+| Sector Analyst | `agents/analysts/sector_correlation_analyst.py` | `sector_correlation_report` |
 
 ### State Classes (in `tradingagents/agents/utils/agent_states.py`)
 - `AgentState` - Main graph state with all report fields
@@ -495,8 +496,14 @@ Each analyst has specific data sources - do NOT mix them:
 | Social Media Analyst | Reddit API only | `get_reddit_stock_info` |
 | Market Analyst | Alpaca API | `get_alpaca_data`, `get_YFin_data` |
 | Macro Analyst | FRED API | `get_macro_data` |
+| Sector Analyst | Alpaca API + sector mapping | `get_sector_peers`, `get_peer_comparison`, `get_relative_strength`, `get_sector_rotation` |
 
 **Do NOT give News Analyst Reddit tools or Social Media Analyst news tools.**
+
+**Sector Analyst notes:**
+- Skips crypto assets (returns N/A report)
+- Uses `sector_utils.py` for sector-to-ETF mapping
+- Tools have `@timing_wrapper("SECTOR")` for pipeline control
 
 ### Callback Patterns
 ```python
@@ -798,6 +805,7 @@ app_state.tool_calls_log.append(tool_call_info)
 |------|---------|----------------------|
 | `tradingagents/graph/trading_graph.py` | Main orchestration | `TradingAgentsGraph.propagate()` |
 | `tradingagents/dataflows/interface.py` | Unified data API (~1500 lines) | `@tool` decorated functions |
+| `tradingagents/dataflows/sector_utils.py` | Sector mapping & ETF lookups | `identify_sector()`, `SECTOR_ETFS` |
 | `tradingagents/dataflows/reddit_live.py` | Live Reddit API | `RedditLiveClient`, `fetch_live_company_news()` |
 | `tradingagents/agents/utils/agent_utils.py` | Tool tracking & timing | `timing_wrapper()`, `_get_current_symbol()` |
 | `tradingagents/default_config.py` | Config defaults | `DEFAULT_CONFIG` dict |
@@ -819,7 +827,8 @@ app_state.tool_calls_log.append(tool_call_info)
 | `webui/components/analysis.py` | Analysis execution | `run_analysis()` (stream loop with pause/stop checkpoints) |
 | `tradingagents/agents/utils/memory.py` | ChromaDB memory | `FinancialSituationMemory` (bull/bear memory) |
 | `tradingagents/graph/setup.py` | Graph construction | `setup_graph()`, `_create_parallel_analysts_coordinator()` |
-| `tradingagents/graph/conditional_logic.py` | Routing functions | `should_continue_debate()`, `should_continue_risk_analysis()` |
+| `tradingagents/graph/conditional_logic.py` | Routing functions | `should_continue_debate()`, `should_continue_risk_analysis()`, `should_continue_sector()` |
+| `tradingagents/agents/analysts/sector_correlation_analyst.py` | Sector/correlation analyst | `create_sector_correlation_analyst()` |
 
 ---
 

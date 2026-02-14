@@ -25,6 +25,7 @@ def register_status_callbacks(app):
             return dbc.Table()
 
         # Group agents by team, showing only selected analysts
+        # The active_analysts list should include "Sector Analyst" when sector analysis is enabled
         teams = {
             "Analyst Team": getattr(app_state, 'active_analysts', []),
             "Research Team": ["Bull Researcher", "Bear Researcher", "Research Manager"],

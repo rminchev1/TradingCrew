@@ -386,12 +386,22 @@ def get_current_price(symbol: str) -> float:
         return 0
 
 
-def get_full_options_analysis(symbol: str, curr_date: str = None) -> str:
+def get_full_options_analysis(symbol: str, curr_date: str = None, num_expirations: int = 4) -> str:
     """
-    Get comprehensive options market positioning analysis for a stock.
+    Get comprehensive options market positioning analysis for a stock across multiple expirations.
+
+    Analyzes the next 4 expiration dates to understand:
+    - Term structure of positioning
+    - Where institutional money is concentrated
+    - How sentiment changes across time horizons
+
+    Args:
+        symbol: Stock ticker symbol
+        curr_date: Current date (optional)
+        num_expirations: Number of expirations to analyze (default 4)
 
     Returns:
-        Formatted string with full options analysis
+        Formatted string with full options analysis across multiple expirations
     """
     try:
         # Get current price
@@ -399,153 +409,282 @@ def get_full_options_analysis(symbol: str, curr_date: str = None) -> str:
         if current_price == 0:
             return f"Error: Could not fetch current price for {symbol}"
 
-        # Get options chain
-        calls, puts, expirations = get_options_chain(symbol)
+        # Get all available expirations
+        ticker = yf.Ticker(symbol)
+        all_expirations = ticker.options
 
-        if calls is None or puts is None or len(expirations) == 0:
+        if not all_expirations or len(all_expirations) == 0:
             return f"Error: No options data available for {symbol}. This may be a stock without listed options."
 
-        nearest_exp = expirations[0]
+        # Fetch chains for up to 4 expirations
+        expirations_to_analyze = all_expirations[:min(num_expirations, len(all_expirations))]
+        chains_data = get_multiple_expirations_chain(symbol, num_expirations)
 
-        # Calculate all metrics
-        pc_ratio = calculate_put_call_ratio(calls, puts)
-        max_pain = calculate_max_pain(calls, puts, current_price)
-        key_levels = get_key_oi_levels(calls, puts, current_price)
-        iv_metrics = calculate_iv_metrics(calls, puts, current_price)
-        unusual = detect_unusual_activity(calls, puts)
+        if not chains_data:
+            return f"Error: Could not fetch options chains for {symbol}"
+
+        # Calculate days to expiration for each
+        today = datetime.now()
+        exp_info = []
+        for exp_date in expirations_to_analyze:
+            exp_dt = datetime.strptime(exp_date, "%Y-%m-%d")
+            dte = (exp_dt - today).days
+            exp_info.append({'date': exp_date, 'dte': dte})
+
+        # Aggregate metrics across all expirations
+        total_call_oi = 0
+        total_put_oi = 0
+        total_call_volume = 0
+        total_put_volume = 0
+        all_max_pains = []
+        all_key_levels = {'calls': [], 'puts': []}
+        expiration_summaries = []
+
+        for exp_date in expirations_to_analyze:
+            if exp_date not in chains_data:
+                continue
+
+            calls = chains_data[exp_date]['calls']
+            puts = chains_data[exp_date]['puts']
+
+            if calls is None or puts is None or len(calls) == 0:
+                continue
+
+            # Calculate metrics for this expiration
+            pc_ratio = calculate_put_call_ratio(calls, puts)
+            max_pain = calculate_max_pain(calls, puts, current_price)
+            key_levels = get_key_oi_levels(calls, puts, current_price, top_n=3)
+            iv_metrics = calculate_iv_metrics(calls, puts, current_price)
+            unusual = detect_unusual_activity(calls, puts)
+
+            # Accumulate totals
+            total_call_oi += pc_ratio.get('total_call_oi', 0)
+            total_put_oi += pc_ratio.get('total_put_oi', 0)
+            total_call_volume += pc_ratio.get('total_call_volume', 0)
+            total_put_volume += pc_ratio.get('total_put_volume', 0)
+
+            # Track max pain for each expiration
+            dte = next((e['dte'] for e in exp_info if e['date'] == exp_date), 0)
+            all_max_pains.append({
+                'date': exp_date,
+                'dte': dte,
+                'max_pain': max_pain.get('max_pain', 0),
+                'distance_pct': max_pain.get('distance_pct', 0)
+            })
+
+            # Collect key levels
+            for level in key_levels.get('call_resistance_levels', []):
+                level['expiration'] = exp_date
+                level['dte'] = dte
+                all_key_levels['calls'].append(level)
+            for level in key_levels.get('put_support_levels', []):
+                level['expiration'] = exp_date
+                level['dte'] = dte
+                all_key_levels['puts'].append(level)
+
+            # Store expiration summary
+            expiration_summaries.append({
+                'date': exp_date,
+                'dte': dte,
+                'pc_ratio': pc_ratio,
+                'iv_metrics': iv_metrics,
+                'max_pain': max_pain,
+                'unusual': unusual,
+                'key_levels': key_levels
+            })
+
+        # Calculate aggregate ratios
+        agg_volume_ratio = total_put_volume / total_call_volume if total_call_volume > 0 else 0
+        agg_oi_ratio = total_put_oi / total_call_oi if total_call_oi > 0 else 0
+
+        # Determine aggregate sentiment
+        if agg_volume_ratio < 0.7:
+            agg_sentiment = "Very Bullish"
+        elif agg_volume_ratio < 0.9:
+            agg_sentiment = "Bullish"
+        elif agg_volume_ratio < 1.1:
+            agg_sentiment = "Neutral"
+        elif agg_volume_ratio < 1.3:
+            agg_sentiment = "Bearish"
+        else:
+            agg_sentiment = "Very Bearish"
+
+        # Sort key levels by OI to find most significant
+        all_key_levels['calls'] = sorted(all_key_levels['calls'], key=lambda x: x['oi'], reverse=True)[:5]
+        all_key_levels['puts'] = sorted(all_key_levels['puts'], key=lambda x: x['oi'], reverse=True)[:5]
 
         # Format the report
         report = f"""
 # OPTIONS MARKET POSITIONING ANALYSIS: {symbol}
+## Multi-Expiration Analysis (Next {len(expiration_summaries)} Expirations)
 
 **Current Stock Price:** ${current_price:.2f}
-**Nearest Expiration:** {nearest_exp}
-**Available Expirations:** {len(expirations)} dates
+**Expirations Analyzed:** {', '.join([f"{e['date']} ({e['dte']} DTE)" for e in exp_info[:len(expiration_summaries)]])}
+**Total Available Expirations:** {len(all_expirations)}
 
 ---
 
-## 1. SENTIMENT INDICATORS
+## 1. AGGREGATE SENTIMENT (All Expirations Combined)
 
-### Put/Call Ratios
 | Metric | Value | Interpretation |
 |--------|-------|----------------|
-| Volume P/C Ratio | {pc_ratio['volume_ratio']:.2f} | {pc_ratio['volume_sentiment']} |
-| Open Interest P/C Ratio | {pc_ratio['oi_ratio']:.2f} | {"Bullish" if pc_ratio['oi_ratio'] < 1 else "Bearish"} bias |
+| Aggregate Volume P/C Ratio | {agg_volume_ratio:.2f} | {agg_sentiment} |
+| Aggregate OI P/C Ratio | {agg_oi_ratio:.2f} | {"Bullish" if agg_oi_ratio < 1 else "Bearish"} positioning |
 
-**Volume Breakdown:**
-- Total Call Volume: {pc_ratio['total_call_volume']:,}
-- Total Put Volume: {pc_ratio['total_put_volume']:,}
-- Total Call OI: {pc_ratio['total_call_oi']:,}
-- Total Put OI: {pc_ratio['total_put_oi']:,}
+**Total Open Interest:**
+- Calls: {total_call_oi:,} contracts
+- Puts: {total_put_oi:,} contracts
 
-### IV Skew Analysis
-- **Put IV:** {iv_metrics.get('put_iv', 0):.1f}%
-- **Call IV:** {iv_metrics.get('call_iv', 0):.1f}%
-- **Skew:** {iv_metrics.get('iv_skew', 0):+.2f}%
-- **Interpretation:** {iv_metrics.get('skew_interpretation', 'N/A')}
+**Total Volume Today:**
+- Calls: {total_call_volume:,} contracts
+- Puts: {total_put_volume:,} contracts
 
 ---
 
-## 2. EXPECTED MOVE & VOLATILITY
+## 2. EXPIRATION-BY-EXPIRATION BREAKDOWN
+
+"""
+        # Add detailed breakdown for each expiration
+        for i, summary in enumerate(expiration_summaries):
+            exp_date = summary['date']
+            dte = summary['dte']
+            pc = summary['pc_ratio']
+            iv = summary['iv_metrics']
+            mp = summary['max_pain']
+            ua = summary['unusual']
+
+            term_label = "Near-term" if dte <= 7 else "Short-term" if dte <= 30 else "Medium-term" if dte <= 60 else "Longer-term"
+
+            report += f"""### Expiration {i+1}: {exp_date} ({dte} DTE) - {term_label}
 
 | Metric | Value |
 |--------|-------|
-| ATM Implied Volatility | {iv_metrics.get('atm_iv', 0):.1f}% |
-| Expected Move (to expiry) | ±${iv_metrics.get('expected_move_dollars', 0):.2f} (±{iv_metrics.get('expected_move_pct', 0):.1f}%) |
-| ATM Straddle Price | ${iv_metrics.get('straddle_price', 0):.2f} |
+| P/C Volume Ratio | {pc['volume_ratio']:.2f} ({pc['volume_sentiment']}) |
+| P/C OI Ratio | {pc['oi_ratio']:.2f} |
+| ATM IV | {iv.get('atm_iv', 0):.1f}% |
+| Expected Move | ±{iv.get('expected_move_pct', 0):.1f}% (±${iv.get('expected_move_dollars', 0):.2f}) |
+| Max Pain | ${mp.get('max_pain', 0):.2f} ({mp.get('distance_pct', 0):+.1f}% away) |
+| IV Skew | {iv.get('iv_skew', 0):+.2f}% ({iv.get('skew_interpretation', 'N/A')}) |
 
-**Volatility Assessment:** {"High IV - options are expensive, big move expected" if iv_metrics.get('atm_iv', 0) > 40 else "Moderate IV - normal volatility expectations" if iv_metrics.get('atm_iv', 0) > 25 else "Low IV - options are cheap, quiet period expected"}
-
----
-
-## 3. KEY PRICE LEVELS (from Options OI)
-
-### Max Pain Analysis
-- **Max Pain Strike:** ${max_pain.get('max_pain', 0):.2f}
-- **Distance from Current:** {max_pain.get('distance_pct', 0):+.1f}%
-- **Interpretation:** {max_pain.get('interpretation', 'N/A')}
-
-### Resistance Levels (High Call OI)
-| Strike | Open Interest | Volume | Distance |
-|--------|---------------|--------|----------|
 """
-        # Add call resistance levels
-        for level in key_levels.get('call_resistance_levels', [])[:3]:
-            report += f"| ${level['strike']:.2f} | {level['oi']:,} | {level['volume']:,} | {level['pct_away']:+.1f}% |\n"
+            # Note unusual activity if present
+            if ua.get('has_unusual_activity'):
+                report += f"**⚠️ Unusual Activity:** {ua.get('activity_bias', 'Detected')}\n\n"
+
+        report += """---
+
+## 3. MAX PAIN TERM STRUCTURE
+
+Understanding where price may gravitate at each expiration:
+
+| Expiration | DTE | Max Pain | Distance from Current |
+|------------|-----|----------|----------------------|
+"""
+        for mp in all_max_pains:
+            report += f"| {mp['date']} | {mp['dte']} | ${mp['max_pain']:.2f} | {mp['distance_pct']:+.1f}% |\n"
+
+        # Analyze max pain trend
+        if len(all_max_pains) >= 2:
+            near_term_mp = all_max_pains[0]['max_pain']
+            far_term_mp = all_max_pains[-1]['max_pain']
+            if far_term_mp > near_term_mp * 1.02:
+                mp_trend = "**Trend:** Max pain rises over time - suggests upward price drift expected"
+            elif far_term_mp < near_term_mp * 0.98:
+                mp_trend = "**Trend:** Max pain falls over time - suggests downward price drift expected"
+            else:
+                mp_trend = "**Trend:** Max pain stable across expirations - range-bound expectations"
+            report += f"\n{mp_trend}\n"
 
         report += """
-### Support Levels (High Put OI)
-| Strike | Open Interest | Volume | Distance |
-|--------|---------------|--------|----------|
-"""
-        # Add put support levels
-        for level in key_levels.get('put_support_levels', [])[:3]:
-            report += f"| ${level['strike']:.2f} | {level['oi']:,} | {level['volume']:,} | {level['pct_away']:+.1f}% |\n"
-
-        report += f"""
 ---
 
-## 4. UNUSUAL OPTIONS ACTIVITY
+## 4. KEY PRICE LEVELS ACROSS ALL EXPIRATIONS
 
-**Activity Bias:** {unusual.get('activity_bias', 'Unknown')}
-
+### Highest Call OI (Resistance Levels)
+| Strike | OI | Expiration | DTE | Distance |
+|--------|-------|------------|-----|----------|
 """
-        if unusual.get('unusual_calls'):
-            report += "### Unusual Call Activity\n"
-            report += "| Strike | Volume | OI | Vol/OI Ratio |\n"
-            report += "|--------|--------|----|--------------|\n"
-            for c in unusual['unusual_calls'][:3]:
-                report += f"| ${c['strike']:.2f} | {c['volume']:,} | {c['oi']:,} | {c['vol_oi_ratio']:.1f}x |\n"
-        else:
-            report += "*No unusual call activity detected*\n"
+        for level in all_key_levels['calls'][:5]:
+            report += f"| ${level['strike']:.2f} | {level['oi']:,} | {level['expiration']} | {level['dte']} | {level['pct_away']:+.1f}% |\n"
 
-        report += "\n"
+        report += """
+### Highest Put OI (Support Levels)
+| Strike | OI | Expiration | DTE | Distance |
+|--------|-------|------------|-----|----------|
+"""
+        for level in all_key_levels['puts'][:5]:
+            report += f"| ${level['strike']:.2f} | {level['oi']:,} | {level['expiration']} | {level['dte']} | {level['pct_away']:+.1f}% |\n"
 
-        if unusual.get('unusual_puts'):
-            report += "### Unusual Put Activity\n"
-            report += "| Strike | Volume | OI | Vol/OI Ratio |\n"
-            report += "|--------|--------|----|--------------|\n"
-            for p in unusual['unusual_puts'][:3]:
-                report += f"| ${p['strike']:.2f} | {p['volume']:,} | {p['oi']:,} | {p['vol_oi_ratio']:.1f}x |\n"
-        else:
-            report += "*No unusual put activity detected*\n"
-
-        report += f"""
+        report += """
 ---
 
-## 5. TRADING IMPLICATIONS
+## 5. TERM STRUCTURE INSIGHTS
 
-### For Stock Trading:
 """
-        # Generate trading implications
+        # Compare near-term vs longer-term positioning
+        if len(expiration_summaries) >= 2:
+            near = expiration_summaries[0]
+            far = expiration_summaries[-1]
+
+            near_sentiment = near['pc_ratio']['volume_sentiment']
+            far_sentiment = far['pc_ratio']['volume_sentiment']
+
+            report += f"**Near-term ({near['date']}):** {near_sentiment} (P/C: {near['pc_ratio']['volume_ratio']:.2f})\n"
+            report += f"**Longer-term ({far['date']}):** {far_sentiment} (P/C: {far['pc_ratio']['volume_ratio']:.2f})\n\n"
+
+            # IV term structure
+            near_iv = near['iv_metrics'].get('atm_iv', 0)
+            far_iv = far['iv_metrics'].get('atm_iv', 0)
+
+            if near_iv > far_iv * 1.1:
+                report += "**IV Term Structure:** Backwardation (near-term IV higher) - event/catalyst expected soon\n"
+            elif far_iv > near_iv * 1.1:
+                report += "**IV Term Structure:** Contango (longer-term IV higher) - uncertainty increases over time\n"
+            else:
+                report += "**IV Term Structure:** Flat - no significant term structure signal\n"
+
+            # Positioning divergence
+            near_oi_ratio = near['pc_ratio']['oi_ratio']
+            far_oi_ratio = far['pc_ratio']['oi_ratio']
+
+            if near_oi_ratio < 0.9 and far_oi_ratio > 1.1:
+                report += "**Positioning Divergence:** Near-term bullish but longer-term hedged - possible short-term rally then pullback\n"
+            elif near_oi_ratio > 1.1 and far_oi_ratio < 0.9:
+                report += "**Positioning Divergence:** Near-term bearish but longer-term bullish - possible dip then recovery\n"
+
+        report += """
+---
+
+## 6. TRADING IMPLICATIONS
+
+"""
+        # Generate comprehensive implications
         implications = []
 
-        # Sentiment-based
-        if pc_ratio['volume_ratio'] < 0.8:
-            implications.append("- **Bullish Sentiment:** Low put/call ratio suggests traders are betting on upside")
-        elif pc_ratio['volume_ratio'] > 1.2:
-            implications.append("- **Bearish Sentiment:** High put/call ratio suggests caution or hedging")
+        # Aggregate sentiment
+        if agg_volume_ratio < 0.8:
+            implications.append("- **Strong Bullish Positioning:** Aggregate P/C ratio across all expirations is very low")
+        elif agg_volume_ratio > 1.2:
+            implications.append("- **Strong Bearish/Hedging:** Aggregate P/C ratio across all expirations is elevated")
 
-        # Max pain
-        if abs(max_pain.get('distance_pct', 0)) > 2:
-            direction = "up" if max_pain.get('distance_pct', 0) > 0 else "down"
-            implications.append(f"- **Max Pain Magnet:** Price may drift {direction} toward ${max_pain.get('max_pain', 0):.2f} into expiration")
+        # Near-term max pain
+        if all_max_pains and abs(all_max_pains[0]['distance_pct']) > 2:
+            direction = "up" if all_max_pains[0]['distance_pct'] > 0 else "down"
+            implications.append(f"- **Near-term Max Pain:** Price may drift {direction} toward ${all_max_pains[0]['max_pain']:.2f} by {all_max_pains[0]['date']}")
 
-        # Key levels
-        if key_levels.get('primary_resistance'):
-            implications.append(f"- **Resistance Watch:** Heavy call OI at ${key_levels['primary_resistance']['strike']:.2f} may cap upside")
-        if key_levels.get('primary_support'):
-            implications.append(f"- **Support Watch:** Heavy put OI at ${key_levels['primary_support']['strike']:.2f} may provide floor")
+        # Key resistance/support
+        if all_key_levels['calls']:
+            top_resistance = all_key_levels['calls'][0]
+            implications.append(f"- **Key Resistance:** Highest call OI at ${top_resistance['strike']:.2f} ({top_resistance['oi']:,} contracts)")
+        if all_key_levels['puts']:
+            top_support = all_key_levels['puts'][0]
+            implications.append(f"- **Key Support:** Highest put OI at ${top_support['strike']:.2f} ({top_support['oi']:,} contracts)")
 
-        # Volatility
-        if iv_metrics.get('atm_iv', 0) > 40:
-            implications.append("- **High IV Environment:** Large move expected - consider waiting for direction clarity")
-        elif iv_metrics.get('atm_iv', 0) < 20:
-            implications.append("- **Low IV Environment:** Quiet period expected - breakout may be coming")
-
-        # Unusual activity
-        if unusual.get('has_unusual_activity'):
-            implications.append(f"- **Smart Money Alert:** {unusual.get('activity_bias', 'Unusual activity detected')}")
+        # Unusual activity across expirations
+        unusual_exps = [s for s in expiration_summaries if s['unusual'].get('has_unusual_activity')]
+        if unusual_exps:
+            exp_list = ', '.join([f"{s['date']}" for s in unusual_exps])
+            implications.append(f"- **Unusual Activity Alert:** Detected in expirations: {exp_list}")
 
         if implications:
             report += "\n".join(implications)

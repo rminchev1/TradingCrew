@@ -179,16 +179,16 @@ def get_earnings_calendar_data(
     ticker: str,
     start_date: str,
     end_date: str,
-    lookback_days: int = 90
+    lookback_days: int = 365
 ) -> str:
     """
     Get comprehensive earnings calendar data for stocks or crypto events
-    
+
     Args:
         ticker: Stock or crypto ticker symbol
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format
-        lookback_days: How many days to look back for historical data
+        lookback_days: How many days to look back for historical data (default 365 = 12 months)
         
     Returns:
         Formatted string with earnings/events data

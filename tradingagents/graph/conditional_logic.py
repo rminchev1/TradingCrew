@@ -59,6 +59,14 @@ class ConditionalLogic:
             return "tools_options"
         return "Msg Clear Options"
 
+    def should_continue_sector(self, state: AgentState):
+        """Determine if sector/correlation analysis should continue."""
+        messages = state["messages"]
+        last_message = messages[-1]
+        if last_message.tool_calls:
+            return "tools_sector"
+        return "Msg Clear Sector"
+
     def should_continue_debate(self, state: AgentState) -> str:
         """Determine if debate should continue."""
 

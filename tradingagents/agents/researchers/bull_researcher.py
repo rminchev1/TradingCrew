@@ -24,8 +24,9 @@ def create_bull_researcher(llm, memory):
         fundamentals_report = state.get("fundamentals_report", "")
         macro_report = state.get("macro_report", "")
         options_report = state.get("options_report", "")
+        sector_report = state.get("sector_correlation_report", "")
 
-        curr_situation = f"{macro_report}\n\n{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{options_report}"
+        curr_situation = f"{macro_report}\n\n{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{options_report}\n\n{sector_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
 
         past_memory_str = ""
@@ -47,6 +48,7 @@ Social media sentiment report: {sentiment_report}
 Latest world affairs news: {news_report}
 Company fundamentals report: {fundamentals_report}
 Options market positioning report: {options_report}
+Sector correlation report: {sector_report}
 Conversation history of the debate: {history}
 Last bear argument: {current_response}
 Reflections from similar situations and lessons learned: {past_memory_str}
