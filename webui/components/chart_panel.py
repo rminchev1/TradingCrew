@@ -8,6 +8,21 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 
 
+def _get_initial_chart_options():
+    """Get initial dropdown options from watchlist for immediate display on app start."""
+    try:
+        from webui.utils.local_storage import get_watchlist
+        from webui.utils.state import app_state
+        watchlist = get_watchlist()
+        symbols = watchlist.get("symbols", [])
+        if symbols:
+            app_state.portfolio_symbols = symbols
+            return [{"label": s, "value": str(i + 1)} for i, s in enumerate(symbols)], "1"
+    except Exception:
+        pass
+    return [], None
+
+
 def create_timeframe_buttons():
     """Create the timeframe selection buttons - 1H, 4H, 1D only"""
     return dbc.ButtonGroup([
@@ -47,6 +62,9 @@ def create_indicator_checklist():
 
 def create_chart_panel():
     """Create the chart panel for the web UI with symbol dropdown and technical indicators."""
+    # Initialize dropdown with watchlist symbols for immediate display
+    initial_options, initial_value = _get_initial_chart_options()
+
     return dbc.Card(
         dbc.CardBody([
             # Symbol select, timeframe, indicators, and controls — single compact row
@@ -54,7 +72,8 @@ def create_chart_panel():
                 dbc.Col([
                     dbc.Select(
                         id="chart-symbol-select",
-                        options=[],
+                        options=initial_options,
+                        value=initial_value,
                         placeholder="Select symbol...",
                         size="sm",
                         className="symbol-select"

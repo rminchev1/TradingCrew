@@ -39,13 +39,24 @@ class TestChartSymbolSelect:
         assert select is not None
         assert isinstance(select, dbc.Select)
 
-    def test_chart_symbol_select_initial_options_empty(self):
-        """Chart symbol select should start with empty options."""
-        from webui.components.chart_panel import create_chart_panel
+    @patch("webui.utils.local_storage.get_watchlist")
+    def test_chart_symbol_select_empty_when_no_watchlist(self, mock_watchlist):
+        """Chart symbol select should be empty when watchlist is empty."""
+        mock_watchlist.return_value = {"symbols": []}
+        from webui.components.chart_panel import _get_initial_chart_options
+        options, value = _get_initial_chart_options()
+        assert options == []
+        assert value is None
 
-        panel = create_chart_panel()
-        select = _find_component_by_id(panel, "chart-symbol-select")
-        assert select.options == []
+    @patch("webui.utils.local_storage.get_watchlist")
+    def test_chart_symbol_select_initializes_from_watchlist(self, mock_watchlist):
+        """Chart symbol select should initialize with watchlist symbols."""
+        mock_watchlist.return_value = {"symbols": ["AAPL", "NVDA", "TSLA"]}
+        from webui.components.chart_panel import _get_initial_chart_options
+        options, value = _get_initial_chart_options()
+        assert len(options) == 3
+        assert options[0] == {"label": "AAPL", "value": "1"}
+        assert value == "1"
 
     def test_chart_symbol_select_has_placeholder(self):
         """Chart symbol select should have a placeholder."""
