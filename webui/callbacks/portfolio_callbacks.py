@@ -3,7 +3,7 @@ webui/callbacks/portfolio_callbacks.py
 Callback to refresh the Portfolio Overview panel on the slow refresh interval.
 """
 
-from dash import Input, Output
+from dash import Input, Output, callback_context
 from webui.utils.state import app_state
 
 
@@ -17,10 +17,13 @@ def register_portfolio_callbacks(app):
             Output("portfolio-sector-chart", "children"),
             Output("portfolio-config-summary", "children"),
         ],
-        [Input("slow-refresh-interval", "n_intervals")],
+        [
+            Input("slow-refresh-interval", "n_intervals"),
+            Input("system-settings-store", "data"),
+        ],
         prevent_initial_call=False,
     )
-    def update_portfolio_panel(n_intervals):
+    def update_portfolio_panel(n_intervals, settings_store_data):
         """Refresh all 4 sections of the portfolio overview panel."""
         from webui.components.portfolio_panel import (
             _is_alpaca_configured,
@@ -40,8 +43,14 @@ def register_portfolio_callbacks(app):
             not_configured = _render_not_configured_message()
             return not_configured, not_configured, not_configured, config_section
 
-        # Try cached context first, fallback to building fresh
-        ctx = getattr(app_state, "_current_portfolio_context", None)
+        # If triggered by a settings change, bypass cached context so new
+        # risk limits are reflected immediately.
+        triggered = callback_context.triggered_id
+        use_cache = triggered != "system-settings-store"
+
+        ctx = None
+        if use_cache:
+            ctx = getattr(app_state, "_current_portfolio_context", None)
         if ctx is None:
             try:
                 from tradingagents.dataflows.portfolio_risk import build_portfolio_context
