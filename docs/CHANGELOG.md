@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Pipeline Stop Responsiveness**: Stop signal now interrupts stagger delays (1-30s) between ticker submissions
+  - Added `interruptible_sleep()` method that checks stop event every 0.1s
+  - Applies to single run, loop mode, and market hour modes
+- **Analysis Timeout Protection**: Added 10-minute timeout to ThreadPoolExecutor futures to prevent infinite hangs
+- **Thread Start Safety**: Analysis thread startup now handles exceptions and resets `analysis_running` flag
+- **Error State Tracking**: Added `has_error` and `error_message` fields to symbol state
+  - Distinguishes successful completion from error completion
+  - Prevents auto-trading on incomplete analysis
+- **Double Reset Bug**: Fixed redundant `reset_for_loop()` calls in market hour mode
+- **Memory Leak Prevention**: Ensured `tool_calls_log` and `llm_calls_log` are cleared in reset methods
+- **Missing Initial State Field**: Added `options_report` to graph propagator initial state
+
+### Changed
+- **State Initialization**: Removed duplicate variable initializations in AppState (loop/market_hour/trade fields)
+
 ---
 
 ## [0.4.1] - 2025-02-15

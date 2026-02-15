@@ -801,19 +801,11 @@ def register_control_callbacks(app):
                         # Track this run
                         last_run_time = (next_dt.date(), next_time[0], next_time[1])
 
-                        # Reset states for new analysis
-                        app_state.reset_for_loop()
-
-                        # Initialize symbol states
-                        for symbol in symbols:
-                            app_state.init_symbol_state(symbol)
-
+                    # Reset states for new analysis (only once, outside the conditional blocks)
                     h, m = next_time
                     print(f"[MARKET_HOUR] Market is open, starting analysis at {h}:{m:02d}")
-                    
-                    # Reset states for new analysis
                     app_state.reset_for_loop()
-                    
+
                     # Initialize symbol states
                     for symbol in symbols:
                         app_state.init_symbol_state(symbol)
@@ -849,18 +841,22 @@ def register_control_callbacks(app):
                             if i < len(symbols) - 1:
                                 stagger_delay = random.uniform(1, 30)
                                 print(f"[MARKET_HOUR] Stagger delay before next symbol: {stagger_delay:.1f}s")
-                                time.sleep(stagger_delay)
+                                if not app_state.interruptible_sleep(stagger_delay):
+                                    print("[MARKET_HOUR] Stagger interrupted by stop signal")
+                                    break
 
                         for future in as_completed(futures):
                             if app_state.stop_market_hour:
                                 break
                             symbol = futures[future]
                             try:
-                                sym, success, error = future.result()
+                                sym, success, error = future.result(timeout=600)  # 10 min max
                                 if success:
                                     print(f"[MARKET_HOUR] {sym} analysis completed")
                                 else:
                                     print(f"[MARKET_HOUR] {sym} analysis failed: {error}")
+                            except TimeoutError:
+                                print(f"[MARKET_HOUR] {symbol} timed out after 10 minutes")
                             except Exception as e:
                                 print(f"[MARKET_HOUR] {symbol} raised exception: {e}")
 
@@ -928,18 +924,22 @@ def register_control_callbacks(app):
                             if i < len(symbols) - 1:
                                 stagger_delay = random.uniform(1, 30)
                                 print(f"[LOOP] Stagger delay before next symbol: {stagger_delay:.1f}s")
-                                time.sleep(stagger_delay)
+                                if not app_state.interruptible_sleep(stagger_delay):
+                                    print("[LOOP] Stagger interrupted by stop signal")
+                                    break
 
                         for future in as_completed(futures):
                             if app_state.stop_loop:
                                 break
                             symbol = futures[future]
                             try:
-                                sym, success, error = future.result()
+                                sym, success, error = future.result(timeout=600)  # 10 min max
                                 if success:
                                     print(f"[LOOP] {sym} analysis completed")
                                 else:
                                     print(f"[LOOP] {sym} analysis failed: {error}")
+                            except TimeoutError:
+                                print(f"[LOOP] {symbol} timed out after 10 minutes")
                             except Exception as e:
                                 print(f"[LOOP] {symbol} raised exception: {e}")
 
@@ -1024,7 +1024,9 @@ def register_control_callbacks(app):
                         if i < len(symbols) - 1:
                             stagger_delay = random.uniform(1, 30)
                             print(f"[PARALLEL] Stagger delay before next symbol: {stagger_delay:.1f}s")
-                            time.sleep(stagger_delay)
+                            if not app_state.interruptible_sleep(stagger_delay):
+                                print("[PARALLEL] Stagger interrupted by stop signal")
+                                break
                     print(f"[PARALLEL] All {len(futures)} futures submitted: {list(futures.values())}")
 
                     completed_count = 0
@@ -1035,13 +1037,16 @@ def register_control_callbacks(app):
                         symbol = futures[future]
                         print(f"[PARALLEL] Future completed ({completed_count}/{len(futures)}): {symbol}")
                         try:
-                            sym, success, error = future.result()
+                            sym, success, error = future.result(timeout=600)  # 10 min max
                             if success:
                                 print(f"[PARALLEL] {sym} analysis completed successfully")
                                 succeeded.append(sym)
                             else:
                                 print(f"[PARALLEL] {sym} analysis failed: {error}")
                                 failed.append((sym, error))
+                        except TimeoutError:
+                            print(f"[PARALLEL] {symbol} timed out after 10 minutes")
+                            failed.append((symbol, "Analysis timed out after 10 minutes"))
                         except Exception as e:
                             print(f"[PARALLEL] {symbol} analysis raised exception: {e}")
                             failed.append((symbol, str(e)))
@@ -1066,19 +1071,25 @@ def register_control_callbacks(app):
                         for i, sym in enumerate(retry_symbols):
                             retry_futures[retry_executor.submit(analyze_single_ticker, sym)] = sym
                             if i < len(retry_symbols) - 1:
-                                time.sleep(random.uniform(1, 10))
+                                stagger = random.uniform(1, 10)
+                                if not app_state.interruptible_sleep(stagger):
+                                    print("[RETRY] Stagger interrupted by stop signal")
+                                    break
                         for future in as_completed(retry_futures):
                             if app_state._stop_event.is_set():
                                 break
                             sym = retry_futures[future]
                             try:
-                                s, success, error = future.result()
+                                s, success, error = future.result(timeout=600)  # 10 min max
                                 if success:
                                     print(f"[RETRY] {s} succeeded on retry")
                                     succeeded.append(s)
                                 else:
                                     print(f"[RETRY] {s} failed again: {error}")
                                     failed.append((s, error))
+                            except TimeoutError:
+                                print(f"[RETRY] {sym} timed out on retry")
+                                failed.append((sym, "Retry timed out"))
                             except Exception as e:
                                 print(f"[RETRY] {sym} raised exception on retry: {e}")
                                 failed.append((sym, str(e)))
@@ -1120,8 +1131,14 @@ def register_control_callbacks(app):
 
         if not app_state.analysis_running:
             app_state.analysis_running = True
-            thread = threading.Thread(target=safe_analysis_thread)
-            thread.start()
+            thread = threading.Thread(target=safe_analysis_thread, daemon=True)
+            try:
+                thread.start()
+            except Exception as e:
+                # If thread fails to start, reset the flag
+                app_state.analysis_running = False
+                print(f"[THREAD] Failed to start analysis thread: {e}")
+                return f"Error: Failed to start analysis thread: {e}", {}, 1, 1, 1, 1
         
         if market_hour_enabled:
             mode_text = "market hour mode"

@@ -241,7 +241,7 @@ Pipeline execution can be paused, resumed, and stopped using `threading.Event` p
 - **`_pause_event`**: When cleared, `check_pipeline_interrupt()` blocks the calling thread. When set, execution continues.
 - **`_stop_event`**: When set, all threads exit at the next checkpoint.
 - **Checkpoints**: Inserted in the `graph.stream()` loop in `webui/components/analysis.py`. Each LangGraph node completion yields a chunk, providing a natural breakpoint.
-- **Methods**: `pause_pipeline()`, `resume_pipeline()`, `stop_pipeline()`, `reset_pipeline_controls()`, `check_pipeline_interrupt(symbol)`
+- **Methods**: `pause_pipeline()`, `resume_pipeline()`, `stop_pipeline()`, `reset_pipeline_controls()`, `check_pipeline_interrupt(symbol)`, `interruptible_sleep(seconds)`
 
 ```
 UI States:  Idle → [Start] → Running → [Pause] → Paused → [Resume] → Running
@@ -250,6 +250,12 @@ UI States:  Idle → [Start] → Running → [Pause] → Paused → [Resume] →
                                   ↓                           ↓
                                 Idle                        Idle
 ```
+
+**Robustness Features:**
+- **Interruptible Sleep**: Use `app_state.interruptible_sleep(seconds)` instead of `time.sleep()` for delays that should respond to stop signals (e.g., stagger delays between ticker submissions). Returns `False` if interrupted.
+- **Future Timeouts**: All `ThreadPoolExecutor` futures use 10-minute timeouts (`future.result(timeout=600)`) to prevent infinite hangs.
+- **Error State Tracking**: Symbol states include `has_error` and `error_message` fields to distinguish successful completion from error completion.
+- **Thread Start Safety**: Analysis thread startup is wrapped in try/except to reset `analysis_running` if `thread.start()` fails.
 
 ### Symbol Selection (Dropdown Pattern)
 Both the **Chart** and **Reports** panels use `dbc.Select` dropdowns for symbol selection (not button grids). They sync via hidden `dbc.Pagination` components.

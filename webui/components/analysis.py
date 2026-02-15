@@ -351,8 +351,11 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         traceback.print_exc()
         # Store error in state so UI can display it
         if current_state:
-            current_state["current_reports"]["error"] = f"Analysis failed: {type(e).__name__}: {str(e)}"
+            error_msg = f"Analysis failed: {type(e).__name__}: {str(e)}"
+            current_state["current_reports"]["error"] = error_msg
             current_state["analysis_complete"] = True  # Mark complete so UI updates
+            current_state["has_error"] = True  # Distinguish error from success
+            current_state["error_message"] = error_msg
             # Mark all non-completed agents as "error" so the UI shows failure
             for agent, status in current_state["agent_statuses"].items():
                 if status != "completed":

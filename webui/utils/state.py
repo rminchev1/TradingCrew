@@ -57,20 +57,21 @@ class AppState:
         self.loop_thread = None
         self.stop_loop = False
         self.next_loop_run_time = None  # datetime when next loop iteration will run (EST/EDT)
-        
-        # Market hour configuration  
+
+        # Market hour configuration
         self.market_hour_enabled = False
         self.market_hour_symbols = []
         self.market_hour_config = {}
-        self.market_hours = []
+        self.market_hours = []  # List of (hour, minute) tuples to trade
         self.market_hour_thread = None
         self.stop_market_hour = False
-        
+
         # Trading configuration
         self.trade_enabled = False
         self.trade_amount = 1000
         self.trade_occurred = False
-        
+
+        # Legacy state fields (kept for backward compatibility)
         self.refresh_interval = 1.0  # seconds
         self.analysis_complete = False
         self.analysis_results = None
@@ -78,7 +79,6 @@ class AppState:
         self.chart_data = None
         self.chart_period = "1y"  # Default chart period
         self.session_id = None
-        self.session_start_time = None
         self.report_timestamps = {}  # Track when each report was last updated
         self.agent_statuses = {}
         self.current_reports = {}
@@ -86,21 +86,6 @@ class AppState:
         self.recommended_action = None
         self.last_trade_time = None
         self.alpaca_refresh_needed = False
-        self.loop_enabled = False
-        self.loop_interval_minutes = 60
-        self.loop_symbols = []  # Store original symbols list for looping
-        self.loop_config = {}  # Store analysis configuration for looping
-        self.loop_thread = None
-        self.stop_loop = False  # Flag to stop the loop
-        self.market_hour_enabled = False
-        self.market_hours = []  # List of hours to trade (e.g., [10, 15] for 10AM and 3PM)
-        self.market_hour_symbols = []  # Store original symbols list for market hour trading
-        self.market_hour_config = {}  # Store analysis configuration for market hour trading
-        self.market_hour_thread = None
-        self.stop_market_hour = False  # Flag to stop market hour scheduling
-        self.trade_enabled = False
-        self.trade_amount = 1000
-        self.trade_occurred = False
 
         # Pipeline control (pause/resume/stop)
         self._pause_event = threading.Event()
@@ -314,7 +299,10 @@ class AppState:
             },
             "investment_debate_state": None,
             "analysis_complete": False,
+            "analysis_running": False,
             "analysis_results": None,
+            "has_error": False,  # Distinguish error completion from success
+            "error_message": None,  # Store error details
             "ticker_symbol": symbol,
             "chart_data": None,
             "chart_period": "1y",  # Default chart period
@@ -568,6 +556,8 @@ class AppState:
             state.update({
                 "analysis_running": False,
                 "analysis_complete": False,
+                "has_error": False,
+                "error_message": None,
                 "current_reports": {
                     "market_report": None,
                     "options_report": None,
@@ -716,6 +706,21 @@ class AppState:
         self.pipeline_paused = False
         self.pipeline_stopped = False
         self.paused_symbols = set()
+
+    def interruptible_sleep(self, seconds):
+        """Sleep for the given duration but check stop_event every 0.1s.
+
+        Returns:
+            bool: True if sleep completed normally, False if interrupted by stop.
+        """
+        import time
+        elapsed = 0.0
+        while elapsed < seconds:
+            if self._stop_event.is_set():
+                return False
+            time.sleep(min(0.1, seconds - elapsed))
+            elapsed += 0.1
+        return True
 
     def check_pipeline_interrupt(self, symbol=None):
         """Check pause/stop flags at a breakpoint. Call between graph stream chunks.
