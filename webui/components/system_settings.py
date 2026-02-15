@@ -668,6 +668,7 @@ def create_dashboard_panels_section():
     """Create the Dashboard Panels visibility section."""
     panels = [
         ("show-panel-account-bar", "Account Summary Bar", "Top-level account overview"),
+        ("show-panel-portfolio", "Portfolio Overview", "Portfolio metrics & risk utilization"),
         ("show-panel-scanner", "Market Scanner", "Scan for trading opportunities"),
         ("show-panel-watchlist", "Watchlist & Portfolio", "Symbol tracking and run queue"),
         ("show-panel-chart", "Price Chart & Progress", "Chart and agent progress"),

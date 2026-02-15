@@ -207,10 +207,11 @@ Dashboard panels can be hidden/shown from the Settings page. Hidden panels are *
 2. `panel_visibility_callbacks.py` has a single callback that reads `system-settings-store` and populates each wrapper with the panel content (via `_build_*()` functions) or `[]` (empty) if hidden
 3. `suppress_callback_exceptions=True` (set in `webui/config/constants.py`) allows callbacks targeting IDs inside hidden panels to silently fail
 
-**9 togglable panels** (setting key → wrapper ID):
+**10 togglable panels** (setting key → wrapper ID):
 | Setting Key | Wrapper ID | Builder Function |
 |---|---|---|
 | `show_panel_account_bar` | `panel-wrapper-account-bar` | `_build_account_bar()` |
+| `show_panel_portfolio` | `panel-wrapper-portfolio` | `_build_portfolio_section()` |
 | `show_panel_scanner` | `panel-wrapper-scanner` | `_build_scanner_section()` |
 | `show_panel_watchlist` | `panel-wrapper-watchlist` | `_build_watchlist_section()` |
 | `show_panel_chart` | `panel-wrapper-main-trading-row` | `_build_main_trading_row()` |
@@ -815,6 +816,8 @@ app_state.tool_calls_log.append(tool_call_info)
 | `tradingagents/dataflows/sector_utils.py` | Sector mapping & ETF lookups | `identify_sector()`, `SECTOR_ETFS` |
 | `tradingagents/dataflows/reddit_live.py` | Live Reddit API | `RedditLiveClient`, `fetch_live_company_news()` |
 | `tradingagents/dataflows/portfolio_risk.py` | Pre-execution risk guardrails | `build_portfolio_context()`, `validate_trade()`, `format_portfolio_context_for_prompt()` |
+| `webui/components/portfolio_panel.py` | Portfolio Overview panel UI | `create_portfolio_panel()`, `render_portfolio_metrics()`, `render_risk_utilization()`, `render_sector_exposure()`, `render_config_summary()` |
+| `webui/callbacks/portfolio_callbacks.py` | Portfolio panel refresh | `register_portfolio_callbacks()`, `update_portfolio_panel()` |
 | `tradingagents/agents/utils/agent_utils.py` | Tool tracking & timing | `timing_wrapper()`, `_get_current_symbol()` |
 | `tradingagents/default_config.py` | Config defaults | `DEFAULT_CONFIG` dict |
 | `webui/app_dash.py` | App factory | `create_app()`, `run_app()` |

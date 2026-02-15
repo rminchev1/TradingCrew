@@ -123,6 +123,7 @@ def register_system_settings_callbacks(app):
             Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
             # Dashboard Panel Visibility
             Output("setting-show-panel-account-bar", "value", allow_duplicate=True),
+            Output("setting-show-panel-portfolio", "value", allow_duplicate=True),
             Output("setting-show-panel-scanner", "value", allow_duplicate=True),
             Output("setting-show-panel-watchlist", "value", allow_duplicate=True),
             Output("setting-show-panel-chart", "value", allow_duplicate=True),
@@ -206,6 +207,7 @@ def register_system_settings_callbacks(app):
             settings.get("take_profit_use_ai", True),
             # Dashboard Panel Visibility
             settings.get("show_panel_account_bar", True),
+            settings.get("show_panel_portfolio", True),
             settings.get("show_panel_scanner", True),
             settings.get("show_panel_watchlist", True),
             settings.get("show_panel_chart", True),
@@ -276,6 +278,7 @@ def register_system_settings_callbacks(app):
             State("setting-take-profit-use-ai", "value"),
             # Dashboard Panel Visibility
             State("setting-show-panel-account-bar", "value"),
+            State("setting-show-panel-portfolio", "value"),
             State("setting-show-panel-scanner", "value"),
             State("setting-show-panel-watchlist", "value"),
             State("setting-show-panel-chart", "value"),
@@ -301,7 +304,7 @@ def register_system_settings_callbacks(app):
         risk_guardrails_enabled, risk_max_per_trade_pct, risk_max_single_position_pct, risk_max_total_exposure_pct,
         enable_stop_loss, stop_loss_percentage, stop_loss_use_ai,
         enable_take_profit, take_profit_percentage, take_profit_use_ai,
-        show_account_bar, show_scanner, show_watchlist, show_chart, show_trading,
+        show_account_bar, show_portfolio, show_scanner, show_watchlist, show_chart, show_trading,
         show_positions, show_options, show_reports, show_logs,
         current_store
     ):
@@ -358,6 +361,7 @@ def register_system_settings_callbacks(app):
             "take_profit_use_ai": take_profit_use_ai,
             # Dashboard Panel Visibility
             "show_panel_account_bar": show_account_bar,
+            "show_panel_portfolio": show_portfolio,
             "show_panel_scanner": show_scanner,
             "show_panel_watchlist": show_watchlist,
             "show_panel_chart": show_chart,
@@ -442,6 +446,7 @@ def register_system_settings_callbacks(app):
             Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
             # Dashboard Panel Visibility
             Output("setting-show-panel-account-bar", "value", allow_duplicate=True),
+            Output("setting-show-panel-portfolio", "value", allow_duplicate=True),
             Output("setting-show-panel-scanner", "value", allow_duplicate=True),
             Output("setting-show-panel-watchlist", "value", allow_duplicate=True),
             Output("setting-show-panel-chart", "value", allow_duplicate=True),
@@ -513,6 +518,7 @@ def register_system_settings_callbacks(app):
             defaults.get("take_profit_use_ai", True),
             # Dashboard Panel Visibility
             defaults.get("show_panel_account_bar", True),
+            defaults.get("show_panel_portfolio", True),
             defaults.get("show_panel_scanner", True),
             defaults.get("show_panel_watchlist", True),
             defaults.get("show_panel_chart", True),
@@ -593,6 +599,7 @@ def register_system_settings_callbacks(app):
             Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
             # Dashboard Panel Visibility
             Output("setting-show-panel-account-bar", "value", allow_duplicate=True),
+            Output("setting-show-panel-portfolio", "value", allow_duplicate=True),
             Output("setting-show-panel-scanner", "value", allow_duplicate=True),
             Output("setting-show-panel-watchlist", "value", allow_duplicate=True),
             Output("setting-show-panel-chart", "value", allow_duplicate=True),
@@ -661,6 +668,7 @@ def register_system_settings_callbacks(app):
                 imported.get("take_profit_use_ai", True),
                 # Dashboard Panel Visibility
                 imported.get("show_panel_account_bar", True),
+                imported.get("show_panel_portfolio", True),
                 imported.get("show_panel_scanner", True),
                 imported.get("show_panel_watchlist", True),
                 imported.get("show_panel_chart", True),
@@ -684,9 +692,9 @@ def register_system_settings_callbacks(app):
                 no_update, no_update, no_update, no_update,
                 # SL/TP (6 no_update)
                 no_update, no_update, no_update, no_update, no_update, no_update,
-                # Dashboard Panel Visibility (9 no_update)
+                # Dashboard Panel Visibility (10 no_update)
                 no_update, no_update, no_update, no_update, no_update,
-                no_update, no_update, no_update, no_update,
+                no_update, no_update, no_update, no_update, no_update,
                 True,
                 f"Error importing settings: {str(e)}",
                 "danger",

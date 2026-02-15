@@ -162,6 +162,7 @@ class AppState:
             "show_panel_trading": True,
             "show_panel_positions": True,
             "show_panel_options": True,
+            "show_panel_portfolio": True,
             "show_panel_reports": True,
             "show_panel_logs": True,
         }

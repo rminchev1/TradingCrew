@@ -19,11 +19,13 @@ from .history_callbacks import register_history_callbacks
 from .log_callbacks import register_log_callbacks
 from .system_settings_callbacks import register_system_settings_callbacks
 from .panel_visibility_callbacks import register_panel_visibility_callbacks
+from .portfolio_callbacks import register_portfolio_callbacks
 
 
 def register_all_callbacks(app):
     """Register all callback functions with the Dash app"""
     register_panel_visibility_callbacks(app)
+    register_portfolio_callbacks(app)
     register_status_callbacks(app)
     register_chart_callbacks(app)
     register_report_callbacks(app)

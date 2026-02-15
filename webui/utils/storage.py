@@ -86,6 +86,7 @@ DEFAULT_SYSTEM_SETTINGS = {
     "show_panel_trading": True,
     "show_panel_positions": True,
     "show_panel_options": True,
+    "show_panel_portfolio": True,
     "show_panel_reports": True,
     "show_panel_logs": True,
 }
@@ -149,6 +150,7 @@ def export_settings(settings: dict) -> str:
         "show_panel_trading",
         "show_panel_positions",
         "show_panel_options",
+        "show_panel_portfolio",
         "show_panel_reports",
         "show_panel_logs",
     ]
