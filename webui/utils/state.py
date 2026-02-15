@@ -142,6 +142,11 @@ class AppState:
             "options_min_delta": 0.20,
             "options_max_delta": 0.70,
             "options_min_open_interest": 100,
+            # Risk Guardrails (pre-execution validation)
+            "risk_guardrails_enabled": False,
+            "risk_max_per_trade_pct": 3.0,
+            "risk_max_single_position_pct": 8.0,
+            "risk_max_total_exposure_pct": 15.0,
             # Stop-Loss and Take-Profit Settings
             "enable_stop_loss": False,
             "stop_loss_percentage": 5.0,

@@ -109,6 +109,11 @@ def register_system_settings_callbacks(app):
             Output("setting-options-min-delta", "value", allow_duplicate=True),
             Output("setting-options-max-delta", "value", allow_duplicate=True),
             Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Risk Guardrails
+            Output("setting-risk-guardrails-enabled", "value", allow_duplicate=True),
+            Output("setting-risk-max-per-trade-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-single-position-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-total-exposure-pct", "value", allow_duplicate=True),
             # Stop-Loss and Take-Profit settings
             Output("setting-enable-stop-loss", "value", allow_duplicate=True),
             Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
@@ -187,6 +192,11 @@ def register_system_settings_callbacks(app):
             settings.get("options_min_delta", 0.20),
             settings.get("options_max_delta", 0.70),
             settings.get("options_min_open_interest", 100),
+            # Risk Guardrails
+            settings.get("risk_guardrails_enabled", False),
+            settings.get("risk_max_per_trade_pct", 3.0),
+            settings.get("risk_max_single_position_pct", 8.0),
+            settings.get("risk_max_total_exposure_pct", 15.0),
             # Stop-Loss and Take-Profit settings
             settings.get("enable_stop_loss", False),
             settings.get("stop_loss_percentage", 5.0),
@@ -252,6 +262,11 @@ def register_system_settings_callbacks(app):
             State("setting-options-min-delta", "value"),
             State("setting-options-max-delta", "value"),
             State("setting-options-min-open-interest", "value"),
+            # Risk Guardrails
+            State("setting-risk-guardrails-enabled", "value"),
+            State("setting-risk-max-per-trade-pct", "value"),
+            State("setting-risk-max-single-position-pct", "value"),
+            State("setting-risk-max-total-exposure-pct", "value"),
             # Stop-Loss and Take-Profit settings
             State("setting-enable-stop-loss", "value"),
             State("setting-stop-loss-percentage", "value"),
@@ -283,6 +298,7 @@ def register_system_settings_callbacks(app):
         scanner_results, scanner_llm, scanner_options, scanner_cache, scanner_dynamic,
         enable_options_trading, options_trading_level, options_max_contracts, options_max_position_value,
         options_min_dte, options_max_dte, options_min_delta, options_max_delta, options_min_open_interest,
+        risk_guardrails_enabled, risk_max_per_trade_pct, risk_max_single_position_pct, risk_max_total_exposure_pct,
         enable_stop_loss, stop_loss_percentage, stop_loss_use_ai,
         enable_take_profit, take_profit_percentage, take_profit_use_ai,
         show_account_bar, show_scanner, show_watchlist, show_chart, show_trading,
@@ -328,6 +344,11 @@ def register_system_settings_callbacks(app):
             "options_min_delta": options_min_delta,
             "options_max_delta": options_max_delta,
             "options_min_open_interest": options_min_open_interest,
+            # Risk Guardrails
+            "risk_guardrails_enabled": risk_guardrails_enabled,
+            "risk_max_per_trade_pct": risk_max_per_trade_pct,
+            "risk_max_single_position_pct": risk_max_single_position_pct,
+            "risk_max_total_exposure_pct": risk_max_total_exposure_pct,
             # Stop-Loss and Take-Profit settings
             "enable_stop_loss": enable_stop_loss,
             "stop_loss_percentage": stop_loss_percentage,
@@ -407,6 +428,11 @@ def register_system_settings_callbacks(app):
             Output("setting-options-min-delta", "value", allow_duplicate=True),
             Output("setting-options-max-delta", "value", allow_duplicate=True),
             Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Risk Guardrails
+            Output("setting-risk-guardrails-enabled", "value", allow_duplicate=True),
+            Output("setting-risk-max-per-trade-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-single-position-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-total-exposure-pct", "value", allow_duplicate=True),
             # Stop-Loss and Take-Profit settings
             Output("setting-enable-stop-loss", "value", allow_duplicate=True),
             Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
@@ -473,6 +499,11 @@ def register_system_settings_callbacks(app):
             defaults.get("options_min_delta", 0.20),
             defaults.get("options_max_delta", 0.70),
             defaults.get("options_min_open_interest", 100),
+            # Risk Guardrails
+            defaults.get("risk_guardrails_enabled", False),
+            defaults.get("risk_max_per_trade_pct", 3.0),
+            defaults.get("risk_max_single_position_pct", 8.0),
+            defaults.get("risk_max_total_exposure_pct", 15.0),
             # Stop-Loss and Take-Profit settings
             defaults.get("enable_stop_loss", False),
             defaults.get("stop_loss_percentage", 5.0),
@@ -548,6 +579,11 @@ def register_system_settings_callbacks(app):
             Output("setting-options-min-delta", "value", allow_duplicate=True),
             Output("setting-options-max-delta", "value", allow_duplicate=True),
             Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Risk Guardrails
+            Output("setting-risk-guardrails-enabled", "value", allow_duplicate=True),
+            Output("setting-risk-max-per-trade-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-single-position-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-total-exposure-pct", "value", allow_duplicate=True),
             # Stop-Loss and Take-Profit settings
             Output("setting-enable-stop-loss", "value", allow_duplicate=True),
             Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
@@ -611,6 +647,11 @@ def register_system_settings_callbacks(app):
                 imported.get("options_min_delta", 0.20),
                 imported.get("options_max_delta", 0.70),
                 imported.get("options_min_open_interest", 100),
+                # Risk Guardrails
+                imported.get("risk_guardrails_enabled", False),
+                imported.get("risk_max_per_trade_pct", 3.0),
+                imported.get("risk_max_single_position_pct", 8.0),
+                imported.get("risk_max_total_exposure_pct", 15.0),
                 # Stop-Loss and Take-Profit settings
                 imported.get("enable_stop_loss", False),
                 imported.get("stop_loss_percentage", 5.0),
@@ -638,8 +679,11 @@ def register_system_settings_callbacks(app):
                 no_update, no_update, no_update, no_update, no_update, no_update,
                 no_update, no_update, no_update, no_update, no_update, no_update,
                 no_update, no_update, no_update, no_update, no_update, no_update,
-                no_update, no_update, no_update, no_update, no_update, no_update,
+                no_update, no_update, no_update,
+                # Risk Guardrails (4 no_update)
                 no_update, no_update, no_update, no_update,
+                # SL/TP (6 no_update)
+                no_update, no_update, no_update, no_update, no_update, no_update,
                 # Dashboard Panel Visibility (9 no_update)
                 no_update, no_update, no_update, no_update, no_update,
                 no_update, no_update, no_update, no_update,

@@ -415,6 +415,109 @@ def create_scanner_section():
     ])
 
 
+def create_risk_guardrails_section():
+    """Create the Risk Guardrails (pre-execution validation) section."""
+    return html.Div([
+        html.Div([
+            html.Small(
+                "Hard limits enforced before any order is sent to the broker. "
+                "Trades that exceed limits are automatically resized or rejected.",
+                className="text-muted d-block mb-3"
+            ),
+        ]),
+
+        # Enable Guardrails Toggle
+        dbc.Row([
+            dbc.Col(dbc.Label("Enable Guardrails", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Switch(
+                    id="setting-risk-guardrails-enabled",
+                    value=False,
+                    className="mt-1"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Validate trades before execution", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Max Per-Trade %
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Per-Trade %", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-risk-max-per-trade-pct",
+                    type="number",
+                    min=0.5,
+                    max=100,
+                    step=0.5,
+                    value=3.0,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Max % of equity per trade", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Max Single Position %
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Single Position %", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-risk-max-single-position-pct",
+                    type="number",
+                    min=1,
+                    max=100,
+                    step=0.5,
+                    value=8.0,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Max % of equity in one symbol", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        # Max Total Exposure %
+        dbc.Row([
+            dbc.Col(dbc.Label("Max Total Exposure %", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-risk-max-total-exposure-pct",
+                    type="number",
+                    min=1,
+                    max=100,
+                    step=1,
+                    value=15.0,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Max % of equity across all positions", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Alert(
+            [
+                html.I(className="fas fa-info-circle me-2"),
+                "Trades exceeding limits are resized when possible or rejected. "
+                "Portfolio context is also injected into Trader and Risk Manager prompts."
+            ],
+            color="info",
+            className="mt-3 mb-0 py-2",
+        ),
+    ])
+
+
 def create_risk_management_section():
     """Create the Risk Management (Stop-Loss/Take-Profit) section."""
     return html.Div([
@@ -923,6 +1026,13 @@ def create_system_settings_page():
                     "Options Trading",
                     create_options_trading_section(),
                     icon="fas fa-chart-line"
+                ),
+
+                # Risk Guardrails Section
+                create_settings_card(
+                    "Risk Guardrails (Pre-Execution)",
+                    create_risk_guardrails_section(),
+                    icon="fas fa-exclamation-triangle"
                 ),
 
                 # Risk Management Section

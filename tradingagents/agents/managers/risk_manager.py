@@ -79,6 +79,11 @@ def create_risk_manager(llm, memory, config=None):
             f"- Cash: ${cash:,.2f}\n"
             f"- Daily Change: ${daily_change_dollars:,.2f} ({daily_change_percent:.2f}%)"
         )
+
+        # Portfolio-wide context (injected from WebUI risk guardrails)
+        portfolio_context_text = config.get("portfolio_context_text", "") if config else ""
+        if portfolio_context_text:
+            account_status_desc += f"\n\n{portfolio_context_text}"
         # ---------------------------------------------------------
         # END NEW BLOCK
         # ---------------------------------------------------------

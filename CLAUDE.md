@@ -814,6 +814,7 @@ app_state.tool_calls_log.append(tool_call_info)
 | `tradingagents/dataflows/interface.py` | Unified data API (~1500 lines) | `@tool` decorated functions |
 | `tradingagents/dataflows/sector_utils.py` | Sector mapping & ETF lookups | `identify_sector()`, `SECTOR_ETFS` |
 | `tradingagents/dataflows/reddit_live.py` | Live Reddit API | `RedditLiveClient`, `fetch_live_company_news()` |
+| `tradingagents/dataflows/portfolio_risk.py` | Pre-execution risk guardrails | `build_portfolio_context()`, `validate_trade()`, `format_portfolio_context_for_prompt()` |
 | `tradingagents/agents/utils/agent_utils.py` | Tool tracking & timing | `timing_wrapper()`, `_get_current_symbol()` |
 | `tradingagents/default_config.py` | Config defaults | `DEFAULT_CONFIG` dict |
 | `webui/app_dash.py` | App factory | `create_app()`, `run_app()` |
@@ -931,4 +932,6 @@ app_state._stop_event           # threading.Event - set=stop requested
 19. **NumPy must stay < 2.0** — pandas/numexpr are compiled against NumPy 1.x. If a dependency upgrade pulls NumPy 2.x, fix with `pip install "numpy<2"`
 20. **App uses pyenv Python 3.11.4** — Not conda. Use `/Users/radoslavminchev/.pyenv/versions/3.11.4/bin/pip` for the correct environment
 21. **Symbol selection uses `dbc.Select` dropdowns** — NOT button grids. Chart: `chart-symbol-select`, Reports: `report-symbol-select`. Values are 1-indexed strings mapping to `app_state.symbol_states` keys. Synced via hidden `dbc.Pagination` components.
-22. **UPDATE CLAUDE.md after meaningful changes** — Any new feature, pattern change, or architectural update must be reflected in this file. Read the section first, then make surgical edits.
+22. **Risk guardrails are OFF by default** — Enable via Settings > Risk Guardrails. `validate_trade()` runs 4 checks (per-trade, single position, total exposure, buying power), resizes when possible, rejects otherwise. Logged as `RISK_GUARDRAIL` in tool_calls_log.
+23. **Portfolio context is built once per analysis batch** — `build_portfolio_context()` is called in `control_callbacks.py` before each executor block. Stored on `app_state._current_portfolio_context`. Injected into Trader/Risk Manager prompts via `config["portfolio_context_text"]`. Cleaned up at end of `analysis_thread()`.
+24. **UPDATE CLAUDE.md after meaningful changes** — Any new feature, pattern change, or architectural update must be reflected in this file. Read the section first, then make surgical edits.
