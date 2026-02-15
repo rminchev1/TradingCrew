@@ -3,10 +3,15 @@ webui/components/analysis.py
 """
 
 import time
+import datetime as _dt
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.dataflows.alpaca_utils import AlpacaUtils
 from tradingagents.agents.utils.agent_trading_modes import extract_recommendation
+from tradingagents.dataflows.portfolio_risk import (
+    validate_trade,
+    format_portfolio_context_for_prompt,
+)
 from webui.utils.state import app_state, set_thread_symbol, clear_thread_symbol
 from webui.utils.charts import create_chart
 
@@ -80,6 +85,56 @@ def execute_trade_after_analysis(ticker, allow_shorts, trade_amount):
         if sl_enabled or tp_enabled:
             print(f"[TRADE] SL/TP enabled - SL: {sl_enabled} ({sl_tp_config['stop_loss_percentage']}%), TP: {tp_enabled} ({sl_tp_config['take_profit_percentage']}%)")
             print(f"[TRADE] AI levels - SL: {sl_tp_config['stop_loss_use_ai']}, TP: {sl_tp_config['take_profit_use_ai']}")
+
+        # --- Risk Guardrail Validation ---
+        guardrails_enabled = system_settings.get("risk_guardrails_enabled", False)
+        portfolio_ctx = getattr(app_state, '_current_portfolio_context', None)
+
+        validation = validate_trade(
+            symbol=ticker,
+            dollar_amount=trade_amount,
+            signal=recommended_action,
+            context=portfolio_ctx,
+            guardrails_enabled=guardrails_enabled,
+        )
+
+        # Log guardrail results
+        timestamp = _dt.datetime.now().strftime("%H:%M:%S")
+        if validation.warnings:
+            for warn in validation.warnings:
+                print(f"[RISK_GUARDRAIL] {ticker}: {warn}")
+                app_state.tool_calls_log.append({
+                    "timestamp": timestamp,
+                    "tool_name": "risk_guardrail",
+                    "inputs": {"symbol": ticker, "signal": recommended_action, "amount": trade_amount},
+                    "output": warn,
+                    "execution_time": "0s",
+                    "status": "warning",
+                    "agent_type": "RISK_GUARDRAIL",
+                    "symbol": ticker,
+                })
+
+        if not validation.allowed:
+            rejection_msg = "; ".join(validation.rejections)
+            print(f"[RISK_GUARDRAIL] {ticker}: REJECTED — {rejection_msg}")
+            app_state.tool_calls_log.append({
+                "timestamp": timestamp,
+                "tool_name": "risk_guardrail",
+                "inputs": {"symbol": ticker, "signal": recommended_action, "amount": trade_amount},
+                "output": f"REJECTED: {rejection_msg}",
+                "execution_time": "0s",
+                "status": "error",
+                "agent_type": "RISK_GUARDRAIL",
+                "symbol": ticker,
+            })
+            state["trading_results"] = {"error": f"Risk guardrail rejected trade: {rejection_msg}"}
+            return
+
+        # Use adjusted amount (may be resized)
+        trade_amount = validation.adjusted_amount
+        if validation.adjusted_amount != validation.original_amount:
+            print(f"[RISK_GUARDRAIL] {ticker}: Trade resized from ${validation.original_amount:,.2f} to ${validation.adjusted_amount:,.2f}")
+        # --- End Risk Guardrail Validation ---
 
         # Get trader analysis text for AI SL/TP extraction
         trader_analysis = state["current_reports"].get("trader_investment_plan", "")
@@ -246,7 +301,12 @@ def run_analysis(ticker, selected_analysts, research_depth, allow_shorts, quick_
         config["parallel_analysts"] = False  # Sequential analysts for proper report updates (tickers still run in parallel)
         config["quick_think_llm"] = quick_llm
         config["deep_think_llm"] = deep_llm
-        
+
+        # Inject portfolio context for Trader/Risk Manager prompt enrichment
+        portfolio_ctx = getattr(app_state, '_current_portfolio_context', None)
+        if portfolio_ctx is not None:
+            config["portfolio_context_text"] = format_portfolio_context_for_prompt(portfolio_ctx)
+
         # Initialize TradingAgentsGraph
         print(f"[ANALYSIS] Initializing TradingAgentsGraph with analysts: {selected_analysts}")
         print(f"[ANALYSIS] Config: quick_llm={config.get('quick_think_llm')}, deep_llm={config.get('deep_think_llm')}")

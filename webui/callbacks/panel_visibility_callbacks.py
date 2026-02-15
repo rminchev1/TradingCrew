@@ -14,6 +14,7 @@ def register_panel_visibility_callbacks(app):
     @app.callback(
         [
             Output("panel-wrapper-account-bar", "children"),
+            Output("panel-wrapper-portfolio", "children"),
             Output("panel-wrapper-scanner", "children"),
             Output("panel-wrapper-watchlist", "children"),
             Output("panel-wrapper-main-trading-row", "children"),
@@ -35,7 +36,8 @@ def register_panel_visibility_callbacks(app):
         """
         from webui.utils.storage import DEFAULT_SYSTEM_SETTINGS
         from webui.layout import (
-            _build_account_bar, _build_scanner_section,
+            _build_account_bar, _build_portfolio_section,
+            _build_scanner_section,
             _build_watchlist_section, _build_main_trading_row,
             _build_positions_section, _build_options_section,
             _build_reports_section, _build_log_panel,
@@ -52,6 +54,7 @@ def register_panel_visibility_callbacks(app):
 
         return (
             _build_account_bar() if settings.get("show_panel_account_bar", True) else [],
+            _build_portfolio_section() if settings.get("show_panel_portfolio", True) else [],
             _build_scanner_section() if settings.get("show_panel_scanner", True) else [],
             _build_watchlist_section() if settings.get("show_panel_watchlist", True) else [],
             _build_main_trading_row(show_chart, show_trading) if (show_chart or show_trading) else [],

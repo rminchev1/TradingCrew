@@ -17,6 +17,7 @@ from webui.components.scanner_panel import create_scanner_panel
 from webui.components.ticker_progress_panel import create_ticker_progress_panel
 from webui.components.watchlist_panel import create_watchlist_section
 from webui.components.log_panel import create_log_panel
+from webui.components.portfolio_panel import create_portfolio_panel
 from webui.components.system_settings import create_system_settings_page
 from webui.config.constants import COLORS, REFRESH_INTERVALS
 
@@ -141,6 +142,11 @@ def _build_account_bar():
     return html.Div([
         render_compact_account_bar()
     ], className="account-bar-container mb-3", id="account-bar-wrapper")
+
+
+def _build_portfolio_section():
+    """Build the portfolio overview panel."""
+    return create_portfolio_panel()
 
 
 def _build_chart_section():
@@ -307,6 +313,7 @@ def create_trading_content():
     return html.Div([
         # Panel wrappers - populated by panel_visibility_callbacks
         html.Div(id="panel-wrapper-account-bar"),
+        html.Div(id="panel-wrapper-portfolio"),
         html.Div(id="panel-wrapper-scanner"),
         html.Div(id="panel-wrapper-watchlist"),
         html.Div(id="panel-wrapper-main-trading-row"),
