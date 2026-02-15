@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] - 2025-02-15
+
+### Changed
+- Removed: Analyze button from watchlist panel (unused feature)
+- Updated: CLAUDE.md release guidance for consistency
+
+---
+
 ## [0.4.0] - 2025-02-14
 
 ### Added
