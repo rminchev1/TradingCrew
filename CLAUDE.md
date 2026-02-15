@@ -44,12 +44,12 @@ Release vX.Y.Z - Short Description
 - Feature: Loop mode now shows next run time in EST/EDT
 
 ## Bug Fixes
-- Fixed account bar not refreshing after trades
-- Fixed market hours validation error
+- Fixed: Account bar not refreshing after trades
+- Fixed: Market hours validation error
 
 ## Changes
-- Updated default LLM model to o4-mini
-- Improved error handling in scanner
+- Changed: Default LLM model to o4-mini
+- Updated: Error handling in scanner
 ```
 
 ### 3. Documentation Maintenance
@@ -624,9 +624,10 @@ REFRESH_INTERVALS = {
 1. Ensure all tests pass: `pytest`
 2. Make feature commits with tests
 3. Update version in `pyproject.toml`
-4. Commit: `git commit -m "Bump version to X.Y.Z"`
-5. Push commits: `git push`
-6. Create annotated tag with **DESCRIPTIVE MESSAGE** (REQUIRED):
+4. Update `docs/CHANGELOG.md` with the new version and changes
+5. Commit: `git commit -m "Bump version to X.Y.Z"`
+6. Push commits: `git push`
+7. Create annotated tag with **DESCRIPTIVE MESSAGE** (REQUIRED):
 
 ```bash
 git tag -a vX.Y.Z -m "Release vX.Y.Z - Short Summary
@@ -647,8 +648,8 @@ git tag -a vX.Y.Z -m "Release vX.Y.Z - Short Summary
 - Breaking: What breaks and how to migrate"
 ```
 
-7. Push tag: `git push origin vX.Y.Z`
-8. GitHub Actions triggers automatically:
+8. Push tag: `git push origin vX.Y.Z`
+9. GitHub Actions triggers automatically:
    - Runs test suite
    - Builds package
    - Creates GitHub Release with your tag message
