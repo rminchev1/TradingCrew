@@ -260,56 +260,6 @@ def register_watchlist_callbacks(app):
             print(f"[WATCHLIST] Error handling reorder: {e}")
             return dash.no_update
 
-    # Add to Run Queue when analyze button clicked
-    @app.callback(
-        Output("run-watchlist-store", "data", allow_duplicate=True),
-        Input({"type": "watchlist-analyze-btn", "symbol": ALL}, "n_clicks"),
-        State("run-watchlist-store", "data"),
-        prevent_initial_call=True
-    )
-    def analyze_from_watchlist(n_clicks_list, store_data):
-        """Add symbol to Run Queue for analysis"""
-        ctx = callback_context
-
-        if not ctx.triggered:
-            return dash.no_update
-
-        # Get the triggered prop_id and parse it
-        triggered_prop = ctx.triggered[0]["prop_id"]
-        if not triggered_prop or triggered_prop == ".":
-            return dash.no_update
-
-        # Check if a button was actually clicked (n_clicks >= 1)
-        triggered_value = ctx.triggered[0].get("value")
-        if not triggered_value or triggered_value < 1:
-            return dash.no_update
-
-        # Parse the button ID from the prop_id
-        import json
-        try:
-            id_json = triggered_prop.rsplit(".", 1)[0]
-            button_id = json.loads(id_json)
-        except (json.JSONDecodeError, ValueError, IndexError):
-            return dash.no_update
-
-        if not isinstance(button_id, dict) or button_id.get("type") != "watchlist-analyze-btn":
-            return dash.no_update
-
-        symbol = button_id.get("symbol")
-        if symbol:
-            if not store_data:
-                store_data = {"symbols": []}
-
-            symbols = store_data.get("symbols", [])
-            if symbol.upper() not in symbols:
-                symbols.append(symbol.upper())
-                store_data["symbols"] = symbols
-                local_storage.save_run_queue(store_data)
-                print(f"[WATCHLIST] Added {symbol} to Run Queue for analysis")
-                return store_data
-
-        return dash.no_update
-
     # Update chart when chart button clicked
     @app.callback(
         Output("chart-store", "data", allow_duplicate=True),

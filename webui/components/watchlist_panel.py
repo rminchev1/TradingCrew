@@ -108,14 +108,6 @@ def create_watchlist_item(symbol, price=None, change=None, change_pct=None, inde
                         title="View Chart"
                     ),
                     dbc.Button(
-                        html.I(className="fas fa-robot"),
-                        id={"type": "watchlist-analyze-btn", "symbol": symbol},
-                        color="link",
-                        size="sm",
-                        className="watchlist-action-btn",
-                        title="Analyze"
-                    ),
-                    dbc.Button(
                         html.I(className="fas fa-play"),
                         id={"type": "watchlist-add-run-btn", "symbol": symbol},
                         color="link",
