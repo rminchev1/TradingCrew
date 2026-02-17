@@ -35,8 +35,11 @@ def register_portfolio_callbacks(app):
         )
         from dash import html
 
+        # Use settings from store when available (ensures fresh values after save),
+        # otherwise fall back to app_state.system_settings
+        settings = settings_store_data if settings_store_data else app_state.system_settings
+
         # Config summary is always available (doesn't need Alpaca)
-        settings = app_state.system_settings
         config_section = render_config_summary(settings)
 
         if not _is_alpaca_configured():
@@ -45,8 +48,11 @@ def register_portfolio_callbacks(app):
 
         # If triggered by a settings change, bypass cached context so new
         # risk limits are reflected immediately.
-        triggered = callback_context.triggered_id
-        use_cache = triggered != "system-settings-store"
+        # Check ALL triggered inputs, not just the first one (triggered_id only
+        # returns the first), since multiple inputs can fire simultaneously.
+        triggered_ids = [t["prop_id"].split(".")[0] for t in callback_context.triggered]
+        settings_changed = "system-settings-store" in triggered_ids
+        use_cache = not settings_changed
 
         ctx = None
         if use_cache:

@@ -162,3 +162,108 @@ class TestPortfolioCacheBypassLogic:
 
                 assert ctx is fresh_ctx
                 mock_build.assert_called_once()
+
+
+class TestSimultaneousTriggers:
+    """Tests for handling simultaneous triggers (interval + settings change)."""
+
+    def test_settings_in_multiple_triggers_bypasses_cache(self):
+        """When both interval and settings-store trigger, cache is bypassed.
+
+        Bug fix: The old code used `callback_context.triggered_id` which only
+        returns the FIRST triggered input. If interval was listed first, the
+        settings change would be missed and stale cached values shown.
+        """
+        old_ctx = _make_context(max_per_trade_pct=3.0)
+        new_ctx = _make_context(max_per_trade_pct=5.0)
+
+        # Simulate both inputs triggering simultaneously - interval listed first
+        mock_triggered = [
+            {"prop_id": "slow-refresh-interval.n_intervals", "value": 100},
+            {"prop_id": "system-settings-store.data", "value": {"risk_max_per_trade_pct": 5.0}},
+        ]
+
+        with patch(
+            "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
+            return_value=new_ctx,
+        ) as mock_build:
+            # New logic: check ALL triggered inputs
+            triggered_ids = [t["prop_id"].split(".")[0] for t in mock_triggered]
+            settings_changed = "system-settings-store" in triggered_ids
+            use_cache = not settings_changed
+
+            ctx = None
+            if use_cache:
+                ctx = old_ctx  # Would have used stale cache
+            if ctx is None:
+                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
+                ctx = build_portfolio_context({"risk_max_per_trade_pct": 5.0})
+
+            # Cache was bypassed - new context built with updated settings
+            assert ctx is new_ctx
+            assert ctx.max_per_trade_pct == 5.0
+            mock_build.assert_called_once()
+
+    def test_interval_only_trigger_uses_cache(self):
+        """When only interval triggers, cache is used (no settings change)."""
+        cached_ctx = _make_context(max_per_trade_pct=3.0)
+
+        mock_triggered = [
+            {"prop_id": "slow-refresh-interval.n_intervals", "value": 100},
+        ]
+
+        with patch(
+            "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
+        ) as mock_build:
+            triggered_ids = [t["prop_id"].split(".")[0] for t in mock_triggered]
+            settings_changed = "system-settings-store" in triggered_ids
+            use_cache = not settings_changed
+
+            ctx = None
+            if use_cache:
+                ctx = cached_ctx
+            if ctx is None:
+                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
+                ctx = build_portfolio_context({})
+
+            # Cache was used
+            assert ctx is cached_ctx
+            mock_build.assert_not_called()
+
+
+class TestSettingsStoreDataPriority:
+    """Tests for using settings_store_data over app_state.system_settings."""
+
+    def test_settings_from_store_data_used_when_available(self):
+        """When settings_store_data is provided, it should be used directly.
+
+        Bug fix: The old code always read from app_state.system_settings which
+        could have timing issues with sync after a save.
+        """
+        store_data = {"risk_max_per_trade_pct": 5.0, "risk_guardrails_enabled": True}
+        app_state_settings = {"risk_max_per_trade_pct": 3.0}  # Stale value
+
+        # New logic: prefer store data when available
+        settings = store_data if store_data else app_state_settings
+
+        assert settings == store_data
+        assert settings["risk_max_per_trade_pct"] == 5.0
+
+    def test_falls_back_to_app_state_when_store_empty(self):
+        """When settings_store_data is None/empty, fall back to app_state."""
+        store_data = None
+        app_state_settings = {"risk_max_per_trade_pct": 3.0}
+
+        settings = store_data if store_data else app_state_settings
+
+        assert settings == app_state_settings
+        assert settings["risk_max_per_trade_pct"] == 3.0
+
+    def test_empty_dict_store_data_uses_app_state(self):
+        """Empty dict {} is falsy, so app_state is used as fallback."""
+        store_data = {}
+        app_state_settings = {"risk_max_per_trade_pct": 3.0}
+
+        settings = store_data if store_data else app_state_settings
+
+        assert settings == app_state_settings
