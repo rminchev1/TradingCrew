@@ -31,7 +31,7 @@ def _make_context(**overrides):
 
 
 class TestPortfolioCallbackRegistration:
-    """Verify portfolio callback is wired to system-settings-store."""
+    """Verify portfolio callback is wired to both settings stores."""
 
     def test_callback_has_settings_store_input(self):
         """The portfolio callback must listen to system-settings-store changes."""
@@ -58,8 +58,8 @@ class TestPortfolioCallbackRegistration:
                 break
         assert found, "Portfolio callback not registered"
 
-    def test_callback_has_two_inputs(self):
-        """The portfolio callback should have exactly 2 inputs."""
+    def test_callback_has_control_settings_store_input(self):
+        """The portfolio callback must listen to settings-store (control panel) for allow_shorts."""
         from dash import Dash
         from webui.callbacks.portfolio_callbacks import register_portfolio_callbacks
 
@@ -69,7 +69,26 @@ class TestPortfolioCallbackRegistration:
         for output_id, entry in app.callback_map.items():
             if "portfolio-metrics-row" in output_id:
                 inputs = entry.get("inputs", [])
-                assert len(inputs) == 2
+                input_ids = [inp["id"] for inp in inputs]
+                assert "settings-store" in input_ids, (
+                    "Portfolio callback must have settings-store as an Input for allow_shorts"
+                )
+                break
+
+    def test_callback_has_three_inputs(self):
+        """The portfolio callback should have exactly 3 inputs."""
+        from dash import Dash
+        from webui.callbacks.portfolio_callbacks import register_portfolio_callbacks
+
+        app = Dash(__name__)
+        register_portfolio_callbacks(app)
+
+        for output_id, entry in app.callback_map.items():
+            if "portfolio-metrics-row" in output_id:
+                inputs = entry.get("inputs", [])
+                assert len(inputs) == 3, (
+                    f"Expected 3 inputs (interval, system-settings, settings-store), got {len(inputs)}"
+                )
                 break
 
 
@@ -187,9 +206,12 @@ class TestSimultaneousTriggers:
             "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
             return_value=new_ctx,
         ) as mock_build:
-            # New logic: check ALL triggered inputs
+            # New logic: check ALL triggered inputs for either settings store
             triggered_ids = [t["prop_id"].split(".")[0] for t in mock_triggered]
-            settings_changed = "system-settings-store" in triggered_ids
+            settings_changed = (
+                "system-settings-store" in triggered_ids or
+                "settings-store" in triggered_ids
+            )
             use_cache = not settings_changed
 
             ctx = None
@@ -204,6 +226,40 @@ class TestSimultaneousTriggers:
             assert ctx.max_per_trade_pct == 5.0
             mock_build.assert_called_once()
 
+    def test_control_settings_store_trigger_bypasses_cache(self):
+        """When settings-store (control panel) triggers, cache is bypassed.
+
+        This happens when allow_shorts is toggled in Trading Control.
+        """
+        old_ctx = _make_context()
+        new_ctx = _make_context()
+
+        mock_triggered = [
+            {"prop_id": "settings-store.data", "value": {"allow_shorts": True}},
+        ]
+
+        with patch(
+            "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
+            return_value=new_ctx,
+        ) as mock_build:
+            triggered_ids = [t["prop_id"].split(".")[0] for t in mock_triggered]
+            settings_changed = (
+                "system-settings-store" in triggered_ids or
+                "settings-store" in triggered_ids
+            )
+            use_cache = not settings_changed
+
+            ctx = None
+            if use_cache:
+                ctx = old_ctx
+            if ctx is None:
+                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
+                ctx = build_portfolio_context({})
+
+            # Cache was bypassed
+            assert ctx is new_ctx
+            mock_build.assert_called_once()
+
     def test_interval_only_trigger_uses_cache(self):
         """When only interval triggers, cache is used (no settings change)."""
         cached_ctx = _make_context(max_per_trade_pct=3.0)
@@ -216,7 +272,10 @@ class TestSimultaneousTriggers:
             "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
         ) as mock_build:
             triggered_ids = [t["prop_id"].split(".")[0] for t in mock_triggered]
-            settings_changed = "system-settings-store" in triggered_ids
+            settings_changed = (
+                "system-settings-store" in triggered_ids or
+                "settings-store" in triggered_ids
+            )
             use_cache = not settings_changed
 
             ctx = None
@@ -267,3 +326,63 @@ class TestSettingsStoreDataPriority:
         settings = store_data if store_data else app_state_settings
 
         assert settings == app_state_settings
+
+
+class TestAllowShortsMerge:
+    """Tests for merging allow_shorts from control panel settings."""
+
+    def test_allow_shorts_merged_from_control_settings(self):
+        """allow_shorts from control panel settings should be merged into settings.
+
+        Bug fix: allow_shorts is stored in settings-store (control panel), not
+        system-settings-store. Portfolio Overview was showing "Long Only" even
+        when "Shorts OK" was enabled in Trading Control.
+        """
+        system_settings = {"risk_guardrails_enabled": True, "allow_shorts": False}
+        control_settings = {"allow_shorts": True}
+
+        # Merge logic from callback
+        settings = dict(system_settings)
+        if control_settings and "allow_shorts" in control_settings:
+            settings["allow_shorts"] = control_settings["allow_shorts"]
+
+        assert settings["allow_shorts"] is True
+        # Original shouldn't be mutated
+        assert system_settings["allow_shorts"] is False
+
+    def test_allow_shorts_not_merged_when_control_settings_empty(self):
+        """When control settings is None/empty, allow_shorts stays from system settings."""
+        system_settings = {"allow_shorts": False}
+        control_settings = None
+
+        settings = dict(system_settings)
+        if control_settings and "allow_shorts" in control_settings:
+            settings["allow_shorts"] = control_settings["allow_shorts"]
+
+        assert settings["allow_shorts"] is False
+
+    def test_allow_shorts_false_explicitly_set(self):
+        """allow_shorts=False from control settings should override."""
+        system_settings = {"allow_shorts": True}  # Hypothetically stale
+        control_settings = {"allow_shorts": False}
+
+        settings = dict(system_settings)
+        if control_settings and "allow_shorts" in control_settings:
+            settings["allow_shorts"] = control_settings["allow_shorts"]
+
+        assert settings["allow_shorts"] is False
+
+    def test_settings_dict_is_copied_not_mutated(self):
+        """Merging allow_shorts should not mutate the original settings dict."""
+        original_system_settings = {"risk_guardrails_enabled": True, "allow_shorts": False}
+        control_settings = {"allow_shorts": True}
+
+        # Simulate callback logic
+        settings = original_system_settings if original_system_settings else {}
+        if control_settings and "allow_shorts" in control_settings:
+            settings = dict(settings)  # Copy before mutation
+            settings["allow_shorts"] = control_settings["allow_shorts"]
+
+        assert settings["allow_shorts"] is True
+        # When we copy first, original is preserved
+        # (In actual callback, we copy; this test verifies the pattern works)

@@ -3,7 +3,7 @@ webui/callbacks/portfolio_callbacks.py
 Callback to refresh the Portfolio Overview panel on the slow refresh interval.
 """
 
-from dash import Input, Output, callback_context
+from dash import Input, Output, State, callback_context
 from webui.utils.state import app_state
 
 
@@ -20,10 +20,11 @@ def register_portfolio_callbacks(app):
         [
             Input("slow-refresh-interval", "n_intervals"),
             Input("system-settings-store", "data"),
+            Input("settings-store", "data"),  # Control panel settings (for allow_shorts)
         ],
         prevent_initial_call=False,
     )
-    def update_portfolio_panel(n_intervals, settings_store_data):
+    def update_portfolio_panel(n_intervals, settings_store_data, control_settings_data):
         """Refresh all 4 sections of the portfolio overview panel."""
         from webui.components.portfolio_panel import (
             _is_alpaca_configured,
@@ -39,6 +40,11 @@ def register_portfolio_callbacks(app):
         # otherwise fall back to app_state.system_settings
         settings = settings_store_data if settings_store_data else app_state.system_settings
 
+        # Merge allow_shorts from control panel settings (it's stored there, not in system settings)
+        if control_settings_data and "allow_shorts" in control_settings_data:
+            settings = dict(settings)  # Make a copy to avoid mutating the original
+            settings["allow_shorts"] = control_settings_data["allow_shorts"]
+
         # Config summary is always available (doesn't need Alpaca)
         config_section = render_config_summary(settings)
 
@@ -51,7 +57,10 @@ def register_portfolio_callbacks(app):
         # Check ALL triggered inputs, not just the first one (triggered_id only
         # returns the first), since multiple inputs can fire simultaneously.
         triggered_ids = [t["prop_id"].split(".")[0] for t in callback_context.triggered]
-        settings_changed = "system-settings-store" in triggered_ids
+        settings_changed = (
+            "system-settings-store" in triggered_ids or
+            "settings-store" in triggered_ids  # Control panel settings changed
+        )
         use_cache = not settings_changed
 
         ctx = None
