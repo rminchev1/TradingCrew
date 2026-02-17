@@ -253,13 +253,18 @@ The Dash-based web UI provides a complete trading workstation:
 
 ### Screenshots
 
-<p align="center">
-  <img src="assets/config_and_chart.png" style="width: 100%; height: auto;">
-</p>
+<img width="1506" height="862" alt="image" src="https://github.com/user-attachments/assets/9bb4968d-71f0-4a79-a0cf-790dc44508db" />
 
-<p align="center">
-  <img src="assets/reports.png" style="width: 100%; height: auto;">
-</p>
+<img width="1489" height="850" alt="image" src="https://github.com/user-attachments/assets/bceaa037-abb3-41d1-bd37-1e5bf3ba07df" />
+
+<img width="1497" height="854" alt="image" src="https://github.com/user-attachments/assets/294b8172-c98e-461b-b007-d97fbb2f8cc1" />
+
+<img width="1500" height="862" alt="image" src="https://github.com/user-attachments/assets/93e3df8c-ae93-4fd9-9c2a-747209407ceb" />
+
+<img width="1494" height="854" alt="image" src="https://github.com/user-attachments/assets/b1f30540-105e-4a0a-b779-5a04dcc4910d" />
+
+<img width="1502" height="862" alt="image" src="https://github.com/user-attachments/assets/7400d424-e747-46d0-a44b-3c282b34089c" />
+
 
 ---
 
