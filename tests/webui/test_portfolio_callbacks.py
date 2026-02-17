@@ -1,6 +1,6 @@
 """
 tests/webui/test_portfolio_callbacks.py
-Tests for the portfolio panel callback, especially cache-bypass on settings change.
+Tests for the portfolio panel callback.
 """
 
 import pytest
@@ -92,202 +92,44 @@ class TestPortfolioCallbackRegistration:
                 break
 
 
-class TestPortfolioCacheBypassLogic:
-    """Tests for cache-bypass when triggered by settings change."""
+class TestAlwaysBuildFreshContext:
+    """Tests for the always-build-fresh context behavior.
 
-    def test_timer_trigger_uses_cached_context(self):
-        """When triggered by timer, cached PortfolioContext is used (no rebuild)."""
-        cached_ctx = _make_context(max_per_trade_pct=3.0)
+    The portfolio callback now always builds a fresh context on each call
+    to ensure it uses the latest settings. This prevents stale cached contexts
+    from analysis runs from showing outdated risk limits.
+    """
 
-        with patch(
-            "webui.callbacks.portfolio_callbacks.callback_context"
-        ) as mock_ctx, patch(
-            "webui.callbacks.portfolio_callbacks.app_state"
-        ) as mock_state, patch(
-            "webui.components.portfolio_panel._is_alpaca_configured",
-            return_value=True,
-        ), patch(
-            "tradingagents.dataflows.portfolio_risk.build_portfolio_context"
-        ) as mock_build:
-            mock_ctx.triggered_id = "slow-refresh-interval"
-            mock_state.system_settings = {"risk_guardrails_enabled": True}
-            mock_state._current_portfolio_context = cached_ctx
-
-            # Simulate calling the callback body logic inline
-            triggered = mock_ctx.triggered_id
-            use_cache = triggered != "system-settings-store"
-
-            ctx = None
-            if use_cache:
-                ctx = getattr(mock_state, "_current_portfolio_context", None)
-            if ctx is None:
-                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
-                ctx = build_portfolio_context(mock_state.system_settings)
-
-            # Cache was used - build should NOT have been called
-            assert ctx is cached_ctx
-            mock_build.assert_not_called()
-
-    def test_settings_trigger_bypasses_cache(self):
-        """When triggered by settings store, cached context is skipped."""
-        old_ctx = _make_context(max_per_trade_pct=3.0)
-        new_ctx = _make_context(max_per_trade_pct=5.0)
-
-        with patch(
-            "webui.callbacks.portfolio_callbacks.callback_context"
-        ) as mock_ctx, patch(
-            "webui.callbacks.portfolio_callbacks.app_state"
-        ) as mock_state, patch(
-            "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
-            return_value=new_ctx,
-        ) as mock_build:
-            mock_ctx.triggered_id = "system-settings-store"
-            mock_state.system_settings = {"risk_max_per_trade_pct": 5.0}
-            mock_state._current_portfolio_context = old_ctx
-
-            # Same logic as the callback
-            triggered = mock_ctx.triggered_id
-            use_cache = triggered != "system-settings-store"
-
-            ctx = None
-            if use_cache:
-                ctx = getattr(mock_state, "_current_portfolio_context", None)
-            if ctx is None:
-                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
-                ctx = build_portfolio_context(mock_state.system_settings)
-
-            # Cache was bypassed - build should have been called
-            assert ctx is new_ctx
-            mock_build.assert_called_once_with(mock_state.system_settings)
-
-    def test_no_cache_always_builds(self):
-        """When no cached context exists, always build regardless of trigger."""
-        fresh_ctx = _make_context()
+    def test_always_builds_context_regardless_of_trigger(self):
+        """Context is always built fresh, never uses stale cache."""
+        fresh_ctx = _make_context(max_per_trade_pct=5.0)
 
         with patch(
             "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
             return_value=fresh_ctx,
         ) as mock_build:
-            for trigger in ["slow-refresh-interval", "system-settings-store"]:
-                mock_build.reset_mock()
-                use_cache = trigger != "system-settings-store"
+            # Regardless of what triggers the callback, we should build
+            settings = {"risk_max_per_trade_pct": 5.0}
+            from tradingagents.dataflows.portfolio_risk import build_portfolio_context
+            ctx = build_portfolio_context(settings)
 
-                ctx = None
-                if use_cache:
-                    ctx = None  # No cache
-                if ctx is None:
-                    from tradingagents.dataflows.portfolio_risk import build_portfolio_context
-                    ctx = build_portfolio_context({})
+            assert ctx is fresh_ctx
+            mock_build.assert_called_once_with(settings)
 
-                assert ctx is fresh_ctx
-                mock_build.assert_called_once()
-
-
-class TestSimultaneousTriggers:
-    """Tests for handling simultaneous triggers (interval + settings change)."""
-
-    def test_settings_in_multiple_triggers_bypasses_cache(self):
-        """When both interval and settings-store trigger, cache is bypassed.
-
-        Bug fix: The old code used `callback_context.triggered_id` which only
-        returns the FIRST triggered input. If interval was listed first, the
-        settings change would be missed and stale cached values shown.
-        """
-        old_ctx = _make_context(max_per_trade_pct=3.0)
-        new_ctx = _make_context(max_per_trade_pct=5.0)
-
-        # Simulate both inputs triggering simultaneously - interval listed first
-        mock_triggered = [
-            {"prop_id": "slow-refresh-interval.n_intervals", "value": 100},
-            {"prop_id": "system-settings-store.data", "value": {"risk_max_per_trade_pct": 5.0}},
-        ]
+    def test_uses_settings_from_store(self):
+        """Context is built with settings from the store, not stale app_state."""
+        store_settings = {"risk_max_total_exposure_pct": 75.0}
+        ctx_with_new_limit = _make_context(max_total_exposure_pct=75.0)
 
         with patch(
             "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
-            return_value=new_ctx,
+            return_value=ctx_with_new_limit,
         ) as mock_build:
-            # New logic: check ALL triggered inputs for either settings store
-            triggered_ids = [t["prop_id"].split(".")[0] for t in mock_triggered]
-            settings_changed = (
-                "system-settings-store" in triggered_ids or
-                "settings-store" in triggered_ids
-            )
-            use_cache = not settings_changed
+            from tradingagents.dataflows.portfolio_risk import build_portfolio_context
+            ctx = build_portfolio_context(store_settings)
 
-            ctx = None
-            if use_cache:
-                ctx = old_ctx  # Would have used stale cache
-            if ctx is None:
-                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
-                ctx = build_portfolio_context({"risk_max_per_trade_pct": 5.0})
-
-            # Cache was bypassed - new context built with updated settings
-            assert ctx is new_ctx
-            assert ctx.max_per_trade_pct == 5.0
-            mock_build.assert_called_once()
-
-    def test_control_settings_store_trigger_bypasses_cache(self):
-        """When settings-store (control panel) triggers, cache is bypassed.
-
-        This happens when allow_shorts is toggled in Trading Control.
-        """
-        old_ctx = _make_context()
-        new_ctx = _make_context()
-
-        mock_triggered = [
-            {"prop_id": "settings-store.data", "value": {"allow_shorts": True}},
-        ]
-
-        with patch(
-            "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
-            return_value=new_ctx,
-        ) as mock_build:
-            triggered_ids = [t["prop_id"].split(".")[0] for t in mock_triggered]
-            settings_changed = (
-                "system-settings-store" in triggered_ids or
-                "settings-store" in triggered_ids
-            )
-            use_cache = not settings_changed
-
-            ctx = None
-            if use_cache:
-                ctx = old_ctx
-            if ctx is None:
-                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
-                ctx = build_portfolio_context({})
-
-            # Cache was bypassed
-            assert ctx is new_ctx
-            mock_build.assert_called_once()
-
-    def test_interval_only_trigger_uses_cache(self):
-        """When only interval triggers, cache is used (no settings change)."""
-        cached_ctx = _make_context(max_per_trade_pct=3.0)
-
-        mock_triggered = [
-            {"prop_id": "slow-refresh-interval.n_intervals", "value": 100},
-        ]
-
-        with patch(
-            "tradingagents.dataflows.portfolio_risk.build_portfolio_context",
-        ) as mock_build:
-            triggered_ids = [t["prop_id"].split(".")[0] for t in mock_triggered]
-            settings_changed = (
-                "system-settings-store" in triggered_ids or
-                "settings-store" in triggered_ids
-            )
-            use_cache = not settings_changed
-
-            ctx = None
-            if use_cache:
-                ctx = cached_ctx
-            if ctx is None:
-                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
-                ctx = build_portfolio_context({})
-
-            # Cache was used
-            assert ctx is cached_ctx
-            mock_build.assert_not_called()
+            assert ctx.max_total_exposure_pct == 75.0
+            mock_build.assert_called_once_with(store_settings)
 
 
 class TestSettingsStoreDataPriority:

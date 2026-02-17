@@ -52,26 +52,15 @@ def register_portfolio_callbacks(app):
             not_configured = _render_not_configured_message()
             return not_configured, not_configured, not_configured, config_section
 
-        # If triggered by a settings change, bypass cached context so new
-        # risk limits are reflected immediately.
-        # Check ALL triggered inputs, not just the first one (triggered_id only
-        # returns the first), since multiple inputs can fire simultaneously.
-        triggered_ids = [t["prop_id"].split(".")[0] for t in callback_context.triggered]
-        settings_changed = (
-            "system-settings-store" in triggered_ids or
-            "settings-store" in triggered_ids  # Control panel settings changed
-        )
-        use_cache = not settings_changed
-
+        # Always build fresh context for display to ensure we use the latest settings.
+        # The _current_portfolio_context cache is for analysis-time use and may have
+        # stale risk limits from a previous analysis run.
         ctx = None
-        if use_cache:
-            ctx = getattr(app_state, "_current_portfolio_context", None)
-        if ctx is None:
-            try:
-                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
-                ctx = build_portfolio_context(settings)
-            except Exception as e:
-                print(f"[PORTFOLIO] Failed to build context: {e}")
+        try:
+            from tradingagents.dataflows.portfolio_risk import build_portfolio_context
+            ctx = build_portfolio_context(settings)
+        except Exception as e:
+            print(f"[PORTFOLIO] Failed to build context: {e}")
 
         if ctx is None:
             error_msg = html.Div(
