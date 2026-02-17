@@ -79,15 +79,21 @@ class TradingAgentsGraph:
         # supported by the current OpenAI Python client library. 
         # These will be added when the client library is updated to support them.
         
+        # max_retries enables automatic retry with exponential backoff for rate limit errors
+        # This is critical when running many stocks in parallel
+        max_retries = self.config.get("llm_max_retries", 6)
+
         self.deep_thinking_llm = ChatOpenAI(
-            model=deep_think_model, 
+            model=deep_think_model,
             openai_api_key=api_key,
+            max_retries=max_retries,
             **deep_think_kwargs
         )
-        
+
         self.quick_thinking_llm = ChatOpenAI(
-            model=quick_think_model, 
+            model=quick_think_model,
             openai_api_key=api_key,
+            max_retries=max_retries,
             **quick_think_kwargs
         )
         

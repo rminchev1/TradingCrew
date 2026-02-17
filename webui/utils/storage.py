@@ -50,6 +50,9 @@ DEFAULT_SYSTEM_SETTINGS = {
     "online_tools": True,
     "max_recur_limit": 200,
     "max_parallel_tickers": 3,
+    # Rate Limiting / Throughput Control
+    "ticker_cooldown_seconds": 10,  # Delay after each ticker completes (rate limit protection)
+    "llm_max_retries": 6,  # Max retries for LLM API calls (with exponential backoff)
     # Scanner Settings
     "scanner_num_results": 20,
     "scanner_use_llm_sentiment": False,
@@ -114,6 +117,8 @@ def export_settings(settings: dict) -> str:
         "online_tools",
         "max_recur_limit",
         "max_parallel_tickers",
+        "ticker_cooldown_seconds",
+        "llm_max_retries",
         "scanner_num_results",
         "scanner_use_llm_sentiment",
         "scanner_use_options_flow",

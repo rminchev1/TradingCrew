@@ -1052,6 +1052,9 @@ def register_control_callbacks(app):
                     completed_count = 0
                     succeeded = []
                     failed = []
+                    # Cooldown between completions to avoid rate limiting
+                    cooldown_seconds = app_state.system_settings.get("ticker_cooldown_seconds", 10)
+
                     for future in as_completed(futures):
                         completed_count += 1
                         symbol = futures[future]
@@ -1070,6 +1073,14 @@ def register_control_callbacks(app):
                         except Exception as e:
                             print(f"[PARALLEL] {symbol} analysis raised exception: {e}")
                             failed.append((symbol, str(e)))
+
+                        # Add cooldown after each completion to prevent rate limiting
+                        # This gives the API time to recover between stocks
+                        if completed_count < len(futures) and cooldown_seconds > 0:
+                            print(f"[PARALLEL] Cooldown: waiting {cooldown_seconds}s before processing next result...")
+                            if not app_state.interruptible_sleep(cooldown_seconds):
+                                print("[PARALLEL] Cooldown interrupted by stop signal")
+                                break
 
                 # Retry failed tickers (up to 1 retry per ticker)
                 max_retries = 1

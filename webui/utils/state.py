@@ -127,6 +127,8 @@ class AppState:
             "online_tools": True,
             "max_recur_limit": 200,
             "max_parallel_tickers": 3,
+            "ticker_cooldown_seconds": 10,
+            "llm_max_retries": 6,
             "scanner_num_results": 20,
             "scanner_use_llm_sentiment": False,
             "scanner_use_options_flow": True,

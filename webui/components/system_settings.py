@@ -321,6 +321,47 @@ def create_analysis_section():
                 width=5
             )
         ], className="mb-2 align-items-center"),
+
+        html.Hr(className="my-2"),
+        html.Small("Rate Limiting Protection", className="text-muted d-block mb-2"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("Ticker Cooldown (sec)", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-ticker-cooldown-seconds",
+                    type="number",
+                    min=0,
+                    max=120,
+                    value=10,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Delay after each ticker completes (0=no delay)", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
+
+        dbc.Row([
+            dbc.Col(dbc.Label("LLM Max Retries", className="mb-0"), width=4),
+            dbc.Col(
+                dbc.Input(
+                    id="setting-llm-max-retries",
+                    type="number",
+                    min=1,
+                    max=10,
+                    value=6,
+                    size="sm"
+                ),
+                width=3
+            ),
+            dbc.Col(
+                html.Small("Retry count for rate-limited API calls", className="text-muted"),
+                width=5
+            )
+        ], className="mb-2 align-items-center"),
     ])
 
 
