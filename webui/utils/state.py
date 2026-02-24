@@ -107,6 +107,11 @@ class AppState:
         self.viewing_history = False
         self.historical_run = None
 
+        # Chat assistant state
+        self.chat_messages = []       # List of {role, content, timestamp} dicts
+        self.chat_processing = False  # True while LLM is generating a response
+        self.chat_error = None        # Error message if LLM call fails
+
         # System settings (loaded from localStorage, overrides env vars)
         self.system_settings = {
             "openai_api_key": None,
@@ -455,6 +460,13 @@ class AppState:
             self.next_loop_run_time = None
         # Reset pipeline controls (outside lock since reset_pipeline_controls is lock-free)
         self.reset_pipeline_controls()
+
+    def reset_chat(self):
+        """Reset the chat assistant state."""
+        with self._lock:
+            self.chat_messages = []
+            self.chat_processing = False
+            self.chat_error = None
 
     def get_tool_calls_for_display(self, agent_filter=None, symbol_filter=None):
         """Get tool calls in a consistent format for UI display, optionally filtered by agent type and symbol"""

@@ -19,6 +19,7 @@ from webui.components.watchlist_panel import create_watchlist_section
 from webui.components.log_panel import create_log_panel
 from webui.components.portfolio_panel import create_portfolio_panel
 from webui.components.system_settings import create_system_settings_page
+from webui.components.chat_drawer import create_chat_drawer
 from webui.config.constants import COLORS, REFRESH_INTERVALS
 
 
@@ -65,6 +66,13 @@ def create_intervals():
         dcc.Interval(
             id="chart-live-interval",
             interval=5000,  # 5 seconds
+            n_intervals=0,
+            disabled=True
+        ),
+        # Chat assistant polling interval
+        dcc.Interval(
+            id="chat-poll-interval",
+            interval=1000,  # 1 second
             n_intervals=0,
             disabled=True
         ),
@@ -392,4 +400,4 @@ def create_main_layout():
 
     ], fluid=True, className="p-3 pro-trader-layout", style={"backgroundColor": COLORS["background"]})
 
-    return layout
+    return html.Div([layout, create_chat_drawer()])

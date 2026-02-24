@@ -1270,11 +1270,67 @@ body.theme-bw .order-status-badge.accepted {
     padding: 0.5rem;
 }
 
-/* Run Symbol Selector Dropdown */
+/* Run Symbol Selector Dropdown (Dash 4.x) */
 .run-symbol-dropdown {
     flex: 1;
 }
 
+.run-symbol-dropdown .dash-dropdown {
+    font-size: 0.85rem;
+}
+
+.run-symbol-dropdown .dash-dropdown-trigger {
+    background: #1E293B !important;
+    border: 1px solid #334155 !important;
+    border-radius: 6px !important;
+    min-height: 32px !important;
+    color: #E2E8F0 !important;
+}
+
+.run-symbol-dropdown .dash-dropdown-value,
+.run-symbol-dropdown .dash-dropdown-value-item {
+    color: #E2E8F0 !important;
+    background: #334155 !important;
+    border-radius: 4px !important;
+    font-size: 0.8rem !important;
+}
+
+.run-symbol-dropdown .dash-dropdown-placeholder {
+    color: #94A3B8 !important;
+    font-size: 0.85rem !important;
+}
+
+.run-symbol-dropdown .dash-dropdown-search {
+    color: #E2E8F0 !important;
+    background: transparent !important;
+}
+
+.run-symbol-dropdown .dash-dropdown-options {
+    background: #1E293B !important;
+    border: 1px solid #334155 !important;
+    border-radius: 6px !important;
+}
+
+.run-symbol-dropdown .dash-dropdown-option {
+    background: #1E293B !important;
+    color: #E2E8F0 !important;
+}
+
+.run-symbol-dropdown .dash-dropdown-option:hover {
+    background: #334155 !important;
+}
+
+.run-symbol-dropdown .dash-dropdown-clear,
+.run-symbol-dropdown .dash-dropdown-trigger-icon {
+    color: #94A3B8 !important;
+}
+
+.run-symbol-dropdown .dash-dropdown-clear:hover,
+.run-symbol-dropdown .dash-dropdown-trigger-icon:hover {
+    color: #E2E8F0 !important;
+}
+
+/* Legacy Dash <4 selectors (Select-* classes) */
 .run-symbol-dropdown .Select-control {
     background: #1E293B !important;
     border: 1px solid #334155 !important;
@@ -2481,7 +2537,47 @@ body.theme-bw .symbol-select option {
     color: #1E293B;
 }
 
-/* Light Theme - Run Symbol Selector */
+/* Light Theme - Run Symbol Selector (Dash 4.x) */
+body.theme-bw .run-symbol-dropdown .dash-dropdown-trigger {
+    background: #F8FAFC !important;
+    border-color: #CBD5E1 !important;
+    color: #1E293B !important;
+}
+
+body.theme-bw .run-symbol-dropdown .dash-dropdown-value,
+body.theme-bw .run-symbol-dropdown .dash-dropdown-value-item {
+    color: #1E293B !important;
+    background: #E2E8F0 !important;
+}
+
+body.theme-bw .run-symbol-dropdown .dash-dropdown-placeholder {
+    color: #64748B !important;
+}
+
+body.theme-bw .run-symbol-dropdown .dash-dropdown-search {
+    color: #1E293B !important;
+}
+
+body.theme-bw .run-symbol-dropdown .dash-dropdown-options {
+    background: #FFFFFF !important;
+    border-color: #CBD5E1 !important;
+}
+
+body.theme-bw .run-symbol-dropdown .dash-dropdown-option {
+    background: #FFFFFF !important;
+    color: #1E293B !important;
+}
+
+body.theme-bw .run-symbol-dropdown .dash-dropdown-option:hover {
+    background: #F1F5F9 !important;
+}
+
+body.theme-bw .run-symbol-dropdown .dash-dropdown-clear,
+body.theme-bw .run-symbol-dropdown .dash-dropdown-trigger-icon {
+    color: #64748B !important;
+}
+
+/* Light Theme - Run Symbol Selector (legacy Select-* classes) */
 body.theme-bw .run-symbol-dropdown .Select-control {
     background: #F8FAFC !important;
     border-color: #CBD5E1 !important;
@@ -2849,16 +2945,18 @@ body.theme-bw .watchlist-action-btn:hover {
 
 /* Active Settings Summary Row */
 .active-settings-row {
-    padding: 6px 10px;
-    background: rgba(59, 130, 246, 0.08);
+    padding: 5px 8px;
+    background: transparent;
     border-radius: 6px;
-    border: 1px solid rgba(59, 130, 246, 0.15);
+    border: none;
 }
 
 .active-settings-row .badge {
     font-size: 0.7rem;
     font-weight: 500;
-    padding: 4px 8px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.02em;
 }
 
 /* Agent Quick Summary Container */
@@ -2895,8 +2993,7 @@ body.theme-bw .watchlist-action-btn:hover {
 
 /* Light theme adjustments */
 body.theme-bw .active-settings-row {
-    background: rgba(59, 130, 246, 0.05);
-    border-color: rgba(59, 130, 246, 0.2);
+    background: transparent;
 }
 
 body.theme-bw .agent-summary-content {
@@ -3230,13 +3327,14 @@ body.theme-bw .watchlist-drag-handle:hover {
 
 /* Run Queue Status in Config Panel */
 .run-queue-status-container {
-    background: rgba(16, 185, 129, 0.08);
+    background: rgba(16, 185, 129, 0.06);
     border-radius: 8px;
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    padding: 10px 12px;
 }
 
 .run-queue-status {
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 /* Watchlist Tabs Styling */
@@ -3780,4 +3878,161 @@ body.theme-bw .fullscreen-symbol {
     .fullscreen-header {
         padding: 8px 12px;
     }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHAT DRAWER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Resize handle — rendered via ::before on the offcanvas itself so it
+   sits outside the offcanvas-body scroll/overflow context. */
+#chat-drawer.offcanvas::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 1100;
+    background: transparent;
+    transition: background-color 0.15s;
+}
+
+#chat-drawer.offcanvas:hover::before {
+    /* subtle hint on hover over the whole drawer edge */
+}
+
+#chat-drawer.offcanvas.chat-resizing::before,
+#chat-drawer.offcanvas::before:hover {
+    background-color: var(--accent-primary);
+    opacity: 0.6;
+}
+
+.chat-drawer .offcanvas-body {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+
+.chat-drawer .offcanvas-header {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 16px;
+}
+
+.chat-drawer .offcanvas-header .btn-close {
+    filter: invert(1);
+}
+
+.chat-messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-message-row {
+    max-width: 90%;
+}
+
+.chat-message-user {
+    align-self: flex-end;
+}
+
+.chat-message-assistant {
+    align-self: flex-start;
+}
+
+.chat-bubble-user {
+    background-color: var(--accent-primary);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 12px 12px 2px 12px;
+    font-size: 0.875rem;
+    word-wrap: break-word;
+}
+
+.chat-bubble-assistant-md {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 12px 12px 12px 2px;
+    font-size: 0.875rem;
+    word-wrap: break-word;
+}
+
+.chat-bubble-assistant-md p {
+    margin-bottom: 0.4em;
+}
+
+.chat-bubble-assistant-md p:last-child {
+    margin-bottom: 0;
+}
+
+.chat-bubble-assistant-md table {
+    font-size: 0.8rem;
+}
+
+.chat-timestamp {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    padding: 0 4px;
+}
+
+.chat-typing-indicator {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+}
+
+.chat-actions {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.chat-actions .btn {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+}
+
+.chat-input-area {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+}
+
+.chat-input-area .form-control {
+    background-color: var(--input-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.chat-input-area .form-control::placeholder {
+    color: var(--text-muted);
+}
+
+.chat-toggle-btn {
+    position: relative;
+}
+
+/* Light theme overrides */
+body.theme-bw .chat-drawer .offcanvas-header .btn-close {
+    filter: none;
+}
+
+body.theme-bw .chat-bubble-user {
+    background-color: var(--accent-primary);
+    color: #fff;
+}
+
+body.theme-bw .chat-bubble-assistant-md {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
 }
