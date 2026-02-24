@@ -658,7 +658,23 @@ def register_control_callbacks(app):
         for symbol in symbols:
             app_state.init_symbol_state(symbol)
 
+        def _build_and_store_portfolio_context():
+            """Build portfolio context from Alpaca and store on app_state."""
+            try:
+                from tradingagents.dataflows.portfolio_risk import build_portfolio_context
+                ctx = build_portfolio_context(app_state.system_settings)
+                app_state._current_portfolio_context = ctx
+                if ctx:
+                    print(f"[RISK] Portfolio context built: equity=${ctx.equity:,.2f}, "
+                          f"{len(ctx.positions)} positions")
+            except Exception as e:
+                print(f"[RISK] Failed to build portfolio context: {e}")
+                app_state._current_portfolio_context = None
+
         def analysis_thread():
+            # Build portfolio context once at the start of the analysis batch
+            _build_and_store_portfolio_context()
+
             if market_hour_enabled:
                 # Start market hour mode with scheduling logic
                 market_hour_config = {
@@ -804,6 +820,8 @@ def register_control_callbacks(app):
                     # Reset states for new analysis (only once, outside the conditional blocks)
                     h, m = next_time
                     print(f"[MARKET_HOUR] Market is open, starting analysis at {h}:{m:02d}")
+                    # Refresh portfolio context for this market hour run
+                    _build_and_store_portfolio_context()
                     app_state.reset_for_loop()
 
                     # Initialize symbol states
@@ -913,6 +931,8 @@ def register_control_callbacks(app):
                 loop_iteration = 1
                 while not app_state.stop_loop:
                     print(f"[LOOP] Starting iteration {loop_iteration} with parallel execution")
+                    # Refresh portfolio context for this iteration
+                    _build_and_store_portfolio_context()
 
                     # Run analysis for all symbols in parallel (staggered 1-30s apart)
                     max_workers = min(get_max_parallel_tickers(), len(symbols))
@@ -1032,6 +1052,9 @@ def register_control_callbacks(app):
                     completed_count = 0
                     succeeded = []
                     failed = []
+                    # Cooldown between completions to avoid rate limiting
+                    cooldown_seconds = app_state.system_settings.get("ticker_cooldown_seconds", 10)
+
                     for future in as_completed(futures):
                         completed_count += 1
                         symbol = futures[future]
@@ -1050,6 +1073,14 @@ def register_control_callbacks(app):
                         except Exception as e:
                             print(f"[PARALLEL] {symbol} analysis raised exception: {e}")
                             failed.append((symbol, str(e)))
+
+                        # Add cooldown after each completion to prevent rate limiting
+                        # This gives the API time to recover between stocks
+                        if completed_count < len(futures) and cooldown_seconds > 0:
+                            print(f"[PARALLEL] Cooldown: waiting {cooldown_seconds}s before processing next result...")
+                            if not app_state.interruptible_sleep(cooldown_seconds):
+                                print("[PARALLEL] Cooldown interrupted by stop signal")
+                                break
 
                 # Retry failed tickers (up to 1 retry per ticker)
                 max_retries = 1
@@ -1116,6 +1147,8 @@ def register_control_callbacks(app):
                     print(f"[AUTO-SAVE] Error saving analysis: {e}")
 
             app_state.analysis_running = False
+            # Clean up portfolio context
+            app_state._current_portfolio_context = None
 
         def safe_analysis_thread():
             """Wrapper that guarantees analysis_running is reset and errors are logged."""

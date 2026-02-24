@@ -207,10 +207,11 @@ Dashboard panels can be hidden/shown from the Settings page. Hidden panels are *
 2. `panel_visibility_callbacks.py` has a single callback that reads `system-settings-store` and populates each wrapper with the panel content (via `_build_*()` functions) or `[]` (empty) if hidden
 3. `suppress_callback_exceptions=True` (set in `webui/config/constants.py`) allows callbacks targeting IDs inside hidden panels to silently fail
 
-**9 togglable panels** (setting key → wrapper ID):
+**10 togglable panels** (setting key → wrapper ID):
 | Setting Key | Wrapper ID | Builder Function |
 |---|---|---|
 | `show_panel_account_bar` | `panel-wrapper-account-bar` | `_build_account_bar()` |
+| `show_panel_portfolio` | `panel-wrapper-portfolio` | `_build_portfolio_section()` |
 | `show_panel_scanner` | `panel-wrapper-scanner` | `_build_scanner_section()` |
 | `show_panel_watchlist` | `panel-wrapper-watchlist` | `_build_watchlist_section()` |
 | `show_panel_chart` | `panel-wrapper-main-trading-row` | `_build_main_trading_row()` |
@@ -814,6 +815,9 @@ app_state.tool_calls_log.append(tool_call_info)
 | `tradingagents/dataflows/interface.py` | Unified data API (~1500 lines) | `@tool` decorated functions |
 | `tradingagents/dataflows/sector_utils.py` | Sector mapping & ETF lookups | `identify_sector()`, `SECTOR_ETFS` |
 | `tradingagents/dataflows/reddit_live.py` | Live Reddit API | `RedditLiveClient`, `fetch_live_company_news()` |
+| `tradingagents/dataflows/portfolio_risk.py` | Pre-execution risk guardrails | `build_portfolio_context()`, `validate_trade()`, `format_portfolio_context_for_prompt()` |
+| `webui/components/portfolio_panel.py` | Portfolio Overview panel UI | `create_portfolio_panel()`, `render_portfolio_metrics()`, `render_risk_utilization()`, `render_sector_exposure()`, `render_config_summary()` |
+| `webui/callbacks/portfolio_callbacks.py` | Portfolio panel refresh | `register_portfolio_callbacks()`, `update_portfolio_panel()` |
 | `tradingagents/agents/utils/agent_utils.py` | Tool tracking & timing | `timing_wrapper()`, `_get_current_symbol()` |
 | `tradingagents/default_config.py` | Config defaults | `DEFAULT_CONFIG` dict |
 | `webui/app_dash.py` | App factory | `create_app()`, `run_app()` |
@@ -931,4 +935,6 @@ app_state._stop_event           # threading.Event - set=stop requested
 19. **NumPy must stay < 2.0** — pandas/numexpr are compiled against NumPy 1.x. If a dependency upgrade pulls NumPy 2.x, fix with `pip install "numpy<2"`
 20. **App uses pyenv Python 3.11.4** — Not conda. Use `/Users/radoslavminchev/.pyenv/versions/3.11.4/bin/pip` for the correct environment
 21. **Symbol selection uses `dbc.Select` dropdowns** — NOT button grids. Chart: `chart-symbol-select`, Reports: `report-symbol-select`. Values are 1-indexed strings mapping to `app_state.symbol_states` keys. Synced via hidden `dbc.Pagination` components.
-22. **UPDATE CLAUDE.md after meaningful changes** — Any new feature, pattern change, or architectural update must be reflected in this file. Read the section first, then make surgical edits.
+22. **Risk guardrails are OFF by default** — Enable via Settings > Risk Guardrails. `validate_trade()` runs 4 checks (per-trade, single position, total exposure, buying power), resizes when possible, rejects otherwise. Logged as `RISK_GUARDRAIL` in tool_calls_log.
+23. **Portfolio context is built once per analysis batch** — `build_portfolio_context()` is called in `control_callbacks.py` before each executor block. Stored on `app_state._current_portfolio_context`. Injected into Trader/Risk Manager prompts via `config["portfolio_context_text"]`. Cleaned up at end of `analysis_thread()`.
+24. **UPDATE CLAUDE.md after meaningful changes** — Any new feature, pattern change, or architectural update must be reflected in this file. Read the section first, then make surgical edits.

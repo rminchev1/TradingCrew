@@ -17,6 +17,20 @@ def get_earnings_calendar_api_key():
     return api_key
 
 
+def _is_non_us_exchange_symbol(ticker: str) -> bool:
+    """
+    Detect tickers from non-US exchanges by their dot-suffix notation
+    (e.g. IREN.MI = Milan, VOD.L = London, AIR.PA = Paris, SAP.DE = Frankfurt).
+    Finnhub's earnings calendar only covers US-listed stocks on free/standard plans.
+    """
+    if "." in ticker:
+        suffix = ticker.rsplit(".", 1)[-1].upper()
+        # Ignore purely numeric suffixes (e.g. BRK.B) and common US indicators
+        if suffix.isalpha() and suffix not in ("A", "B", "C", "W", "U", "PR", "WS"):
+            return True
+    return False
+
+
 def get_finnhub_earnings_calendar(
     ticker: str,
     start_date: str,
@@ -24,15 +38,26 @@ def get_finnhub_earnings_calendar(
 ) -> str:
     """
     Get earnings calendar data from Finnhub API
-    
+
     Args:
         ticker: Stock ticker symbol
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format
-        
+
     Returns:
         Formatted string with earnings calendar data
     """
+    # Non-US exchange symbols (e.g. IREN.MI, VOD.L) are not covered by Finnhub's
+    # earnings calendar on free/standard plans — skip the API call entirely to
+    # avoid a noisy 403 error in the logs.
+    if _is_non_us_exchange_symbol(ticker):
+        return (
+            f"Earnings calendar data is not available for {ticker} via Finnhub. "
+            f"This symbol appears to be listed on a non-US exchange (suffix: "
+            f"'.{ticker.rsplit('.', 1)[-1]}'). Finnhub earnings coverage is limited "
+            f"to US-listed stocks on the current plan."
+        )
+
     try:
         from .finnhub_utils import get_finnhub_client
         client = get_finnhub_client()

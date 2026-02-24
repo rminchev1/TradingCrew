@@ -50,6 +50,9 @@ DEFAULT_SYSTEM_SETTINGS = {
     "online_tools": True,
     "max_recur_limit": 200,
     "max_parallel_tickers": 3,
+    # Rate Limiting / Throughput Control
+    "ticker_cooldown_seconds": 10,  # Delay after each ticker completes (rate limit protection)
+    "llm_max_retries": 6,  # Max retries for LLM API calls (with exponential backoff)
     # Scanner Settings
     "scanner_num_results": 20,
     "scanner_use_llm_sentiment": False,
@@ -66,6 +69,11 @@ DEFAULT_SYSTEM_SETTINGS = {
     "options_min_delta": 0.20,
     "options_max_delta": 0.70,
     "options_min_open_interest": 100,
+    # Risk Guardrails (pre-execution validation)
+    "risk_guardrails_enabled": False,
+    "risk_max_per_trade_pct": 3.0,
+    "risk_max_single_position_pct": 8.0,
+    "risk_max_total_exposure_pct": 15.0,
     # Stop-Loss and Take-Profit Settings
     "enable_stop_loss": False,
     "stop_loss_percentage": 5.0,
@@ -81,6 +89,7 @@ DEFAULT_SYSTEM_SETTINGS = {
     "show_panel_trading": True,
     "show_panel_positions": True,
     "show_panel_options": True,
+    "show_panel_portfolio": True,
     "show_panel_reports": True,
     "show_panel_logs": True,
 }
@@ -108,6 +117,8 @@ def export_settings(settings: dict) -> str:
         "online_tools",
         "max_recur_limit",
         "max_parallel_tickers",
+        "ticker_cooldown_seconds",
+        "llm_max_retries",
         "scanner_num_results",
         "scanner_use_llm_sentiment",
         "scanner_use_options_flow",
@@ -124,6 +135,11 @@ def export_settings(settings: dict) -> str:
         "options_min_delta",
         "options_max_delta",
         "options_min_open_interest",
+        # Risk Guardrails (not sensitive)
+        "risk_guardrails_enabled",
+        "risk_max_per_trade_pct",
+        "risk_max_single_position_pct",
+        "risk_max_total_exposure_pct",
         # Stop-Loss and Take-Profit settings (not sensitive)
         "enable_stop_loss",
         "stop_loss_percentage",
@@ -139,6 +155,7 @@ def export_settings(settings: dict) -> str:
         "show_panel_trading",
         "show_panel_positions",
         "show_panel_options",
+        "show_panel_portfolio",
         "show_panel_reports",
         "show_panel_logs",
     ]

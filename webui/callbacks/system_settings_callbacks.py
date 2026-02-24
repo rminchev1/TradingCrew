@@ -94,6 +94,8 @@ def register_system_settings_callbacks(app):
             Output("setting-online-tools", "value", allow_duplicate=True),
             Output("setting-max-recur-limit", "value", allow_duplicate=True),
             Output("setting-max-parallel-tickers", "value", allow_duplicate=True),
+            Output("setting-ticker-cooldown-seconds", "value", allow_duplicate=True),
+            Output("setting-llm-max-retries", "value", allow_duplicate=True),
             Output("setting-scanner-num-results", "value", allow_duplicate=True),
             Output("setting-scanner-llm-sentiment", "value", allow_duplicate=True),
             Output("setting-scanner-options-flow", "value", allow_duplicate=True),
@@ -109,6 +111,11 @@ def register_system_settings_callbacks(app):
             Output("setting-options-min-delta", "value", allow_duplicate=True),
             Output("setting-options-max-delta", "value", allow_duplicate=True),
             Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Risk Guardrails
+            Output("setting-risk-guardrails-enabled", "value", allow_duplicate=True),
+            Output("setting-risk-max-per-trade-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-single-position-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-total-exposure-pct", "value", allow_duplicate=True),
             # Stop-Loss and Take-Profit settings
             Output("setting-enable-stop-loss", "value", allow_duplicate=True),
             Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
@@ -118,6 +125,7 @@ def register_system_settings_callbacks(app):
             Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
             # Dashboard Panel Visibility
             Output("setting-show-panel-account-bar", "value", allow_duplicate=True),
+            Output("setting-show-panel-portfolio", "value", allow_duplicate=True),
             Output("setting-show-panel-scanner", "value", allow_duplicate=True),
             Output("setting-show-panel-watchlist", "value", allow_duplicate=True),
             Output("setting-show-panel-chart", "value", allow_duplicate=True),
@@ -172,6 +180,8 @@ def register_system_settings_callbacks(app):
             settings.get("online_tools", True),
             settings.get("max_recur_limit", 200),
             settings.get("max_parallel_tickers", 3),
+            settings.get("ticker_cooldown_seconds", 10),
+            settings.get("llm_max_retries", 6),
             settings.get("scanner_num_results", 20),
             settings.get("scanner_use_llm_sentiment", False),
             settings.get("scanner_use_options_flow", True),
@@ -187,6 +197,11 @@ def register_system_settings_callbacks(app):
             settings.get("options_min_delta", 0.20),
             settings.get("options_max_delta", 0.70),
             settings.get("options_min_open_interest", 100),
+            # Risk Guardrails
+            settings.get("risk_guardrails_enabled", False),
+            settings.get("risk_max_per_trade_pct", 3.0),
+            settings.get("risk_max_single_position_pct", 8.0),
+            settings.get("risk_max_total_exposure_pct", 15.0),
             # Stop-Loss and Take-Profit settings
             settings.get("enable_stop_loss", False),
             settings.get("stop_loss_percentage", 5.0),
@@ -196,6 +211,7 @@ def register_system_settings_callbacks(app):
             settings.get("take_profit_use_ai", True),
             # Dashboard Panel Visibility
             settings.get("show_panel_account_bar", True),
+            settings.get("show_panel_portfolio", True),
             settings.get("show_panel_scanner", True),
             settings.get("show_panel_watchlist", True),
             settings.get("show_panel_chart", True),
@@ -237,6 +253,8 @@ def register_system_settings_callbacks(app):
             State("setting-online-tools", "value"),
             State("setting-max-recur-limit", "value"),
             State("setting-max-parallel-tickers", "value"),
+            State("setting-ticker-cooldown-seconds", "value"),
+            State("setting-llm-max-retries", "value"),
             State("setting-scanner-num-results", "value"),
             State("setting-scanner-llm-sentiment", "value"),
             State("setting-scanner-options-flow", "value"),
@@ -252,6 +270,11 @@ def register_system_settings_callbacks(app):
             State("setting-options-min-delta", "value"),
             State("setting-options-max-delta", "value"),
             State("setting-options-min-open-interest", "value"),
+            # Risk Guardrails
+            State("setting-risk-guardrails-enabled", "value"),
+            State("setting-risk-max-per-trade-pct", "value"),
+            State("setting-risk-max-single-position-pct", "value"),
+            State("setting-risk-max-total-exposure-pct", "value"),
             # Stop-Loss and Take-Profit settings
             State("setting-enable-stop-loss", "value"),
             State("setting-stop-loss-percentage", "value"),
@@ -261,6 +284,7 @@ def register_system_settings_callbacks(app):
             State("setting-take-profit-use-ai", "value"),
             # Dashboard Panel Visibility
             State("setting-show-panel-account-bar", "value"),
+            State("setting-show-panel-portfolio", "value"),
             State("setting-show-panel-scanner", "value"),
             State("setting-show-panel-watchlist", "value"),
             State("setting-show-panel-chart", "value"),
@@ -280,12 +304,14 @@ def register_system_settings_callbacks(app):
         reddit_client_id, reddit_client_secret, reddit_user_agent,
         deep_llm, quick_llm,
         max_debate, max_risk, parallel_analysts, online_tools, max_recur, max_parallel_tickers,
+        ticker_cooldown_seconds, llm_max_retries,
         scanner_results, scanner_llm, scanner_options, scanner_cache, scanner_dynamic,
         enable_options_trading, options_trading_level, options_max_contracts, options_max_position_value,
         options_min_dte, options_max_dte, options_min_delta, options_max_delta, options_min_open_interest,
+        risk_guardrails_enabled, risk_max_per_trade_pct, risk_max_single_position_pct, risk_max_total_exposure_pct,
         enable_stop_loss, stop_loss_percentage, stop_loss_use_ai,
         enable_take_profit, take_profit_percentage, take_profit_use_ai,
-        show_account_bar, show_scanner, show_watchlist, show_chart, show_trading,
+        show_account_bar, show_portfolio, show_scanner, show_watchlist, show_chart, show_trading,
         show_positions, show_options, show_reports, show_logs,
         current_store
     ):
@@ -313,6 +339,8 @@ def register_system_settings_callbacks(app):
             "online_tools": online_tools,
             "max_recur_limit": max_recur,
             "max_parallel_tickers": max_parallel_tickers,
+            "ticker_cooldown_seconds": ticker_cooldown_seconds,
+            "llm_max_retries": llm_max_retries,
             "scanner_num_results": scanner_results,
             "scanner_use_llm_sentiment": scanner_llm,
             "scanner_use_options_flow": scanner_options,
@@ -328,6 +356,11 @@ def register_system_settings_callbacks(app):
             "options_min_delta": options_min_delta,
             "options_max_delta": options_max_delta,
             "options_min_open_interest": options_min_open_interest,
+            # Risk Guardrails
+            "risk_guardrails_enabled": risk_guardrails_enabled,
+            "risk_max_per_trade_pct": risk_max_per_trade_pct,
+            "risk_max_single_position_pct": risk_max_single_position_pct,
+            "risk_max_total_exposure_pct": risk_max_total_exposure_pct,
             # Stop-Loss and Take-Profit settings
             "enable_stop_loss": enable_stop_loss,
             "stop_loss_percentage": stop_loss_percentage,
@@ -337,6 +370,7 @@ def register_system_settings_callbacks(app):
             "take_profit_use_ai": take_profit_use_ai,
             # Dashboard Panel Visibility
             "show_panel_account_bar": show_account_bar,
+            "show_panel_portfolio": show_portfolio,
             "show_panel_scanner": show_scanner,
             "show_panel_watchlist": show_watchlist,
             "show_panel_chart": show_chart,
@@ -392,6 +426,8 @@ def register_system_settings_callbacks(app):
             Output("setting-online-tools", "value", allow_duplicate=True),
             Output("setting-max-recur-limit", "value", allow_duplicate=True),
             Output("setting-max-parallel-tickers", "value", allow_duplicate=True),
+            Output("setting-ticker-cooldown-seconds", "value", allow_duplicate=True),
+            Output("setting-llm-max-retries", "value", allow_duplicate=True),
             Output("setting-scanner-num-results", "value", allow_duplicate=True),
             Output("setting-scanner-llm-sentiment", "value", allow_duplicate=True),
             Output("setting-scanner-options-flow", "value", allow_duplicate=True),
@@ -407,6 +443,11 @@ def register_system_settings_callbacks(app):
             Output("setting-options-min-delta", "value", allow_duplicate=True),
             Output("setting-options-max-delta", "value", allow_duplicate=True),
             Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Risk Guardrails
+            Output("setting-risk-guardrails-enabled", "value", allow_duplicate=True),
+            Output("setting-risk-max-per-trade-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-single-position-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-total-exposure-pct", "value", allow_duplicate=True),
             # Stop-Loss and Take-Profit settings
             Output("setting-enable-stop-loss", "value", allow_duplicate=True),
             Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
@@ -416,6 +457,7 @@ def register_system_settings_callbacks(app):
             Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
             # Dashboard Panel Visibility
             Output("setting-show-panel-account-bar", "value", allow_duplicate=True),
+            Output("setting-show-panel-portfolio", "value", allow_duplicate=True),
             Output("setting-show-panel-scanner", "value", allow_duplicate=True),
             Output("setting-show-panel-watchlist", "value", allow_duplicate=True),
             Output("setting-show-panel-chart", "value", allow_duplicate=True),
@@ -458,6 +500,8 @@ def register_system_settings_callbacks(app):
             defaults.get("online_tools", True),
             defaults.get("max_recur_limit", 200),
             defaults.get("max_parallel_tickers", 3),
+            defaults.get("ticker_cooldown_seconds", 10),
+            defaults.get("llm_max_retries", 6),
             defaults.get("scanner_num_results", 20),
             defaults.get("scanner_use_llm_sentiment", False),
             defaults.get("scanner_use_options_flow", True),
@@ -473,6 +517,11 @@ def register_system_settings_callbacks(app):
             defaults.get("options_min_delta", 0.20),
             defaults.get("options_max_delta", 0.70),
             defaults.get("options_min_open_interest", 100),
+            # Risk Guardrails
+            defaults.get("risk_guardrails_enabled", False),
+            defaults.get("risk_max_per_trade_pct", 3.0),
+            defaults.get("risk_max_single_position_pct", 8.0),
+            defaults.get("risk_max_total_exposure_pct", 15.0),
             # Stop-Loss and Take-Profit settings
             defaults.get("enable_stop_loss", False),
             defaults.get("stop_loss_percentage", 5.0),
@@ -482,6 +531,7 @@ def register_system_settings_callbacks(app):
             defaults.get("take_profit_use_ai", True),
             # Dashboard Panel Visibility
             defaults.get("show_panel_account_bar", True),
+            defaults.get("show_panel_portfolio", True),
             defaults.get("show_panel_scanner", True),
             defaults.get("show_panel_watchlist", True),
             defaults.get("show_panel_chart", True),
@@ -533,6 +583,8 @@ def register_system_settings_callbacks(app):
             Output("setting-online-tools", "value", allow_duplicate=True),
             Output("setting-max-recur-limit", "value", allow_duplicate=True),
             Output("setting-max-parallel-tickers", "value", allow_duplicate=True),
+            Output("setting-ticker-cooldown-seconds", "value", allow_duplicate=True),
+            Output("setting-llm-max-retries", "value", allow_duplicate=True),
             Output("setting-scanner-num-results", "value", allow_duplicate=True),
             Output("setting-scanner-llm-sentiment", "value", allow_duplicate=True),
             Output("setting-scanner-options-flow", "value", allow_duplicate=True),
@@ -548,6 +600,11 @@ def register_system_settings_callbacks(app):
             Output("setting-options-min-delta", "value", allow_duplicate=True),
             Output("setting-options-max-delta", "value", allow_duplicate=True),
             Output("setting-options-min-open-interest", "value", allow_duplicate=True),
+            # Risk Guardrails
+            Output("setting-risk-guardrails-enabled", "value", allow_duplicate=True),
+            Output("setting-risk-max-per-trade-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-single-position-pct", "value", allow_duplicate=True),
+            Output("setting-risk-max-total-exposure-pct", "value", allow_duplicate=True),
             # Stop-Loss and Take-Profit settings
             Output("setting-enable-stop-loss", "value", allow_duplicate=True),
             Output("setting-stop-loss-percentage", "value", allow_duplicate=True),
@@ -557,6 +614,7 @@ def register_system_settings_callbacks(app):
             Output("setting-take-profit-use-ai", "value", allow_duplicate=True),
             # Dashboard Panel Visibility
             Output("setting-show-panel-account-bar", "value", allow_duplicate=True),
+            Output("setting-show-panel-portfolio", "value", allow_duplicate=True),
             Output("setting-show-panel-scanner", "value", allow_duplicate=True),
             Output("setting-show-panel-watchlist", "value", allow_duplicate=True),
             Output("setting-show-panel-chart", "value", allow_duplicate=True),
@@ -596,6 +654,8 @@ def register_system_settings_callbacks(app):
                 imported.get("online_tools", True),
                 imported.get("max_recur_limit", 200),
                 imported.get("max_parallel_tickers", 3),
+                imported.get("ticker_cooldown_seconds", 10),
+                imported.get("llm_max_retries", 6),
                 imported.get("scanner_num_results", 20),
                 imported.get("scanner_use_llm_sentiment", False),
                 imported.get("scanner_use_options_flow", True),
@@ -611,6 +671,11 @@ def register_system_settings_callbacks(app):
                 imported.get("options_min_delta", 0.20),
                 imported.get("options_max_delta", 0.70),
                 imported.get("options_min_open_interest", 100),
+                # Risk Guardrails
+                imported.get("risk_guardrails_enabled", False),
+                imported.get("risk_max_per_trade_pct", 3.0),
+                imported.get("risk_max_single_position_pct", 8.0),
+                imported.get("risk_max_total_exposure_pct", 15.0),
                 # Stop-Loss and Take-Profit settings
                 imported.get("enable_stop_loss", False),
                 imported.get("stop_loss_percentage", 5.0),
@@ -620,6 +685,7 @@ def register_system_settings_callbacks(app):
                 imported.get("take_profit_use_ai", True),
                 # Dashboard Panel Visibility
                 imported.get("show_panel_account_bar", True),
+                imported.get("show_panel_portfolio", True),
                 imported.get("show_panel_scanner", True),
                 imported.get("show_panel_watchlist", True),
                 imported.get("show_panel_chart", True),
@@ -638,11 +704,14 @@ def register_system_settings_callbacks(app):
                 no_update, no_update, no_update, no_update, no_update, no_update,
                 no_update, no_update, no_update, no_update, no_update, no_update,
                 no_update, no_update, no_update, no_update, no_update, no_update,
+                no_update, no_update, no_update,
+                # Risk Guardrails (4 no_update)
+                no_update, no_update, no_update, no_update,
+                # SL/TP (6 no_update)
                 no_update, no_update, no_update, no_update, no_update, no_update,
-                no_update, no_update, no_update, no_update,
-                # Dashboard Panel Visibility (9 no_update)
+                # Dashboard Panel Visibility (10 no_update)
                 no_update, no_update, no_update, no_update, no_update,
-                no_update, no_update, no_update, no_update,
+                no_update, no_update, no_update, no_update, no_update,
                 True,
                 f"Error importing settings: {str(e)}",
                 "danger",
