@@ -15,28 +15,25 @@ def create_trading_control_panel():
         html.Div([
             html.Div([
                 html.I(className="fas fa-list-check me-2 text-success"),
-                html.Span("Portfolio: ", className="text-muted"),
+                html.Span("Portfolio: ", className="text-muted small"),
                 html.Span(id="config-run-queue-count", children="0", className="fw-bold text-success"),
-                html.Span(" symbols", className="text-muted ms-1"),
+                html.Span(" symbols", className="text-muted small ms-1"),
             ], className="d-flex align-items-center run-queue-status mb-2"),
             # Symbol selector dropdown
-            html.Div([
-                html.Small("Run:", className="text-muted me-2"),
-                dcc.Dropdown(
-                    id="run-symbol-selector",
-                    options=[{"label": "All Symbols", "value": "__ALL__"}],
-                    value=["__ALL__"],
-                    multi=True,
-                    placeholder="Select symbols to analyze...",
-                    className="run-symbol-dropdown",
-                    style={"minWidth": "200px", "fontSize": "0.85rem"}
-                ),
-            ], className="d-flex align-items-center"),
+            dcc.Dropdown(
+                id="run-symbol-selector",
+                options=[{"label": "All Symbols", "value": "__ALL__"}],
+                value=["__ALL__"],
+                multi=True,
+                placeholder="Select symbols to analyze...",
+                className="run-symbol-dropdown",
+                style={"fontSize": "0.85rem"}
+            ),
             html.Small(
                 "Select specific symbols or run all",
                 className="text-muted d-block mt-1"
             ),
-        ], className="mb-3 p-2 run-queue-status-container"),
+        ], className="mb-2 run-queue-status-container"),
 
         # Active Settings Summary (inline display)
         html.Div(
@@ -54,13 +51,13 @@ def create_trading_control_panel():
         # Quick Actions Row - Settings and Start Analysis buttons side by side
         html.Div([
             dbc.Button(
-                [html.I(className="fas fa-cog me-1"), ""],
+                html.I(className="fas fa-cog"),
                 id="toggle-settings-btn",
                 color="secondary",
                 outline=True,
                 size="md",
                 className="me-2",
-                style={"minWidth": "45px"}
+                style={"minWidth": "40px", "padding": "6px 10px"}
             ),
             html.Div(id="control-button-container", children=[
                 dbc.Button(
@@ -72,7 +69,7 @@ def create_trading_control_panel():
                     style={"flex": "1"}
                 )
             ], className="flex-grow-1 d-flex")
-        ], className="d-flex align-items-center mb-3"),
+        ], className="d-flex align-items-center mb-2"),
 
         # Collapsible Settings Section
         dbc.Collapse(

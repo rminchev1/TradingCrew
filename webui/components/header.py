@@ -5,6 +5,8 @@ webui/components/header.py - Header component for the web UI.
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 
+from webui.components.chat_drawer import create_chat_toggle_button
+
 
 def create_header():
     """Create the header component for the web UI."""
@@ -17,6 +19,7 @@ def create_header():
                 ], width="auto", className="flex-grow-1"),
                 dbc.Col([
                     html.Div([
+                        create_chat_toggle_button(),
                         dbc.Button(
                             [html.I(className="fas fa-moon me-2"), "Dark"],
                             id="theme-toggle-btn",
