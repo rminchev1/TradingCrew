@@ -619,6 +619,32 @@ REFRESH_INTERVALS = {
 
 ---
 
+## Git Workflow
+
+**NEVER commit directly to main.** All changes must go through a branch and PR:
+
+1. **Create feature branch**: `git checkout -b feature/short-description`
+2. **Make changes** with tests
+3. **Commit** with descriptive message
+4. **Push branch**: `git push -u origin feature/short-description`
+5. **Create PR**: `gh pr create --title "..." --body "..."`
+6. **Wait for CI** to pass
+7. **Merge** after review/approval
+
+```bash
+# Example workflow
+git checkout -b feature/add-new-analyst
+# ... make changes ...
+pytest  # Verify tests pass
+git add <files>
+git commit -m "Add new analyst for X"
+git push -u origin feature/add-new-analyst
+gh pr create --title "Add new analyst for X" --body "## Summary..."
+# Wait for CI, then merge via GitHub UI or: gh pr merge
+```
+
+---
+
 ## Release Process
 
 **Releases are triggered by pushing tags to main. GitHub Actions automatically runs tests, builds, and publishes to PyPI.**
