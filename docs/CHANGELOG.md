@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.5.0] - 2026-02-24
+
+### Added
+- **Pre-Execution Risk Guardrails**: Validates trades against configurable limits before execution
+  - Per-trade size limit (default 3% of portfolio)
+  - Single position concentration limit (default 8%)
+  - Total portfolio exposure limit (default 15%)
+  - Buying power validation
+  - Auto-resizes orders when possible, rejects when necessary
+  - Logged as `RISK_GUARDRAIL` in tool calls for transparency
+  - OFF by default — enable via Settings > Risk Guardrails
+- **Portfolio Overview Dashboard Panel**: New togglable panel showing real-time portfolio context
+  - Risk utilization meters (per-trade, position, exposure)
+  - Sector exposure breakdown
+  - Active configuration summary (trading mode, risk limits)
+  - Auto-refreshes on settings changes
+- **Portfolio Context Injection**: Trader and Risk Manager agents now receive portfolio-wide context
+  - Built once per analysis batch for consistency across tickers
+  - Includes current positions, exposure, sector breakdown, and risk limits
+- **Non-US Exchange Symbol Guard**: Detects international tickers (e.g. `IREN.MI`, `VOD.L`, `SAP.DE`) and skips Finnhub earnings API calls to avoid 403 errors on free/standard plans
+- **Rate Limiting Protection**: Prevents API overload during large batch analysis runs
+
 ### Fixed
 - **Pipeline Stop Responsiveness**: Stop signal now interrupts stagger delays (1-30s) between ticker submissions
   - Added `interruptible_sleep()` method that checks stop event every 0.1s
@@ -19,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Double Reset Bug**: Fixed redundant `reset_for_loop()` calls in market hour mode
 - **Memory Leak Prevention**: Ensured `tool_calls_log` and `llm_calls_log` are cleared in reset methods
 - **Missing Initial State Field**: Added `options_report` to graph propagator initial state
+- **Portfolio Panel Stale Context**: Panel now reads fresh settings instead of stale cached context for risk limits
+- **Portfolio Panel Trading Mode Badge**: Corrected badge display for current trading mode
+- **Portfolio Panel Settings Sync**: Panel now reflects risk setting changes immediately without page refresh
 
 ### Changed
 - **State Initialization**: Removed duplicate variable initializations in AppState (loop/market_hour/trade fields)
